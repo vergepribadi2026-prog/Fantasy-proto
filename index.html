@@ -1069,8 +1069,8 @@
         <div class="badge">Manusia: <span class="val" id="rep-human">Netral (0)</span></div>
         <div class="badge">Dwarf: <span class="val" id="rep-karst">Waspada (0)</span></div>
         <div class="badge">Elf: <span class="val" id="rep-aethel">Curiga (0)</span></div>
-        <button class="btn-sys save-btn" onclick="saveGame()" title="Simpan Progres Permainan">💾 Simpan</button>
-        <button class="btn-sys load-btn" onclick="loadGame()" title="Muat Progres Permainan">📂 Muat</button>
+        <button class="btn-sys save-btn" onclick="saveGame()" title="Simpan / Cadangkan Progres (file atau kode)">💾 Simpan</button>
+        <button class="btn-sys load-btn" onclick="openLoadMenu()" title="Muat dari File / Kode Cadangan">📂 Muat</button>
         <button class="btn-sys" onclick="toggleTouchPad()" title="Tampilkan/Sembunyikan Kontrol Sentuh Android">📱 Gamepad</button>
         <button class="btn-sys" id="btnMusic" onclick="toggleMusic()" title="Musik latar (tekan M)">🎵 Musik: ON</button>
       </div>
@@ -1177,7 +1177,7 @@
           <!-- SHORTCUT: tombol info di dalam layar permainan (pengganti panel samping kanan) -->
           <nav class="shortcut-dock dock-l" id="shortcutDockL" aria-label="Pintasan jurnal (kiri)">
             <button type="button" class="dock-btn" data-panel="popQuest" title="Jurnal Misi & Wilayah" aria-label="Jurnal Misi & Wilayah" aria-expanded="false" aria-controls="popQuest"><span class="ico">📜</span><span class="lbl">Misi</span></button>
-            <button type="button" class="dock-btn" data-panel="popTask" title="Tugas Aktif Guild" aria-label="Tugas Aktif Guild" aria-expanded="false" aria-controls="popTask"><span class="ico">📋</span><span class="lbl">Tugas</span></button>
+            <button type="button" class="dock-btn" data-panel="popTask" title="Tugas Aktif" aria-label="Tugas Aktif" aria-expanded="false" aria-controls="popTask"><span class="ico">📋</span><span class="lbl">Tugas</span></button>
             <button type="button" class="dock-btn" data-panel="popGuide" title="Panduan Kontrol & Peta" aria-label="Panduan Kontrol & Peta" aria-expanded="false" aria-controls="popGuide"><span class="ico">⚙</span><span class="lbl">Panduan</span></button>
           </nav>
           <nav class="shortcut-dock dock-r" id="shortcutDock" aria-label="Pintasan karakter (kanan)">
@@ -1218,7 +1218,7 @@
         </div>
             </div>
           </div>
-          <div class="info-popup pop-l" id="popTask" role="dialog" aria-label="Tugas Aktif Guild">
+          <div class="info-popup pop-l" id="popTask" role="dialog" aria-label="Tugas Aktif">
             <div class="popup-bar"><span class="popup-hint">Tekan Esc atau ✕ untuk menutup</span><button type="button" class="popup-close" aria-label="Tutup panel">✕ Tutup</button></div>
             <div class="popup-body">
             </div>
@@ -1242,7 +1242,7 @@
           <div style="font-size: 11px; line-height: 1.55; color: var(--text-muted);">
             <div><strong>Peta 4 (Hutan Berburu):</strong> Lewati jalur <strong>Barat (Kiri)</strong> dari Desa Oakhaven.</div>
             <div><strong>Altar Teleportasi:</strong> ada di Hutan Elf (dekat Suaka) dan di tengah Pasar Rakyat Barat, Aurelion. Berinteraksi dengan altar untuk berpindah langsung antar keduanya (dua arah, gratis).</div>
-            <div><strong>Jalan Setapak (Hutan→Ibu Kota):</strong> hutan lebih terang, banyak monster respawn ±2 menit. Pengepul loot Roan ada di Pos Api Unggun tengah jalan.</div>
+            <div><strong>Jalan Setapak (Hutan→Ibu Kota):</strong> hutan lebih terang, monster tersebar jarang (respawn ±2 menit). Pengepul loot Roan ada di Pos Api Unggun tengah jalan.</div>
             <div><strong>Save/Load:</strong> Klik tombol <strong>💾 Simpan</strong> & <strong>📂 Muat</strong> di kanan atas kapan saja.</div>
             <div><strong>Gerak (HP):</strong> geser <strong>Joystick Analog</strong> di kiri-bawah; makin jauh digeser, makin cepat.</div>
             <div><strong>Minimap 🗺 (atau tombol M):</strong> tekan sekali = minimap kecil, tekan lagi = peta besar, tekan lagi = tutup. Ketuk minimap kecil untuk memperbesar.</div>
@@ -2120,48 +2120,122 @@
       o.poly([[20, 44], [22, 28], [28, 28], [30, 44]], 's'); o.ell(24, 25, 15, 10, 'o'); o.each((x, y, k) => (y > 29 && k === 'o') ? null : undefined);
       o.ell(24, 29, 13, 1.5, 'D'); o.ell(17, 22, 3, 2, 'y'); o.ell(27, 19, 3, 2, 'y'); o.ell(33, 24, 2, 1.5, 'y'); o.ell(22, 25, 1.5, 1, 'y'); o.line(12, 44, 16, 44, 1, 'g'); o.line(31, 44, 34, 44, 1, 'g');
     };
-    // ---------- Pohon (bermacam bentuk) ----------
-    function crown(o, blobs, top, bot) {
-      blobs.forEach(b => o.ell(b[0], b[1], b[2], b[3], 'm'));
-      o.each((x, y, k) => {
-        if (k !== 'm') return;
-        const t = (y - top) / (bot - top), v = nz(x >> 1, y >> 1, 3) * 0.7 + nz(x, y, 9) * 0.3;
-        if (t > 0.85) return 'u'; const sc = v - 0.45 * t;
-        return sc > 0.62 ? 'l' : sc > 0.28 ? 'm' : 'd';
-      });
+    // ---------- Pohon realistis (v2): gugus daun berlapis, kulit kayu, cabang, dahan pinus menjuntai ----------
+    const lvUp = k => ({ u: 'd', d: 'm', m: 'l', l: 'h', h: 'h' }[k] || k), lvDn = k => ({ h: 'l', l: 'm', m: 'd', d: 'u', u: 'u' }[k] || k);
+    function leafBlob(o, cx, cy, rx, ry, seed, bias) {
+      for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
+        const dx = (x - cx) / rx, dy = (y - cy) / ry, d2 = dx * dx + dy * dy;
+        if (d2 > 1) continue;
+        if (d2 > 0.7 && nz(x, y, seed + 5) > 0.7) continue;
+        const lit = -(dx * 0.5 + dy * 0.85) + (nz(x, y, seed + 31) - 0.5) * 0.6 + bias;
+        o.p(x, y, lit > 0.66 ? 'h' : lit > 0.24 ? 'l' : lit > -0.22 ? 'm' : lit > -0.62 ? 'd' : 'u');
+      }
     }
-    function trunk(o, x, top, bot, w) {
-      o.poly([[x - w / 2, top], [x + w / 2, top], [x + w / 2 + 1.5, bot], [x - w / 2 - 1.5, bot]], 'k');
-      o.each((px, py, k) => { if (k !== 'k') return; if (px <= x - w / 2 + 0.5) return 'K'; if (px >= x + w / 2 - 0.5) return 'q'; if (nz(px, py, 12) < 0.1) return 'q'; });
-      o.ell(x - w, bot, 2, 1, 'K'); o.ell(x + w, bot, 2, 1, 'q');
+    function leafDome(o, cx, cy, rx, ry, seed, n, rmin, rmax) {
+      o.ell(cx, cy + 1, rx * 0.78, ry * 0.8, 'u');
+      const bl = [];
+      for (let i = 0; i < n; i++) {
+        const a = nz(i, seed, 41) * Math.PI * 2, rr = Math.sqrt(nz(i, seed, 43));
+        bl.push([cx + Math.cos(a) * rx * rr * 0.86, cy + Math.sin(a) * ry * rr * 0.86, rmin + nz(i, seed, 47) * (rmax - rmin)]);
+      }
+      bl.sort((p, q) => p[1] - q[1]);
+      bl.forEach((p, i) => leafBlob(o, p[0], p[1], p[2], p[2] * 0.82, seed + i, -((p[0] - cx) / rx * 0.3 + (p[1] - cy) / ry * 0.4)));
     }
-    const treeOak = o => { trunk(o, 24, 28, 44, 5); crown(o, [[24, 17, 17, 12], [14, 20, 7, 6], [34, 20, 7, 6], [24, 9, 10, 6]], 4, 31); };
-    const treeSpread = o => {
-      trunk(o, 24, 28, 44, 5);
-      [[24, 30, 11, 24], [24, 30, 37, 21], [24, 28, 24, 17], [24, 28, 17, 17], [24, 28, 33, 13]].forEach(b => o.line(b[0], b[1], b[2], b[3], 2, 'k'));
-      crown(o, [[10, 19, 7, 5], [20, 11, 9, 7], [34, 13, 8, 6], [40, 24, 6, 4], [24, 22, 6, 4], [15, 27, 7, 4], [28, 18, 5, 4]], 4, 30);
-      o.rect(8, 44, 32, 1, 'd');
+    function trunk2(o, x, top, bot, w, seed) {
+      for (let y = top; y <= bot; y++) {
+        const t = (y - top) / (bot - top), fl = t > 0.8 ? (t - 0.8) * 9 : 0, hw = w / 2 + t * 0.7 + fl;
+        for (let px = Math.floor(x - hw); px <= Math.ceil(x + hw - 0.5); px++) {
+          const u = (px - (x - hw)) / (2 * hw);
+          let k = u < 0.3 ? 'K' : u > 0.68 ? 'q' : 'k';
+          if (nz(px, y >> 1, seed + 9) < 0.2) k = k === 'K' ? 'k' : 'q';
+          o.p(px, y, k);
+        }
+      }
+      o.line(x - w, bot, x - w / 2 - 1, bot - 3, 1, 'k'); o.line(x + w, bot, x + w / 2 + 1, bot - 3, 1, 'q');
+      o.line(x - w / 2 - 3, bot, x - w, bot, 1, 'q'); o.line(x + w, bot, x + w / 2 + 3, bot, 1, 'q');
+    }
+    const shadeTrunk = (o, y0, y1) => o.each((x, y, k) => { if ((k === 'k' || k === 'K') && y >= y0 && y <= y1) return 'q'; });
+    const treeOak = seed => o => {
+      trunk2(o, 24, 25, 44, 5, seed);
+      o.line(24, 33, 13, 25, 2, 'k'); o.line(24, 31, 35, 24, 2, 'k');
+      leafDome(o, 24, 17, 19, 14, seed, 27, 4.5, 7);
+      shadeTrunk(o, 27, 35);
     };
-    const treeAutumn = o => {
-      trunk(o, 24, 26, 44, 5);
-      crown(o, [[24, 15, 19, 10], [12, 21, 8, 6], [37, 21, 9, 6], [24, 8, 10, 5]], 3, 28);
-      [[24, 32, 14, 23], [24, 30, 35, 21], [24, 28, 24, 20], [18, 25, 20, 19]].forEach(b => o.line(b[0], b[1], b[2], b[3], 2, 'k'));
-      o.ell(24, 43, 13, 1.5, 'm'); for (let i = 0; i < 12; i++) o.p(6 + nz(i, 1, 21) * 36, 30 + nz(i, 2, 21) * 13, i % 2 ? 'l' : 'm');
+    const treeSpread = seed => o => {
+      trunk2(o, 24, 25, 44, 5, seed);
+      [[24, 33, 9, 22], [24, 31, 38, 21], [24, 29, 24, 20]].forEach(b => o.line(b[0], b[1], b[2], b[3], 2, 'k'));
+      leafDome(o, 24, 12, 13, 8, seed, 11, 4.5, 6.5);
+      leafDome(o, 12, 22, 10, 8, seed + 3, 10, 4, 6);
+      leafDome(o, 35, 21, 11, 9, seed + 6, 11, 4, 6.5);
+      shadeTrunk(o, 28, 36);
     };
-    const treePine = (o, snow, tiers) => {
-      o.rect(22, 38, 5, 6, 'k'); o.rect(22, 38, 1, 6, 'K');
-      for (let i = 0; i < tiers; i++) { const ap = 3 + i * (34 / tiers), bs = ap + 36 / tiers + 5, hw = 6 + i * (11 / (tiers - 1)); o.poly([[24, ap], [24 + hw, bs], [24 - hw, bs]], 'm'); }
-      o.each((x, y, k) => {
-        if (k !== 'm') return; const t = y / 38, v = nz(x, y, 14);
-        if (snow && o.at(x, y - 1) !== 'm' && v > 0.25) return 's'; if (snow && o.at(x, y - 2) !== 'm' && v > 0.7) return 's';
-        if (x < 24 - (y * 0.12) && v > 0.55) return 'l'; if (x > 24 + 3 && v < 0.35 + t * 0.2) return 'd';
-      });
+    const treeAutumn = seed => o => {
+      trunk2(o, 24, 25, 44, 5, seed);
+      o.line(24, 33, 13, 25, 2, 'k'); o.line(24, 31, 35, 24, 2, 'k');
+      leafDome(o, 24, 16, 19, 13, seed, 26, 4.5, 7);
+      shadeTrunk(o, 27, 35);
+      for (let i = 0; i < 14; i++) o.p(6 + nz(i, 1, 21) * 36, 41 + nz(i, 2, 21) * 4, i % 2 ? 'l' : 'd');
     };
-    const treeBirch = o => {
-      o.poly([[22, 24], [26, 24], [27, 44], [21, 44]], 'w'); o.each((x, y, k) => { if (k === 'w' && ((y * 5 + x) % 9 === 0 || nz(x, y, 15) < 0.08)) return 'q'; if (k === 'w' && x >= 26) return 'k'; });
-      crown(o, [[24, 14, 11, 12], [17, 20, 6, 6], [31, 20, 6, 6], [24, 6, 7, 5]], 2, 28);
+    const treePine = (snow, tiers, seed) => o => {
+      for (let y = 35; y <= 45; y++) for (let x = 22; x <= 26; x++) o.p(x, y, x <= 22 ? 'K' : x >= 26 ? 'q' : 'k');
+      o.line(20, 45, 22, 43, 1, 'q'); o.line(28, 45, 26, 43, 1, 'q');
+      const step = 33 / tiers;
+      for (let i = 0; i < tiers; i++) {
+        const ap = 1 + i * step, base = Math.min(43, Math.round(ap + step + 9)), hw = 5.5 + i * (12.5 / Math.max(1, tiers - 1));
+        for (let y = Math.round(ap); y <= base; y++) {
+          const t = (y - ap) / (base - ap), half = Math.max(0.7, hw * Math.pow(t, 0.82)) + (nz(y, i, seed) - 0.5) * 1.8;
+          const x0 = Math.round(24 - half), x1 = Math.round(24 + half);
+          for (let x = x0; x <= x1; x++) {
+            const u = (x - (24 - half)) / (2 * half + 0.001);
+            let k = u < 0.3 ? 'l' : u > 0.66 ? 'd' : 'm';
+            const nr = nz(x, y, seed + 3);
+            if (nr > 0.84) k = lvUp(k); else if (nr < 0.1) k = lvDn(k);
+            if (y >= base - 2) k = 'u'; else if (y >= base - 4 && k !== 'u') k = lvDn(k);
+            o.p(x, y, k);
+          }
+          if (snow && y <= base - 3) {
+            const sw = t < 0.35 ? 2 : 1;
+            for (let s = 0; s < sw; s++) { if (nz(x0 + s, y, seed + 8) > 0.2) o.p(x0 + s, y, 's'); if (nz(x1 - s, y, seed + 9) > 0.5) o.p(x1 - s, y, 's'); }
+          }
+        }
+        for (let x = Math.round(24 - hw) + 1; x <= Math.round(24 + hw) - 1; x++) {
+          if (nz(x, i, seed + 7) > 0.45 && (x + i) % 3 !== 0) { o.p(x, base + 1, 'u'); if (nz(x, i, seed + 11) > 0.6) o.p(x, base + 2, 'u'); }
+          if (snow && nz(x, i, seed + 13) > 0.72 && (x + i) % 2 === 0) o.p(x, base - 3, 's');
+        }
+        if (snow && i === 0) for (let y = 1; y <= 4; y++) for (let x = 24 - y; x <= 24 + y - 1; x++) o.p(x, y, 's');
+      }
     };
-    const TP = (m, l, d, u) => ({ m, l, d, u, k: '#7a4426', K: '#a9683d', q: '#3a1f1a', w: '#e8e2d4', s: '#e6f1f2' });
+    const treeBirch = seed => o => {
+      for (let y = 22; y <= 45; y++) for (let x = 22; x <= 26; x++) {
+        const u = x - 22; let k = u <= 0 ? 'w' : u >= 3 ? 'k' : 'w';
+        if (k === 'w' && (((y * 5 + x * 3) % 11 === 0) || nz(x, y, seed + 15) < 0.1)) k = 'q';
+        o.p(x, y, k);
+      }
+      o.line(24, 30, 15, 22, 1, 'w'); o.line(25, 28, 34, 20, 1, 'w');
+      leafDome(o, 24, 14, 12, 11, seed, 17, 4, 6);
+      o.rect(20, 45, 9, 1, 'q');
+    };
+    const TP = (m, l, h, d, u) => ({ m, l, h, d, u, k: '#6b4a2b', K: '#9a6e42', q: '#33201a', w: '#ece6d8', s: '#e8f3f5' });
+
+    function treeRender(o, pal) {
+      const P = Object.assign({}, pal); if (!P.h) P.h = _hx(P.l, 0.28);
+      const cv = document.createElement('canvas'); cv.width = cv.height = PW;
+      const c = cv.getContext('2d'), g = o.g, cache = {};
+      const col = (k, f) => { const id = k + f; return cache[id] || (cache[id] = _hx(P[k], f)); };
+      for (let y = 0; y < PW; y++) for (let x = 0; x < PW; x++) {
+        const k = g[y][x]; if (!k || !P[k]) continue;
+        const r = nz(x, y, 7), f = r < 0.1 ? -0.06 : r > 0.93 ? 0.06 : 0;
+        c.fillStyle = col(k, f); c.fillRect(x, y, 1, 1);
+      }
+      c.globalAlpha = 0.8;
+      for (let y = 0; y < PW; y++) for (let x = 0; x < PW; x++) {
+        if (g[y][x]) continue;
+        const nk = o.at(x - 1, y) || o.at(x + 1, y) || o.at(x, y - 1) || o.at(x, y + 1);
+        if (nk && P[nk]) { c.fillStyle = col(nk === 's' ? 'u' : nk, -0.62); c.fillRect(x, y, 1, 1); }
+      }
+      cv.kind = 'tree'; cv.glow = [];
+      return cv;
+    }
 
     function buildDetailedWorld() {
       const A3 = 3;
@@ -2176,17 +2250,18 @@
       sprites.wendigo = pxSprite(drawWendigo, { d: '#2b2d42', D: '#3b3e5a', w: '#edf2f4', a: '#a9b4c6', e: '#ef233c', s: '#7fd8ef', c: '#90e0ef' }, 'monster', ['e'], A3);
       sprites.flower = pxSprite(drawFlower, { g: '#3c8c5c', s: '#d9f7ff', c: '#70d6ff', f: '#ffffff' }, 'plant', ['f'], 1);
       sprites.shroom = pxSprite(drawShroom, { o: '#e8641a', D: '#8f3510', y: '#ffe27a', s: '#e3d6bf', g: '#3f8a4a' }, 'plant', ['y'], 1);
-      const mk = (fn, pal) => pxSprite(fn, pal, 'tree', null, 1);
-      const oak = mk(treeOak, TP('#4fae56', '#a8cf52', '#2e7567', '#254a4a'));
-      const oakDark = mk(treeOak, TP('#2f7a52', '#6fae6a', '#1f5a4a', '#183a38'));
-      const spread = mk(treeSpread, TP('#3f9a3f', '#7fd13b', '#25702f', '#1c4a24'));
-      const spreadDark = mk(treeSpread, TP('#2f6a45', '#5f9f58', '#1f4a38', '#16322a'));
-      const autumn = mk(treeAutumn, Object.assign(TP('#ff9b3d', '#ffd35a', '#e0603a', '#a8454a'), { k: '#6b2c3a', K: '#8f4552', q: '#3d1824' }));
-      const pineSnow = mk(o => treePine(o, true, 4), TP('#1f4d3a', '#3c7d5c', '#12301f', '#0c2016'));
-      const pineDark = mk(o => treePine(o, false, 5), TP('#1d4a2e', '#3d7d49', '#10301c', '#0a2012'));
-      const birch = mk(treeBirch, TP('#7fc24a', '#c4e86a', '#46902f', '#2f6a28'));
-      treeSprites[2] = pineSnow; pineSnow.variants = [pineSnow, pineDark, pineSnow, oakDark, pineDark, spreadDark, autumn, pineSnow];
-      treeSprites[10] = oak; oak.variants = [oak, spread, birch, autumn, spread, oak, birch];
+      const mk = (fn, pal) => { const o = pxNew(); fn(o); return treeRender(o, pal); };
+      const GA = TP('#3f8a47', '#6bb350', '#a5d86a', '#2a6a37', '#173f2a');
+      const GB = TP('#2f7a52', '#5fa66a', '#98d08a', '#1f5a46', '#12362f');
+      const GC = TP('#4f9a3c', '#82c24a', '#bfe56e', '#2f6f2d', '#1b4220');
+      const oak1 = mk(treeOak(11), GA), oak2 = mk(treeOak(23), GC), oakDark = mk(treeOak(37), GB);
+      const spread1 = mk(treeSpread(51), GA), spread2 = mk(treeSpread(63), GB);
+      const autumn = mk(treeAutumn(71), Object.assign(TP('#e0782f', '#f5a742', '#ffd36a', '#b0452a', '#6e2a22'), { k: '#5e3a2b', K: '#8a5a3e' }));
+      const PN = TP('#2d6b46', '#4d9a68', '#79c493', '#1c4a31', '#0f2c1e'), PD = TP('#285c3c', '#46885a', '#6db07f', '#194029', '#0d2618');
+      const pineSnow = mk(treePine(true, 4, 5), PN), pineSnow2 = mk(treePine(true, 5, 17), PN), pineDark = mk(treePine(false, 5, 29), PD), pineDark2 = mk(treePine(false, 4, 41), PD);
+      const birch = mk(treeBirch(83), TP('#7fc24a', '#a9dd63', '#d2f08a', '#46902f', '#25582a'));
+      treeSprites[2] = pineSnow; pineSnow.variants = [pineSnow, pineDark, pineSnow2, oakDark, pineDark2, spread2, autumn, pineSnow, pineSnow2];
+      treeSprites[10] = oak1; oak1.variants = [oak1, spread1, birch, autumn, oak2, spread1, oak1, birch, oak2];
       Object.keys(treeSprites).forEach(k => treeSprites[k].variants.forEach(v => { v.glow = []; v.kind = 'tree'; }));
     }
 
@@ -2982,52 +3057,44 @@
     }));
 
     // ==========================================================================
-    // SISTEM SAVE & LOAD (MENGGUNAKAN LOCALSTORAGE BROWSER)
+    // SISTEM SAVE & LOAD (FILE CADANGAN / KODE SIMPANAN - BISA DIPINDAH ANTAR PERANGKAT)
     // ==========================================================================
-    window.saveGame = function() {
+    const SAVE_MAGIC = 'ARSAVE1:';
+    const seedNow = () => { try { return localStorage.getItem('fv6_city_seed') || '20261020'; } catch (e) { return '20261020'; } };
+
+    function buildSave() {
+      const d = new Date();
+      return {
+        game: 'ash_and_rime',
+        format: 3,
+        villageV2: true,
+        exportedAt: d.toISOString(),
+        timestamp: d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        seed: seedNow(),
+        currentMapId,
+        playerX: player.x,
+        playerY: player.y,
+        gameData: JSON.parse(JSON.stringify(gameData))
+      };
+    }
+    const saveToCode = o => SAVE_MAGIC + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+    function parseSave(text) {
+      let t = String(text || '').replace(/^\uFEFF/, '').trim();
+      if (!t) throw new Error('kosong');
+      let json = t;
+      if (t.startsWith(SAVE_MAGIC)) json = decodeURIComponent(escape(atob(t.slice(SAVE_MAGIC.length).replace(/\s+/g, ''))));
+      const o = JSON.parse(json);
+      if (!o || typeof o !== 'object' || !o.gameData || typeof o.gameData !== 'object' || typeof o.gameData.coins !== 'number') throw new Error('format');
+      return o;
+    }
+
+    // Inti pemuatan: menerapkan objek simpanan ke permainan
+    window.loadGame = function(saved) {
+      if (!saved) return window.openLoadMenu();
       try {
-        const payload = {
-          version: 2,
-          villageV2: true,
-          timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-          currentMapId,
-          playerX: player.x,
-          playerY: player.y,
-          gameData
-        };
-        localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
-        const ind = document.getElementById('save-indicator');
-        ind.textContent = `Tersimpan (${payload.timestamp})`;
-        ind.style.color = '#80ed99';
-
-        startDialogue(
-          'Sistem Penyimpanan (Save Game)',
-          'Data Tersimpan di Peramban',
-          '#80ed99',
-          `Progres permainanmu di [${MAPS[currentMapId].name}] beserta seluruh Koin Perak (${gameData.coins}), Senjata, Pertahanan, Inventori, dan Status Misi telah berhasil disimpan!`,
-          [{ label: 'Lanjutkan Permainan', action: closeDialogue }]
-        );
-      } catch (err) {
-        startDialogue('Gagal Menyimpan', 'Sistem', '#e06c75', 'Peramban tidak mengizinkan penyimpanan lokal.', []);
-      }
-    };
-
-    window.loadGame = function() {
-      try {
-        const raw = localStorage.getItem(SAVE_KEY);
-        if (!raw) {
-          startDialogue(
-            'Belum Ada Data Simpanan',
-            'Sistem Muat (Load Game)',
-            '#ffd166',
-            'Belum ditemukan data penyimpanan sebelumnya. Tekan tombol [💾 Simpan] di bagian atas layar untuk menyimpan progresmu terlebih dahulu.',
-            [{ label: 'Mengerti', action: closeDialogue }]
-          );
-          return;
-        }
-
-        const saved = JSON.parse(raw);
         if (saved && saved.gameData) {
+          // Bersihkan flag lama agar progres tidak "bocor" dari sesi sekarang
+          Object.keys(gameData.flags).forEach(k => { if (!(k in (saved.gameData.flags || {}))) gameData.flags[k] = (k === 'supplyOutcome') ? null : false; });
           Object.assign(gameData, saved.gameData);
           if (saved.gameData.reputation) Object.assign(gameData.reputation, saved.gameData.reputation);
           if (saved.gameData.flags) Object.assign(gameData.flags, saved.gameData.flags);
@@ -3035,7 +3102,7 @@
             gameData.inventory = saved.gameData.inventory;
           }
 
-          currentMapId = saved.currentMapId || 'oakhaven';
+          currentMapId = (saved.currentMapId && MAPS[saved.currentMapId]) ? saved.currentMapId : 'oakhaven';
           WORLD_MAP = MAPS[currentMapId].grid;
           player.x = typeof saved.playerX === 'number' ? saved.playerX : 14 * TILE_SIZE;
           player.y = typeof saved.playerY === 'number' ? saved.playerY : 12 * TILE_SIZE;
@@ -3061,8 +3128,131 @@
           );
         }
       } catch (err) {
-        startDialogue('Gagal Memuat', 'Sistem', '#e06c75', 'Data simpanan rusak atau tidak kompatibel.', []);
+        startDialogue('Gagal Memuat', 'Sistem', '#e06c75', 'Data simpanan rusak atau tidak kompatibel.', [{ label: 'Tutup', action: closeDialogue }]);
       }
+    };
+
+    // Impor: jika seed dunia berbeda (perangkat lain), simpan seed lalu muat ulang halaman agar peta identik
+    function importSave(obj) {
+      const cur = seedNow();
+      if (obj.seed !== undefined && String(obj.seed) !== String(cur)) {
+        try {
+          localStorage.setItem('fv_pending_import', JSON.stringify(obj));
+          localStorage.setItem('fv6_city_seed', String(obj.seed));
+          closeSaveModal();
+          location.reload();
+          return;
+        } catch (e) { try { localStorage.removeItem('fv_pending_import'); } catch (e2) {} }
+      }
+      closeSaveModal();
+      window.loadGame(obj);
+    }
+
+    // ---- Antarmuka modal Simpan / Muat ----
+    (function injectSaveUI() {
+      const st = document.createElement('style');
+      st.textContent = `
+        #sv-ov { position: fixed; inset: 0; z-index: 100000; display: none; align-items: center; justify-content: center; background: rgba(5,4,3,0.82); padding: 10px; }
+        #sv-ov.open { display: flex; }
+        #sv-box { width: min(460px, 100%); max-height: 94vh; overflow-y: auto; background: #1b1611; border: 2px solid #d4af37; border-radius: 6px; padding: 14px; color: #e0d8cc; font-family: "Courier New", monospace; font-size: 12px; box-shadow: 0 0 24px rgba(0,0,0,0.8); }
+        #sv-box h3 { margin: 0 0 6px; font-size: 14px; color: #ffd966; }
+        #sv-box p { margin: 6px 0; line-height: 1.45; color: #b8afa6; }
+        #sv-box .sv-warn { color: #ffd166; }
+        #sv-box .sv-btn { display: block; width: 100%; margin: 6px 0; padding: 10px 8px; background: #2b231c; color: #d4af37; border: 1px solid #d4af37; font: bold 12px "Courier New", monospace; cursor: pointer; text-align: center; border-radius: 3px; }
+        #sv-box .sv-btn:active { background: #d4af37; color: #000; }
+        #sv-box .sv-btn.g { color: #80ed99; border-color: #80ed99; }
+        #sv-box .sv-btn.b { color: #70d6ff; border-color: #70d6ff; }
+        #sv-box .sv-btn.x { color: #b8afa6; border-color: #6d645a; }
+        #sv-box textarea { width: 100%; box-sizing: border-box; height: 84px; background: #0f0c09; color: #cfe8d5; border: 1px solid #4a4036; font: 11px "Courier New", monospace; padding: 6px; resize: vertical; border-radius: 3px; }
+        #sv-box .sv-msg { min-height: 16px; margin: 6px 0; font-weight: bold; }
+        #sv-box .sv-sep { border: 0; border-top: 1px dashed #4a4036; margin: 10px 0; }
+      `;
+      document.head.appendChild(st);
+      const ov = document.createElement('div');
+      ov.id = 'sv-ov';
+      ov.innerHTML = '<div id="sv-box" role="dialog" aria-modal="true"></div>';
+      document.body.appendChild(ov);
+      ['keydown', 'keyup', 'keypress'].forEach(ev => ov.addEventListener(ev, e => { e.stopPropagation(); if (ev === 'keydown' && e.key === 'Escape') closeSaveModal(); }));
+      ov.addEventListener('pointerdown', e => { if (e.target === ov) closeSaveModal(); });
+    })();
+
+    const svBox = () => document.getElementById('sv-box');
+    const svMsg = (t, c) => { const m = document.getElementById('sv-msg'); if (m) { m.textContent = t; m.style.color = c || '#80ed99'; } };
+    function closeSaveModal() { document.getElementById('sv-ov').classList.remove('open'); }
+    function openSaveModal(html) {
+      clearAllMovementKeys();
+      svBox().innerHTML = html;
+      document.getElementById('sv-ov').classList.add('open');
+    }
+    const stamp = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()); };
+
+    window.saveGame = function() {
+      let data;
+      try { data = buildSave(); } catch (e) { return; }
+      const code = saveToCode(data);
+      const fname = 'AshRime-save-' + stamp() + '.json';
+      const canShare = !!(navigator.share && navigator.canShare && (() => { try { return navigator.canShare({ files: [new File(['{}'], fname, { type: 'application/json' })] }); } catch (e) { return false; } })());
+      openSaveModal(`
+        <h3>💾 Simpan / Cadangkan Progres</h3>
+        <p>Berisi progres, inventori, status misi, dan posisi (${MAPS[currentMapId].name}, ${gameData.coins} Perak). Simpan file/kode ini di tempat aman (Drive, WhatsApp, email) untuk backup atau untuk melanjutkan di perangkat lain.</p>
+        <button class="sv-btn g" id="sv-dl">⬇ Unduh File Cadangan (.json)</button>
+        ${canShare ? '<button class="sv-btn g" id="sv-share">📤 Kirim / Bagikan File</button>' : ''}
+        <button class="sv-btn b" id="sv-copy">📋 Salin Kode Simpanan</button>
+        <textarea id="sv-code" readonly></textarea>
+        <div class="sv-msg" id="sv-msg"></div>
+        <button class="sv-btn x" id="sv-close">Tutup</button>
+      `);
+      const ta = document.getElementById('sv-code'); ta.value = code;
+      ta.addEventListener('focus', () => ta.select());
+      const done = (t) => { const ind = document.getElementById('save-indicator'); ind.textContent = `Dicadangkan (${data.timestamp})`; ind.style.color = '#80ed99'; svMsg(t); };
+      const download = () => {
+        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = fname;
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+        done('✔ File cadangan diunduh: ' + fname);
+      };
+      document.getElementById('sv-dl').onclick = download;
+      const sh = document.getElementById('sv-share');
+      if (sh) sh.onclick = async () => {
+        try { await navigator.share({ files: [new File([JSON.stringify(data)], fname, { type: 'application/json' })], title: 'Simpanan Ash & Rime' }); done('✔ File dibagikan.'); }
+        catch (e) { if (e && e.name !== 'AbortError') download(); }
+      };
+      document.getElementById('sv-copy').onclick = async () => {
+        try { await navigator.clipboard.writeText(code); done('✔ Kode disalin. Tempel di perangkat lain lewat tombol Muat.'); }
+        catch (e) { ta.focus(); ta.select(); try { document.execCommand('copy'); done('✔ Kode disalin.'); } catch (e2) { svMsg('Tekan lama pada kotak kode lalu pilih Salin.', '#ffd166'); } }
+      };
+      document.getElementById('sv-close').onclick = closeSaveModal;
+    };
+
+    window.openLoadMenu = function() {
+      let legacy = false;
+      try { legacy = !!localStorage.getItem(SAVE_KEY); } catch (e) {}
+      openSaveModal(`
+        <h3>📂 Muat Progres</h3>
+        <p class="sv-warn">Memuat akan menimpa progres permainan yang sedang berjalan. Pilih file cadangan (.json) atau tempel kode simpanan dari perangkat mana pun.</p>
+        <button class="sv-btn b" id="sv-pick">📁 Pilih File Cadangan (.json)</button>
+        <input type="file" id="sv-file" accept=".json,.txt,application/json,text/plain" style="display:none">
+        <hr class="sv-sep">
+        <p>Atau tempel kode simpanan:</p>
+        <textarea id="sv-paste" placeholder="ARSAVE1:..."></textarea>
+        <button class="sv-btn g" id="sv-go">⬆ Muat dari Kode</button>
+        ${legacy ? '<hr class="sv-sep"><p>Simpanan lama ditemukan di peramban ini.</p><button class="sv-btn" id="sv-old">♻ Impor Simpanan Lama</button>' : ''}
+        <div class="sv-msg" id="sv-msg"></div>
+        <button class="sv-btn x" id="sv-close">Tutup</button>
+      `);
+      const tryLoad = (text) => {
+        let o; try { o = parseSave(text); } catch (e) { return svMsg('✖ Data tidak valid / rusak. Pastikan file atau kode utuh.', '#e06c75'); }
+        importSave(o);
+      };
+      const fi = document.getElementById('sv-file');
+      document.getElementById('sv-pick').onclick = () => fi.click();
+      fi.onchange = () => { const f = fi.files && fi.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => tryLoad(r.result); r.onerror = () => svMsg('✖ Gagal membaca file.', '#e06c75'); r.readAsText(f); };
+      document.getElementById('sv-go').onclick = () => tryLoad(document.getElementById('sv-paste').value);
+      const old = document.getElementById('sv-old');
+      if (old) old.onclick = () => { try { const o = JSON.parse(localStorage.getItem(SAVE_KEY)); if (!o || !o.gameData) throw 0; closeSaveModal(); window.loadGame(o); } catch (e) { svMsg('✖ Simpanan lama rusak.', '#e06c75'); } };
+      document.getElementById('sv-close').onclick = closeSaveModal;
     };
 
     // ==========================================================================
@@ -4903,6 +5093,7 @@
         { map: 'forest', done: f.elfQuestRewarded, title: '[Tempur] Penjaga Suaka Thalorien', hint: 'Basmi Serigala & Golem Akar untuk Thalorien.' }
       ];
 
+      window.__qBase = allQuests;
       const trackable = allQuests.filter(q => !q.isHunt);
       const completedCount = trackable.filter(q => q.done).length;
       document.getElementById('quest-counter').textContent = `${completedCount}/${trackable.length} Selesai`;
@@ -5323,6 +5514,70 @@
       }
     }
 
+    // ---------- AIR ANIMASI (tile 5): gelombang mengalir, kilau matahari, busa tepi, bayangan jembatan ----------
+    const WTR_BASE = ['#1b4d6b', '#1e5473', '#194764', '#215a7a'];
+    const WTR_HI = [0.10, 0.16, 0.22, 0.28, 0.34].map(a => 'rgba(165,215,238,' + a + ')');
+    const WTR_LO = 'rgba(6,26,44,0.30)';
+    function drawWater(x, y, r, c) {
+      const S = TILE_SIZE, t = tick;
+      ctx.fillStyle = WTR_BASE[(c * 7 + r * 13 + ((c * r) >> 2)) & 3];
+      ctx.fillRect(x, y, S, S);
+      // kedalaman: bercak gelap/terang lembut yang bergeser perlahan
+      const dp = Math.sin(c * 0.9 + r * 0.6 + t * 0.01) * 0.5 + 0.5;
+      ctx.fillStyle = 'rgba(5,30,52,' + (0.10 + 0.16 * dp).toFixed(2) + ')';
+      ctx.fillRect(x, y, S, S);
+      // riak gelombang (mengalir ke bawah sungai & bergoyang ke samping)
+      for (let row = 0; row < 4; row++) {
+        const by = y + 3 + row * 8;
+        for (let i = 0; i < S; i += 4) {
+          const wx = x + i;
+          const ph = Math.sin(wx * 0.17 + by * 0.11 - t * 0.045 + row * 1.9) + Math.sin(wx * 0.06 + by * 0.21 + t * 0.03) * 0.6;
+          const yy = by + Math.round(Math.sin(wx * 0.12 + t * 0.05 + row) * 1.2);
+          if (ph > 0.55) {
+            ctx.fillStyle = WTR_HI[Math.min(4, Math.floor((ph - 0.55) * 3.2))];
+            ctx.fillRect(wx, yy, 4, 1);
+            if (ph > 1.1) ctx.fillRect(wx + 1, yy - 1, 2, 1);
+          } else if (ph < -0.7) {
+            ctx.fillStyle = WTR_LO;
+            ctx.fillRect(wx, yy + 1, 4, 1);
+          }
+        }
+      }
+      // kilau cahaya
+      for (let k = 0; k < 2; k++) {
+        const sd = c * 3 + k + r * 17;
+        const tw = Math.sin(t * 0.06 + nz(sd, r, 85) * 6.283);
+        if (tw > 0.82) {
+          const px = x + 2 + Math.floor(nz(sd, r, 83) * 27), py = y + 2 + Math.floor(nz(sd, r, 84) * 27);
+          ctx.fillStyle = 'rgba(235,248,255,0.85)';
+          ctx.fillRect(px, py, 2, 1); ctx.fillRect(px, py - 1, 1, 3);
+        }
+      }
+      // tepi: busa di tepi daratan, bayangan di bawah jembatan
+      const G = WORLD_MAP, mr = G.length, mc = G[0].length;
+      const nb = (rr, cc) => (rr < 0 || cc < 0 || rr >= mr || cc >= mc) ? 5 : G[rr][cc];
+      const sides = [[nb(r - 1, c), 0], [nb(r + 1, c), 1], [nb(r, c - 1), 2], [nb(r, c + 1), 3]];
+      for (const [n, sd] of sides) {
+        if (n === 5) continue;
+        const bridge = (n === 6);
+        if (bridge) {
+          ctx.fillStyle = 'rgba(0,12,24,0.38)';
+          if (sd === 0) ctx.fillRect(x, y, S, 7); else if (sd === 1) ctx.fillRect(x, y + S - 7, S, 7);
+          else if (sd === 2) ctx.fillRect(x, y, 7, S); else ctx.fillRect(x + S - 7, y, 7, S);
+          continue;
+        }
+        ctx.fillStyle = 'rgba(8,32,50,0.28)';
+        if (sd === 0) ctx.fillRect(x, y, S, 4); else if (sd === 1) ctx.fillRect(x, y + S - 4, S, 4);
+        else if (sd === 2) ctx.fillRect(x, y, 4, S); else ctx.fillRect(x + S - 4, y, 4, S);
+        for (let i = 0; i < S; i += 2) {
+          const w = Math.sin((sd < 2 ? x + i : y + i) * 0.35 + t * 0.07 + sd) > 0 ? 3 : 2;
+          ctx.fillStyle = 'rgba(225,240,248,' + (w === 3 ? 0.62 : 0.4) + ')';
+          if (sd === 0) ctx.fillRect(x + i, y, 2, w); else if (sd === 1) ctx.fillRect(x + i, y + S - w, 2, w);
+          else if (sd === 2) ctx.fillRect(x, y + i, w, 2); else ctx.fillRect(x + S - w, y + i, w, 2);
+        }
+      }
+    }
+
     function render() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -5348,34 +5603,9 @@
             ctx.drawImage(tileTextures[currentMapId === 'wild_forest' ? 1 : 8], x, y);
           }
 
-          if (!(treeSprites[tileId])) ctx.drawImage(tileTextures[tileId], x, y);
+          if (tileId === 5) drawWater(x, y, r, c);
+          else if (!(treeSprites[tileId])) ctx.drawImage(tileTextures[tileId], x, y);
 
-          if (tileId === 7) {
-            const flicker = Math.sin(tick * 0.15) * 4;
-            const grad = ctx.createRadialGradient(x + 16, y + 12, 4, x + 16, y + 12, 44 + flicker);
-            grad.addColorStop(0, 'rgba(255, 160, 40, 0.35)');
-            grad.addColorStop(1, 'rgba(255, 120, 0, 0)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(x - 32, y - 32, 96, 96);
-          }
-
-          if (tileId === 13) {
-            const pulse = Math.sin(tick * 0.1) * 6;
-            const grad = ctx.createRadialGradient(x + 16, y + 16, 4, x + 16, y + 16, 52 + pulse);
-            grad.addColorStop(0, 'rgba(110, 255, 230, 0.38)');
-            grad.addColorStop(1, 'rgba(40, 180, 160, 0)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(x - 36, y - 36, 104, 104);
-          }
-
-          if (tileId === 16 && (r + c) % 2 === 0) {
-            const glow = Math.sin(tick * 0.12 + r) * 4;
-            const grad = ctx.createRadialGradient(x + 16, y + 16, 4, x + 16, y + 16, 36 + glow);
-            grad.addColorStop(0, 'rgba(255, 90, 0, 0.25)');
-            grad.addColorStop(1, 'rgba(255, 40, 0, 0)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(x - 20, y - 20, 72, 72);
-          }
         }
       }
 
@@ -5386,6 +5616,38 @@
           if (treeSprites[tid]) drawTree(treeSprites[tid], c * TILE_SIZE, r * TILE_SIZE, r, c);
           else if (tid === 9) drawGlowBed(c * TILE_SIZE, r * TILE_SIZE, r, c);
         }
+      }
+
+      // Lapisan cahaya (digambar SETELAH semua tile agar menyinari ke segala arah, termasuk kanan & bawah)
+      {
+        const mr = getMapRows(), mc = getMapCols();
+        const r0 = Math.max(0, startRow - 3), r1 = Math.min(mr - 1, endRow + 3), c0 = Math.max(0, startCol - 3), c1 = Math.min(mc - 1, endCol + 3);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (let r = r0; r <= r1; r++) {
+          for (let c = c0; c <= c1; c++) {
+            const tid = WORLD_MAP[r][c];
+            if (tid !== 7 && tid !== 13 && !(tid === 16 && (r + c) % 2 === 0)) continue;
+            const x = c * TILE_SIZE, y = r * TILE_SIZE;
+            let cx = x + 16, cy = y + 16, rad, stops;
+            if (tid === 7) {
+              const fl = Math.sin(tick * 0.15 + c * 1.7 + r * 0.9) * 3 + Math.sin(tick * 0.37 + c * 2.1) * 1.5;
+              cy = y + 10; rad = 60 + fl;
+              stops = [[0, 'rgba(255,175,70,0.34)'], [0.35, 'rgba(255,135,35,0.17)'], [0.7, 'rgba(255,100,10,0.05)'], [1, 'rgba(255,90,0,0)']];
+            } else if (tid === 13) {
+              rad = 56 + Math.sin(tick * 0.1) * 6;
+              stops = [[0, 'rgba(110,255,230,0.30)'], [0.4, 'rgba(70,220,200,0.13)'], [1, 'rgba(40,180,160,0)']];
+            } else {
+              rad = 40 + Math.sin(tick * 0.12 + r) * 4;
+              stops = [[0, 'rgba(255,90,0,0.22)'], [0.5, 'rgba(255,70,0,0.09)'], [1, 'rgba(255,40,0,0)']];
+            }
+            const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, rad);
+            stops.forEach(s => g.addColorStop(s[0], s[1]));
+            ctx.fillStyle = g;
+            ctx.fillRect(cx - rad, cy - rad, rad * 2, rad * 2);
+          }
+        }
+        ctx.restore();
       }
 
       // Penanda Visual Jalur Pindah Peta di 4 Wilayah
@@ -5475,6 +5737,7 @@
 
       const bobOffset = Math.sin(player.stepFrame) * 1.5;
       drawLiveSprite(sprites.aldric, Math.round(player.x), Math.round(player.y), { phase: 0, bob: bobOffset, moving: player.stepFrame > 0, step: player.stepFrame * 2, flip: player.facing < 0 });
+      if (window.__roofLayer) window.__roofLayer();
 
       if (nearbyNPC && currentState === STATE.EXPLORE) {
         const actionVerb = nearbyNPC.isMonster ? 'Buru/Lawan' : 'Interaksi';
@@ -5542,7 +5805,7 @@
       'Desa Perbatasan Oakhaven',
       '#d4af37',
       hasExistingSave
-        ? '"Data simpanan terdeteksi! Kau dapat menekan tombol [📂 Muat] di kanan atas layar untuk melanjutkan progres terakhirmu, atau langsung menjelajahi jalur Barat menuju Hutan Belantara Vaelen!"'
+        ? '"Simpanan lama terdeteksi di peramban ini! Tekan [📂 Muat] lalu pilih Impor Simpanan Lama, kemudian tekan [💾 Simpan] untuk membuat file cadangan yang bisa dibawa ke perangkat lain."'
         : '"Jalur Barat menuju Hutan Belantara Vaelen kini terbuka! Di sana aku bisa berburu berbagai monster hutan, menjual hasil loot pada Garruk, membeli potion pada Vaelen, lalu membeli senjata & perisai Elf pada Elandor di Suaka Elf..."',
       [{ label: 'Mulai Petualangan (PC / Android)', action: closeDialogue }]
     );
@@ -5613,11 +5876,30 @@
     function panel() {
       const box = document.getElementById('fvx-box');
       if (!box) return;
-      const a = S().act;
-      box.innerHTML = a.length ? a.map(q => `<div class="quest-item"><strong class="${done(q) ? 'q-done' : 'q-active'}">${done(q) ? '✔' : '◈'} ${q.title}</strong>` +
-        q.obj.map(o => `<br><span style="color:#b8afa6;">${prog(o) >= o.n ? '☑' : '☐'} ${o.txt} (${prog(o)}/${o.n})</span>`).join('') +
-        (done(q) ? '<br><span style="color:#ffd166;">➜ Lapor ke Guild di Oakhaven</span>' : '') + '</div>').join('')
-        : '<div class="quest-item" style="color:#8c8275;">Belum ada tugas aktif. Ambil misi di Guild Adventurer (Oakhaven).</div>';
+      const a = S().act, esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      const world = (window.__qBase || []).concat(window.__qCap || []);
+      const open = world.filter(q => !q.done).sort((x, y) => (x.map === currentMapId ? 0 : 1) - (y.map === currentMapId ? 0 : 1));
+      const doneN = world.filter(q => q.done).length;
+      const sec = t => `<div style="margin:8px 0 4px;color:#d4af37;font-weight:bold;font-size:11px;border-bottom:1px dashed #4a4036;">${t}</div>`;
+      let h = '';
+      if (a.length) {
+        h += sec('📋 Tugas Guild');
+        h += a.map(q => `<div class="quest-item"><strong class="${done(q) ? 'q-done' : 'q-active'}">${done(q) ? '✔' : '◈'} ${q.title}</strong>` +
+          q.obj.map(o => `<br><span style="color:#b8afa6;">${prog(o) >= o.n ? '☑' : '☐'} ${o.txt} (${prog(o)}/${o.n})</span>`).join('') +
+          (done(q) ? '<br><span style="color:#ffd166;">➜ Lapor ke Guild di Oakhaven</span>' : '') + '</div>').join('');
+      }
+      if (open.length) {
+        h += sec('📜 Misi Dunia & Wilayah');
+        h += open.map(q => {
+          const m = (typeof MAPS !== 'undefined' && MAPS[q.map]) ? (MAPS[q.map].short || MAPS[q.map].name) : '';
+          const here = q.map === currentMapId ? ' <span style="color:#80ed99;">📍 di sini</span>' : (m ? ` <span style="color:#8c8275;">(${esc(m)})</span>` : '');
+          return `<div class="quest-item"><strong class="q-active">◈ ${esc(q.title)}</strong>${here}<br><span style="color:#b8afa6;">${esc(q.hint)}</span></div>`;
+        }).join('');
+      }
+      if (!a.length && !open.length) h = '<div class="quest-item" style="color:#8c8275;">Belum ada tugas aktif. Ambil misi di Guild Adventurer (Oakhaven).</div>';
+      else if (!a.length) h = '<div class="quest-item" style="color:#8c8275;">Tidak ada tugas Guild. Ambil di Guild Adventurer (Oakhaven).</div>' + h;
+      if (doneN) h += `<div class="quest-item" style="color:#98c379;">✔ ${doneN} misi sudah selesai (lihat Jurnal Misi).</div>`;
+      box.innerHTML = h;
     }
 
     function day() {
@@ -5743,7 +6025,7 @@
     npcsByMap.oakhaven.push({ id: 'guild_clerk', name: 'Resepsionis Guild', race: 'Guild Adventurer Oakhaven', color: '#7ec8ff', x: 24 * TILE_SIZE, y: 22 * TILE_SIZE, spriteKey: 'garruk' });
     const sec = document.getElementById('quest-status').closest('.panel-section'), p = document.createElement('div');
     p.className = 'panel-section';
-    p.innerHTML = '<div class="panel-title"><span>📋 Tugas Aktif</span></div><div class="quest-box" id="fvx-box"></div>';
+    p.innerHTML = '<div class="panel-title"><span>📋 Tugas Aktif (Semua Misi)</span></div><div class="quest-box" id="fvx-box"></div>';
     sec.insertAdjacentElement('afterend', p);
 
     const _ia = interactWithNPC; interactWithNPC = function (n) { ev('talk', n.id); if (n.id === 'guild_clerk') return guildMenu(); return _ia(n); };
@@ -5753,9 +6035,10 @@
     const _up = update; let fc = 0; update = function () { _up(); if (++fc % 30 === 0) tk(); };
     const _rd = render; render = function () { _rd(); hud(); };
     const _lg = window.loadGame;
-    window.loadGame = function () {
-      _lg();
-      try { const r = JSON.parse(localStorage.getItem(SAVE_KEY)); if (r && r.gameData && !r.gameData.fvx) gameData.fvx = fresh(); } catch (e) {}
+    window.loadGame = function (saved) {
+      if (!saved) return _lg();
+      _lg(saved);
+      if (saved.gameData && !saved.gameData.fvx) gameData.fvx = fresh();
       pv = {}; day(); updateUI();
     };
     window.FVX = { tk, S, day };
@@ -5913,16 +6196,18 @@
         for (let k = 0; k < 5; k++) { const vx = off + k * 4; if (vx < 16) bx(x, d, vx, y + 1, 1, 2); }
         for (let k = 0; k < 4; k++) if (hsh(id, row, k) < 0.25) bx(x, 'rgba(255,255,255,0.08)', off + k * 4 + 1, y + 1, 3, 2);
       }
-      if (kind !== 2) { bx(x, d, 0, 0, 16, 1); bx(x, l, 0, 1, 16, 2); bx(x, d, 0, 3, 16, 1); }
-      if (kind !== 1) { bx(x, 'rgba(0,0,0,0.28)', 0, 12, 16, 1); bx(x, 'rgba(0,0,0,0.55)', 0, 13, 16, 3); }
+      if (kind === 0 || kind === 1) { bx(x, d, 0, 0, 16, 1); bx(x, l, 0, 1, 16, 2); bx(x, d, 0, 3, 16, 1); }
+      if (kind === 3) bx(x, 'rgba(255,255,255,0.05)', 0, 0, 16, 16);
+      if (kind === 4) bx(x, 'rgba(0,0,0,0.17)', 0, 0, 16, 16);
+      if (kind === 0 || kind === 2) { bx(x, 'rgba(0,0,0,0.28)', 0, 12, 16, 1); bx(x, 'rgba(0,0,0,0.55)', 0, 13, 16, 3); }
       if (edge === 1) { bx(x, d, 0, 0, 2, 16); bx(x, 'rgba(0,0,0,0.3)', 2, 0, 1, 16); }
       if (edge === 2) { bx(x, d, 14, 0, 2, 16); bx(x, 'rgba(0,0,0,0.3)', 13, 0, 1, 16); }
-      if (edge === 3 && kind !== 2) {
+      if (edge === 3 && kind !== 2 && kind !== 3) {
         bx(x, '#4a433c', 9, 0, 5, 9); bx(x, '#6d655d', 9, 0, 5, 2); bx(x, '#1c1815', 10, 0, 3, 1);
         bx(x, '#38322c', 9, 4, 5, 1); bx(x, '#38322c', 9, 7, 5, 1); bx(x, 'rgba(0,0,0,0.3)', 9, 9, 5, 1);
       }
       if (snow) for (let i = 0; i < 5; i++) {
-        const sx = Math.floor(hsh(id, i, 7) * 13), sy = kind !== 2 ? Math.floor(hsh(id, i, 8) * 5) : Math.floor(hsh(id, i, 8) * 11);
+        const sx = Math.floor(hsh(id, i, 7) * 13), sy = (kind === 0 || kind === 1) ? Math.floor(hsh(id, i, 8) * 5) : Math.floor(hsh(id, i, 8) * 11);
         bx(x, '#eef4f7', sx, sy, 3, 1); bx(x, '#cfdbe2', sx + 1, sy + 1, 2, 1);
       }
     });
@@ -6084,6 +6369,7 @@
   });
 
   function buildCapitalCore() {
+    COREPASS = true;
     const CC = 100, CR = 56, g = mk(CR, CC, 8);
     const F = (r1, c1, r2, c2, t) => { for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) g[r][c] = t; };
     const H = (r1, c1, r2, c2, dc, fl, B) => { F(r1, c1, r2, c2, 3); F(r1 + 1, c1 + 1, r2 - 1, c2 - 1, fl); g[r2][dc] = fl; g[r2][dc + 1] = fl; BLD_CORE.push(Object.assign({ r1, c1, r2, c2, dc }, B)); };
@@ -6131,11 +6417,12 @@
       const corner = (r <= 17 || r >= 38) && (c <= 73 || c >= 92);
       g[r][c] = corner ? castleTower() : (r === 16 || r === 39) ? castleCrenel() : castleWall(hsh(r, c, 9) < 0.12 ? 1 : hsh(r, c, 5) < 0.2 ? 2 : 0);
     }
+    COREPASS = false;
     return g;
   }
 
   // ===== UPDATE V7: IBU KOTA 200x100 = Kota Dalam (peta lama, bertembok) + distrik, 2 pasar besar & ratusan warga =====
-  const LB = [], GD = {}, FD = {}, OCC = new Set();
+  const LB = [], GD = {}, FD = {}, OCC = new Set(), ALLB = []; let COREPASS = false;
   'roti|Roti Madu Hangat|8|18|12;kue|Kue Jahe Rempah|10|15|20;pai|Pai Daging Domba|16|30|20;dend|Dendeng Rusa Asap|14|25|10;sosis|Sosis Panggang Kota|12|22|14;ikan|Ikan Sungai Bakar|13|26|14;sup|Sup Labu Panas|11|18|35;keju|Keju Gunung Tua|15|28|8;apel|Apel Manis Beku|7|14|6;anggur|Anggur Hangat Rempah|18|10|45;teh|Teh Jahe Surya|9|8|30;madu|Madu Sarang Emas|24|40|20;tonik|Tonik Apoteker|30|55|25;salep|Salep Herbal Kota|20|40|20;penawar|Penawar Embun Perak|38|65|35;herb|Salep Herbal Hutan|12|35|20;brew|Tonik Bara Dwarf|34|50|40'.split(';').forEach(s => {
     const [id, n, p, h, t] = s.split('|');
     GD[id] = { n, p: +p, d: 'Pulihkan +' + h + ' HP & +' + t + '% Suhu', i: '+' + h + ' HP, +' + t + '% Suhu' };
@@ -6184,11 +6471,12 @@
   // Menata bangunan pada sebuah persegi: atap berpunggung, dinding bergaya, jendela, pintu terbuka, lantai kayu
   function styleBuilding(g, B) {
     const { r1, c1, r2, c2, dc } = B, rr = B.rr || 1, big = !!B.big, ws = B.ws, pa = B.pal || 0, hall = B.kind !== 'house' && B.kind !== 'shop';
+    // Atap kini lapisan terpisah (memudar saat pemain masuk); baris atas petak = dinding belakang bagian dalam
     for (let r = r1; r < r1 + rr; r++) for (let c = c1; c <= c2; c++) {
-      const kind = rr === 1 ? 0 : (r === r1 ? 1 : 2);
-      const edge = c === c1 ? 1 : c === c2 ? 2 : (B.chim === c && r === r1 ? 3 : 0);
-      g[r][c] = roofTile(B.ci, kind, edge, B.snow ? 1 : 0);
+      const bt = (r === r1 + rr - 1) ? (big ? (((c - c1) % 3 === 1) ? 3 : 0) : (hsh(r, c, 41) < 0.5 ? 1 : 0)) : 0;
+      g[r][c] = wallTile(ws, pa, bt, 0, c === c1 ? 1 : c === c2 ? 2 : 0);
     }
+    ALLB.push(COREPASS ? Object.assign({}, B, { r1: r1 + OY, r2: r2 + OY, c1: c1 + OX, c2: c2 + OX, dc: dc + OX, chim: (B.chim >= 0 ? B.chim + OX : -1) }) : B);
     if (!hall) for (let r = r1 + rr; r < r2; r++) for (let c = c1 + 1; c < c2; c++)
       g[r][c] = (B.rug && B.rug[0] === r && B.rug[1] === c) ? fRug(B.rugv) : fPlank(ri(0, 2));
     else if (B.kind !== 'temple') for (let r = r1 + rr; r < r2; r++) for (let c = c1 + 1; c < c2; c++) if (g[r][c] === 8) g[r][c] = fPlank(ri(0, 2));
@@ -6439,13 +6727,15 @@
   const _rq = renderQuestLog;
   renderQuestLog = function () {
     _rq();
-    const f = F_(), box = document.getElementById('quest-status'); let done = 0, tot = 0, html = '';
+    const f = F_(), box = document.getElementById('quest-status'); let done = 0, tot = 0, html = ''; const cap = [];
     CAP.forEach(a => {
       const q = a[8]; if (!q) return; tot++;
       const st = f['cq_' + a[0]] || 0; if (st === 2) done++;
       const hint = st === 2 ? 'Telah diselesaikan.' : st === 1 ? 'Syarat: ' + q.l + ' (' + needState(q.n)[1] + '). Lapor ke ' + a[1] + ' (' + a[4] + ',' + a[5] + ').' : 'Temui ' + a[1] + ' (' + a[4] + ',' + a[5] + ') di Aurelion.';
+      cap.push({ map: 'capital', done: st === 2, title: '[Ibu Kota] ' + q.t, hint: hint });
       html += '<div class="quest-item"><strong class="' + (st === 2 ? 'q-done' : 'q-active') + '">' + (st === 2 ? '✔' : '◈') + ' [Ibu Kota] ' + q.t + '</strong><br><span style="color:#b8afa6;">' + hint + '</span></div>';
     });
+    window.__qCap = cap;
     box.insertAdjacentHTML(currentMapId === 'capital' ? 'afterbegin' : 'beforeend', html);
     const cnt = document.getElementById('quest-counter'), m = cnt.textContent.match(/(\d+)\/(\d+)/);
     if (m) cnt.textContent = (+m[1] + done) + '/' + (+m[2] + tot) + ' Selesai';
@@ -6559,7 +6849,73 @@
     const gt2 = [...document.querySelectorAll('.panel-title')].find(e => e.textContent.includes('Panduan Kontrol'));
     if (gt2) gt2.nextElementSibling.insertAdjacentHTML('beforeend', '<div><strong>Musik:</strong> tekan <strong>M</strong> atau tombol 🎵 untuk menyalakan/mematikan musik latar.</div>');
   } catch (e) {}
-  window.FV6 = { MAPS, CAP, CAPD, buildRoadMap, buildCapitalMap, pathRow, needState };
+
+  // ===== V9: ATAP BANGUNAN — semua bangunan beratap; atap memudar saat pemain di dalam, kembali utuh saat keluar =====
+  const ROOFBY = {};
+  function roofIds(b, r0, r1) {
+    const n = r1 - r0 + 1, ridge = Math.floor((n - 1) / 2), ids = [];
+    for (let k = 0; k < n; k++) {
+      const kind = n === 1 ? 0 : n === 2 ? (k === 0 ? 1 : 2) : (k === n - 1 ? 2 : k === ridge ? 1 : k < ridge ? 4 : 3), row = [];
+      for (let c = b.c1; c <= b.c2; c++) row.push(roofTile(b.ci, kind, c === b.c1 ? 1 : c === b.c2 ? 2 : (b.chim === c && k === 0 ? 3 : 0), b.snow ? 1 : 0));
+      ids.push(row);
+    }
+    return ids;
+  }
+  function addRoof(map, b) {
+    b.ra = b.ra === undefined ? b.r1 : b.ra; b.rb = b.rb === undefined ? b.r2 - 1 : b.rb;
+    b.rt = roofIds(b, b.ra, b.rb); b.a = 1;
+    (ROOFBY[map] = ROOFBY[map] || []).push(b);
+  }
+  // Ibu Kota: semua rumah, toko, kuil, guild, aula, akademi (ruang dalam = seluruh tapak bangunan, termasuk ambang pintu)
+  ALLB.forEach(b => { b.ir = [b.r1, b.c1, b.r2, b.c2]; addRoof('capital', b); });
+  // Istana: atap besar menutupi aula dalam; tembok & menara tetap terlihat
+  addRoof('capital', { r1: 18 + OY, r2: 38 + OY, c1: 74 + OX, c2: 91 + OX, ra: 18 + OY, rb: 37 + OY, ci: 1, snow: 1, chim: -1, ir: [18 + OY, 72 + OX, 37 + OY, 91 + OX] });
+  // Peta lama: pondok kayu (tile 4), balai desa Oakhaven, dan kios Guild
+  addRoof('oakhaven', { r1: 2, r2: 7, c1: 10, c2: 19, ra: 2, rb: 7, ci: 0, snow: 1, chim: 13, ir: [4, 12, 9, 17] });
+  addRoof('oakhaven', { r1: 4, r2: 7, c1: 24, c2: 27, ra: 4, rb: 5, ci: 1, snow: 1, chim: 26 });
+  addRoof('oakhaven', { r1: 14, r2: 17, c1: 4, c2: 7, ra: 14, rb: 15, ci: 2, snow: 1, chim: 5 });
+  addRoof('oakhaven', { r1: 20, r2: 23, c1: 20, c2: 23, ra: 20, rb: 22, ci: 4, snow: 1, chim: -1, ir: [22, 22, 23, 23] });
+  addRoof('dwarf_hold', { r1: 7, r2: 7, c1: 12, c2: 12, ci: 1, snow: 0, chim: -1, cut: 21 });
+  addRoof('wild_forest', { r1: 10, r2: 10, c1: 34, c2: 35, ci: 2, snow: 1, chim: -1, cut: 21 });
+  addRoof('wild_forest', { r1: 16, r2: 16, c1: 35, c2: 35, ci: 3, snow: 1, chim: -1, cut: 21 });
+
+  window.__roofLayer = function () {
+    const list = ROOFBY[currentMapId]; if (!list) return;
+    const pc = Math.floor((player.x + 16) / T), pr = Math.floor((player.y + 26) / T);
+    const vx0 = camera.x - 8, vx1 = camera.x + canvas.width + 8, vy0 = camera.y - 8, vy1 = camera.y + canvas.height + 8;
+    for (const b of list) {
+      const x0 = b.c1 * T, x1 = (b.c2 + 1) * T, y0 = b.ra * T, y1 = (b.rb + 1) * T;
+      if (x1 < vx0 || x0 > vx1 || y1 < vy0 || y0 > vy1) continue;
+      const inside = !!b.ir && pr >= b.ir[0] && pr <= b.ir[2] && pc >= b.ir[1] && pc <= b.ir[3], tg = inside ? 0 : 1;
+      if (b.a !== tg) { const d = tg - b.a; b.a += Math.abs(d) < 0.07 ? d : Math.sign(d) * 0.07; }
+      if (b.a < 0.02) continue;
+      ctx.globalAlpha = b.a;
+      for (let k = 0; k < b.rt.length; k++) {
+        const r = b.ra + k, last = r === b.rb, cutRow = b.cut && last;
+        for (let i = 0; i < b.rt[k].length; i++) {
+          const tx = (b.c1 + i) * T, ty = r * T, tex = tileTextures[b.rt[k][i]];
+          if (cutRow) ctx.drawImage(tex, 0, 0, T, b.cut, tx, ty, T, b.cut); else ctx.drawImage(tex, tx, ty);
+        }
+        if (cutRow) { ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(x0, ty0(r) + b.cut - 3, x1 - x0, 3); }
+      }
+    }
+    ctx.globalAlpha = 1;
+  };
+  const ty0 = r => r * T;
+  // NPC di dalam bangunan yang atapnya masih tertutup tidak bisa diajak bicara dari luar tembok
+  const _gnn = getNearbyNPC;
+  getNearbyNPC = function () {
+    const list = ROOFBY[currentMapId]; if (!list) return _gnn();
+    const px = player.x + T / 2, py = player.y + T / 2; let best = null, md = 48;
+    for (const n of getActiveNPCs()) {
+      const d = Math.hypot(px - (n.x + 16), py - (n.y + 16)); if (d > md) continue;
+      const nc = Math.floor((n.x + 16) / T), nr = Math.floor((n.y + 16) / T);
+      if (list.some(b => b.ir && b.a > 0.35 && nr >= b.ir[0] && nr <= b.ir[2] && nc >= b.ir[1] && nc <= b.ir[3])) continue;
+      md = d; best = n;
+    }
+    return best;
+  };
+  window.FV6 = { MAPS, CAP, CAPD, buildRoadMap, buildCapitalMap, pathRow, needState, ROOFBY };
   updateUI();
 })();
   </script>
@@ -7079,12 +7435,12 @@
   for (let r = 2; r < RR - 2; r++) for (let c = 1; c < RC - 1; c++) {
     if (!isTree(road[r][c])) continue;
     const d = Math.abs(r - (pr(c) + 0.5));
-    let keep = d < 3.4 ? 0 : d < 6 ? 0.07 : 0.16;               // jalur bersih, pinggir jarang, pedalaman agak rimbun
-    if ((r <= 3 || r >= RR - 4) && d >= 2.5) keep = Math.max(keep, 0.42); // pagar hutan di tepi atas/bawah
+    let keep = d < 3.4 ? 0 : d < 6 ? 0.32 : 0.6;               // jalur bersih, pinggir jarang, pedalaman agak rimbun
+    if ((r <= 3 || r >= RR - 4) && d >= 2.5) keep = Math.max(keep, 0.8); // pagar hutan di tepi atas/bawah
     if (c <= 4 || c >= RC - 5) keep = Math.min(keep, 0.05);        // sambungan peta tetap lapang
     if (hr() >= keep) road[r][c] = 0;
   }
-  MAPS.elf_road.subtitle = 'Lokasi: Jalan Setapak Hutan Kuno (120x26 — hutan jarang, area farming monster) | Barat: Hutan Elf | Timur: Ibu Kota Aurelion';
+  MAPS.elf_road.subtitle = 'Lokasi: Jalan Setapak Hutan Kuno (120x26 — hutan cukup rimbun, area farming monster) | Barat: Hutan Elf | Timur: Ibu Kota Aurelion';
 
   // ===== B. MONSTER FARMING di Jalan Setapak =====
   const MT = {
@@ -7103,7 +7459,7 @@
     [92,  ['wf_bear', 'wf_tiger', 'wf_stag']],
     [107, ['wf_tiger', 'wf_bear', 'wf_wolf']]
   ];
-  const PER_ZONE = 9, mons = [];
+  const PER_ZONE = 3, mons = [];  // dikurangi dari 9 -> 3 per zona (54 -> 18 monster)
   ZONES.forEach(([zc, types], zi) => {
     const zr = Math.max(7, Math.min(RR - 8, pr(zc) + (zi % 2 ? 6 : -6)));
     for (let r = zr - 5; r <= zr + 5; r++) for (let c = zc - 7; c <= zc + 7; c++) { // padang terbuka tempat berburu
@@ -7265,6 +7621,15 @@
     }
   };
 })();
+  </script>
+  <script>
+  (function () {
+    var raw = null;
+    try { raw = localStorage.getItem('fv_pending_import'); if (raw) localStorage.removeItem('fv_pending_import'); } catch (e) {}
+    if (!raw) return;
+    try { window.loadGame(JSON.parse(raw)); }
+    catch (e) { startDialogue('Gagal Memuat', 'Sistem', '#e06c75', 'Data impor rusak atau tidak kompatibel.', [{ label: 'Tutup', action: closeDialogue }]); }
+  })();
   </script>
 </body>
 </html>
