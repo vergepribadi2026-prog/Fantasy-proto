@@ -4962,7 +4962,7 @@
        ========================================================================== -->
   <script>
 (function () {
-  const T = TILE_SIZE, RC = 120, RR = 26, CC = 100, CR = 56;
+  const T = TILE_SIZE, RC = 120, RR = 26, CC = 200, CR = 100, OX = 50, OY = 22;
   const mk = (R, C, v) => Array.from({ length: R }, () => Array(C).fill(v));
   let seed = 20261020;
   const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
@@ -5042,10 +5042,11 @@
     ['guard1', 'Pengawal Istana', 'Manusia — Jembatan Istana', '#adb5bd', 71, 26, 'durgan', 'Hanya tamu yang membawa nama baik boleh melangkah ke aula takhta.', null],
     ['guard2', 'Pengawal Istana', 'Manusia — Jembatan Istana', '#adb5bd', 71, 29, 'durgan', 'Parit istana beku sepanjang tahun. Jangan jatuh, Pengelana.', null]
   ];
+  CAP.forEach(a => { a[4] += OX; a[5] += OY; });
   const CAPD = {}; CAP.forEach(a => CAPD['cap_' + a[0]] = { g: a[7], q: a[8], n: a[1], k: a[0], x: a[4], y: a[5] });
 
-  function buildCapitalMap() {
-    const g = mk(CR, CC, 8);
+  function buildCapitalCore() {
+    const CC = 100, CR = 56, g = mk(CR, CC, 8);
     const F = (r1, c1, r2, c2, t) => { for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) g[r][c] = t; };
     const H = (r1, c1, r2, c2, dc, fl) => { F(r1, c1, r2, c2, 3); F(r1 + 1, c1 + 1, r2 - 1, c2 - 1, fl); g[r2][dc] = fl; g[r2][dc + 1] = fl; };
     F(0, 0, 1, CC - 1, 3); F(CR - 2, 0, CR - 1, CC - 1, 3); F(0, 0, CR - 1, 1, 3); F(0, CC - 2, CR - 1, CC - 1, 3);
@@ -5069,7 +5070,93 @@
     F(46, 56, 52, 96, 0);
     for (let r = 46; r <= 52; r++) for (let c = 56; c <= 96; c++) if (rnd() < 0.2) g[r][c] = rnd() < 0.3 ? 10 : 2;
     F(48, 74, 50, 80, 5);
-    for (const a of CAP) { const r = a[5], c = a[4]; if (SOLID_TILES.has(g[r][c])) g[r][c] = 8; }
+    return g;
+  }
+
+  // ===== UPDATE V7: IBU KOTA 200x100 = Kota Dalam (peta lama, bertembok) + distrik, 2 pasar besar & ratusan warga =====
+  const LB = [], GD = {}, FD = {}, OCC = new Set();
+  'roti|Roti Madu Hangat|8|18|12;kue|Kue Jahe Rempah|10|15|20;pai|Pai Daging Domba|16|30|20;dend|Dendeng Rusa Asap|14|25|10;sosis|Sosis Panggang Kota|12|22|14;ikan|Ikan Sungai Bakar|13|26|14;sup|Sup Labu Panas|11|18|35;keju|Keju Gunung Tua|15|28|8;apel|Apel Manis Beku|7|14|6;anggur|Anggur Hangat Rempah|18|10|45;teh|Teh Jahe Surya|9|8|30;madu|Madu Sarang Emas|24|40|20;tonik|Tonik Apoteker|30|55|25;salep|Salep Herbal Kota|20|40|20;penawar|Penawar Embun Perak|38|65|35;herb|Salep Herbal Hutan|12|35|20;brew|Tonik Bara Dwarf|34|50|40'.split(';').forEach(s => {
+    const [id, n, p, h, t] = s.split('|');
+    GD[id] = { n, p: +p, d: 'Pulihkan +' + h + ' HP & +' + t + '% Suhu', i: '+' + h + ' HP, +' + t + '% Suhu' };
+    if (id !== 'herb' && id !== 'brew') FD[id] = { n, hp: +h, ht: +t };
+  });
+  GD.whetstone = { n: 'Batu Asah Karst', p: 30, d: 'Asah pedang (+6 Serangan permanen)', i: 'Serangan +6 permanen' };
+  GD.inap = { n: 'Menginap Semalam', p: 15, i: 'HP & Suhu pulih penuh' };
+  'belati|Belati Pasar Bayangan|70|a|5;bilah|Bilah Baja Aurelion|110|a|8;kapak|Kapak Perang Karst|150|a|12;jubah|Jubah Bulu Rubah|90|h|20;sarung|Sarung Tangan Wol Domba|45|h|10;rompi|Rompi Kulit Berlapis|130|h|30;jimat|Jimat Perak Penghangat|75|h|15'.split(';').forEach(s => {
+    const [id, n, p, t, v] = s.split('|');
+    GD[id] = { n, p: +p, g: 1, t, v: +v, i: (t === 'a' ? 'Serangan +' : 'Maks HP +') + v };
+  });
+  const RACE = { M: 'Manusia', K: 'Kaum Karst', A: 'Kaum Aethel' };
+  const AR = 'Penjual Roti|M|mira|roti,kue,pai;Tukang Daging|M|garruk|dend,sosis,pai;Penjual Ikan|M|kael|ikan,sup,apel;Penjual Sayur & Buah|M|senna|apel,sup,herb;Penjual Keju & Madu|M|henrik|keju,madu,roti;Pembuat Anggur|M|bramwell|anggur,teh,madu;Apoteker|M|vaelen|salep,tonik,penawar,herb;Penjahit|M|senna|jubah,sarung,rompi;Penjual Senjata|M|durgan|belati,bilah,whetstone;Pandai Besi Karst|K|brokk|whetstone,bilah,kapak;Penjual Bir Karst|K|bramwell|brew,keju,dend;Tukang Daging Karst|K|hilde|dend,sosis,brew;Penjual Herbal Aethel|A|thalorien|herb,salep,penawar,teh;Penjual Jimat Aethel|A|lyraelle|jimat,tonik,teh;Penjual Teh & Kue Elf|A|elincia|teh,kue,madu;Penjahit Elf|A|elandor|jubah,sarung,jimat'
+    .split(';').map(s => { const a = s.split('|'); return { t: a[0], r: a[1], s: a[2], g: a[3].split(',') }; });
+  const FN = 'Aldwin Berta Corwin Dessa Edric Fenna Gareth Hilda Isen Joren Kiri Lorna Marek Nessa Osric Perrin Quill Rena Soren Talia Ulric Vena Wynn Yara Bram Cora Dain Elsa Finn Greta'.split(' ');
+  const COL = ['#e5c07b', '#98c379', '#61afef', '#e06c75', '#c678dd', '#56b6c2', '#d19a66', '#f4a261', '#a8dadc', '#ffd166'];
+  const HS = ['henrik', 'caelen', 'mira', 'senna', 'kael', 'garruk', 'bramwell', 'orin', 'gretta', 'tilda'];
+  const LN = ['Musim dingin tahun ini lebih panjang dari yang kuingat.', 'Pasar Raya tak pernah tidur, tapi perakku selalu cepat habis.', 'Kudengar Wendigo di Hutan Belantara kembali mengaum.', 'Sang Ratu dan Sang Raja jarang terlihat, tapi pengawalnya ada di mana-mana.', 'Beli perbekalan di pedagang yang antreannya paling panjang.', 'Anak-anak bilang ada hantu di Jalan Setapak Hutan Kuno.', 'Aurelion ramai karena tiga bangsa berdagang di sini: Manusia, Dwarf, dan Elf.', 'Penginapan Rusa Emas masih punya kamar hangat kalau kau lelah.', 'Awas dompetmu di pasar, Pengelana. Pencopet pun ikut berdagang.', 'Roti Madu paling enak, tapi Dwarf bilang bir mereka lebih penting.', 'Dulu aku petualang, sampai lututku membeku.', 'Cari Guild kalau butuh uang cepat, cari kuil kalau butuh ketenangan.', 'Hati-hati di parit istana, lantainya licin oleh es.', 'Tabib di Rumah Obat Kota baik hati, tapi tonik pahitnya menyiksa.'];
+  const VL = ['Dagangan segar hari ini! Lihat-lihat dulu, Pengelana.', 'Harga pas, mutu terjamin, langsung dari gudangku.', 'Beli dua kubilang tiga, eh bercanda. Silakan pilih.', 'Hangatkan perjalananmu dengan dagangan terbaik Aurelion.'];
+  const SPC = {
+    '27,10': ['Penginapan Rusa Emas', 'Nyonya Berta', 'Manusia — Pemilik Penginapan', 'mira', 'Kamar hangat, sup panas, dan ranjang empuk, Pengelana.', ['inap', 'sup', 'roti']],
+    '27,24': ['Kedai Beruang Mabuk', 'Gunnar si Bartender', 'Kaum Karst — Pemilik Kedai', 'bramwell', 'Bir dan cerita, dua hal yang tak pernah habis di sini!', ['anggur', 'brew', 'dend', 'sosis']],
+    '67,17': ['Rumah Obat Kota', 'Tabib Elowen', 'Kaum Aethel — Tabib Kota', 'vaelen', 'Segala luka dan dingin ada obatnya di sini.', ['salep', 'tonik', 'penawar', 'herb']],
+    '27,160': ['Bengkel Pandai Besi Raya', 'Master Thrain', 'Kaum Karst — Kepala Pandai Besi', 'brokk', 'Baja Karst terbaik untuk tangan yang berani.', ['whetstone', 'bilah', 'kapak', 'belati']],
+    '27,181': ['Butik Penjahit Kerajaan', 'Madame Odile', 'Manusia — Penjahit Kerajaan', 'senna', 'Jubah hangat untuk musim dingin Vaelen yang kejam.', ['jubah', 'sarung', 'rompi', 'jimat']],
+    '67,174': ['Penginapan Pelancong Timur', 'Tuan Hobbert', 'Manusia — Pemilik Penginapan', 'henrik', 'Hangatkan tubuhmu di sini sebelum kembali ke salju.', ['inap', 'sup', 'teh']],
+    '9,67': ['Barak Prajurit', 'Letnan Osric', 'Manusia — Komandan Barak', 'durgan', 'Prajurit Aurelion berlatih tiap fajar, hujan atau salju.', null],
+    '9,116': ['Gudang Gandum Kerajaan', 'Juru Gudang Pell', 'Manusia — Penjaga Lumbung', 'garruk', 'Lumbung penuh, tapi mulut yang lapar lebih banyak lagi.', ['roti', 'keju']],
+    '86,74': ['Rumah Singgah Tiga Bangsa', 'Sesepuh Mirel', 'Kaum Aethel — Penjaga Rumah Singgah', 'thalorien', 'Di sini Manusia, Dwarf, dan Elf berbagi meja yang sama.', ['teh', 'madu', 'kue']]
+  };
+  const pk = a => a[Math.floor(rnd() * a.length)];
+  let nid = 0;
+  function addN(c, r, name, race, sp, gr, s, w) {
+    const id = 'z' + (nid++);
+    CAP.push([id, name, race, pk(COL), c, r, sp, gr, null]);
+    CAPD['cap_' + id] = { g: gr, q: null, n: name, k: id, x: c, y: r, s, w };
+    OCC.add(c + ',' + r);
+  }
+  const FF = (g, r1, c1, r2, c2, t) => { for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) g[r][c] = t; };
+  const HH = (g, r1, c1, r2, c2, dc, fl) => { FF(g, r1, c1, r2, c2, 3); FF(g, r1 + 1, c1 + 1, r2 - 1, c2 - 1, fl); g[r2][dc] = fl; g[r2][dc + 1] = fl; };
+  // Blok rumah: baris rumah tiap 6 petak, pintu menghadap jalan tanah di bawahnya; sebagian berpenghuni atau bangunan khusus
+  function res(g, r0, r1, c0, c1) {
+    for (let r = r0; r <= r1; r += 6) {
+      for (let c = c0; c + 4 <= c1; c += 7) {
+        const sp = SPC[r + ',' + c];
+        HH(g, r, c, r + 3, c + 4, c + 2, sp ? 11 : 8);
+        if (sp) { addN(c + 2, r + 2, sp[1], sp[2], sp[3], sp[4], sp[5]); LB.push([c + 2.5, r - 0.4, sp[0], '#ffd966']); }
+        else if (rnd() < 0.3) addN(c + 2, r + 2, pk(FN), 'Manusia — Warga Aurelion', pk(HS), pk(LN));
+      }
+      FF(g, r + 4, c0 - 1, r + 5, c1 + 1, 1);
+    }
+  }
+  // Pasar: 4 baris x n lapak (2 petak), tiap lapak dijaga satu pedagang yang menjual barangnya sendiri
+  function market(g, c0, n, off, label) {
+    FF(g, 36, c0 - 1, 61, c0 + 5 * n - 3, 1);
+    let k = 0;
+    for (const r of [38, 42, 54, 58]) for (let i = 0; i < n; i++, k++) {
+      const c = c0 + 5 * i, a = AR[(k + off) % AR.length];
+      g[r][c] = g[r][c + 1] = 4;
+      addN(c, r + 1, a.t, RACE[a.r] + ' — ' + pk(FN), a.s, pk(VL), a.g);
+      if (i % 2 === 0) { g[36][c + 2] = 7; g[61][c + 2] = 7; }
+    }
+    LB.push([c0 + 5 * n / 2 - 1, 35, label, '#f4a261']);
+  }
+
+  function buildCapitalMap() {
+    const core = buildCapitalCore(), g = mk(CR, CC, 8);
+    FF(g, 0, 0, 1, CC - 1, 3); FF(g, CR - 2, 0, CR - 1, CC - 1, 3); FF(g, 0, 0, CR - 1, 1, 3); FF(g, 0, CC - 2, CR - 1, CC - 1, 3);
+    for (let r = 0; r < 56; r++) for (let c = 0; c < 100; c++) g[OY + r][OX + c] = core[r][c];
+    FF(g, 20, 48, 21, 151, 1); FF(g, 78, 48, 79, 151, 1); FF(g, 20, 48, 79, 49, 1); FF(g, 20, 150, 79, 151, 1); // jalan lingkar
+    FF(g, 49, 2, 50, 49, 1); FF(g, 49, 150, 50, 197, 1); FF(g, 2, 98, 21, 101, 1); FF(g, 78, 98, 97, 101, 1);  // jalan raya
+    FF(g, 49, 0, 50, 0, 9); FF(g, 49, 1, 50, 1, 8);                                                           // gerbang barat luar
+    FF(g, 49, 50, 50, 51, 8); FF(g, 22, 98, 23, 101, 1); FF(g, 76, 98, 77, 101, 1);                           // gerbang Kota Dalam
+    market(g, 4, 9, 0, 'PASAR RAKYAT BARAT'); market(g, 154, 9, 7, 'BAZAR TIGA BANGSA');
+    res(g, 3, 27, 3, 46); res(g, 67, 91, 3, 46); res(g, 3, 27, 153, 196); res(g, 67, 91, 153, 196);
+    res(g, 3, 15, 53, 97); res(g, 3, 15, 102, 146); res(g, 80, 92, 53, 97); res(g, 80, 92, 102, 146);
+    for (const [c, r] of [[3, 48], [3, 51], [98, 19], [101, 19], [98, 80], [101, 80]]) addN(c, r, 'Penjaga Kota', 'Manusia — Pengawal Gerbang', 'durgan', 'Semua pendatang disambut, asal tak membawa masalah.');
+    LB.push([4, 46, 'GERBANG BARAT', '#ffd966'], [100, 25, 'KOTA DALAM: ISTANA, GUILD & KUIL', '#ffd966'], [100, 5, 'JALAN RAYA UTARA', '#b8afa6'], [100, 94, 'JALAN RAYA SELATAN', '#b8afa6']);
+    for (const a of CAP) OCC.add(a[4] + ',' + a[5]);
+    for (let r = 2; r < CR - 2; r++) for (let c = 2; c < CC - 2; c++)   // warga jalanan yang berkeliaran
+      if (g[r][c] === 1 && !OCC.has(c + ',' + r) && rnd() < 0.008) addN(c, r, pk(FN), 'Manusia — Warga Aurelion', pk(HS), pk(LN), null, 1);
+    for (const a of CAP) if (SOLID_TILES.has(g[a[5]][a[4]])) g[a[5]][a[4]] = 8;
     return g;
   }
 
@@ -5080,7 +5167,7 @@
   };
   MAPS.capital = {
     name: 'Aurelion — Ibu Kota Kerajaan', short: 'Ibu Kota Aurelion', grid: buildCapitalMap(),
-    subtitle: 'Lokasi: Ibu Kota Aurelion (100x56 — 5x Peta Dwarf, 27 NPC & 21 Misi) | Barat: Jalan Setapak Hutan Kuno'
+    subtitle: 'Lokasi: Ibu Kota Aurelion (200x100 — ' + CAP.length + ' NPC, 2 Pasar Besar & 21 Misi) | Barat: Jalan Setapak Hutan Kuno'
   };
   npcsByMap.elf_road = [];
   npcsByMap.capital = CAP.map(a => ({ id: 'cap_' + a[0], name: a[1], race: a[2], color: a[3], x: a[4] * T, y: a[5] * T, spriteKey: a[6] }));
@@ -5091,8 +5178,8 @@
   const INTRO = {
     elf_road: ['Jalan Setapak Hutan Kuno (Peta Baru 120x26)', 'Jalur Panjang Menuju Aurelion', '#80ffdb',
       'Pohon-pohon raksasa menutup langit. Satu jalan setapak panjang berkelok melintasi dua sungai kecil dan jembatan kayu. Ikuti terus ke timur hingga Gerbang Ibu Kota Aurelion. Api unggun di tepi jalan menandai tempat beristirahat.', 'Ikuti Jalan Setapak'],
-    capital: ['Aurelion, Ibu Kota Kerajaan (Peta Baru 100x56)', 'Lima kali luas Khaz-Karst', '#ffd966',
-      'Menara, pasar, kuil, guild, akademi, dan istana berdiri di balik tembok kota. Ada 27 NPC dan 21 misi menantimu. Mulailah dari Papan Pengumuman di persimpangan raya (46,31).', 'Masuki Aurelion']
+    capital: ['Aurelion, Ibu Kota Kerajaan (Peta Baru 200x100)', 'Hampir 18 kali luas Khaz-Karst', '#ffd966',
+      'Dua pasar besar, ratusan rumah, dan ' + CAP.length + ' NPC memenuhi jalan-jalan Aurelion. Di balik tembok kedua, Kota Dalam menyimpan istana, guild, kuil, dan akademi. Ada 21 misi menantimu; mulailah dari Papan Pengumuman di persimpangan raya (96,53).', 'Masuki Aurelion']
   };
 
   // ===== TRANSISI =====
@@ -5109,8 +5196,8 @@
     const cc = Math.floor((player.x + 16) / T), cr = Math.floor((player.y + 20) / T);
     if (currentMapId === 'forest' && cc >= 19 && (cr === 8 || cr === 9)) return switchMap('elf_road', 1.8, pathRow(1) + 0.4);
     if (currentMapId === 'elf_road' && cc <= 0) return switchMap('forest', 17.4, 8.4);
-    if (currentMapId === 'elf_road' && cc >= RC - 1) return switchMap('capital', 2.6, 27.4);
-    if (currentMapId === 'capital' && cc <= 0 && (cr === 27 || cr === 28)) return switchMap('elf_road', RC - 2.4, pathRow(RC - 1) + 0.4);
+    if (currentMapId === 'elf_road' && cc >= RC - 1) return switchMap('capital', 2.6, 49.4);
+    if (currentMapId === 'capital' && cc <= 0 && (cr === 49 || cr === 50)) return switchMap('elf_road', RC - 2.4, pathRow(RC - 1) + 0.4);
     _ct();
   };
 
@@ -5177,6 +5264,94 @@
     ctx.fillStyle = 'rgba(15,12,10,0.84)'; ctx.fillRect(canvas.width - w - 8, canvas.height - 22, w, 16);
     ctx.fillStyle = currentMapId === 'capital' ? '#ffd966' : '#80ffdb'; ctx.fillText(txt, canvas.width - 14, canvas.height - 10);
     ctx.restore();
+  };
+  // ===== UPDATE V7: PERDAGANGAN, WARGA BERKELILING, LABEL DISTRIK =====
+  const SH = { nella: 'roti,kue,pai', margo: 'jubah,sarung,rompi', isolde: 'jimat,rompi,sarung', fenn: 'salep,tonik,penawar,herb', gorm: 'whetstone,bilah,belati,kapak', hobb: 'herb,pai,dend' };
+  for (const k in SH) CAPD['cap_' + k].s = SH[k].split(',');
+  function shop(n, msg) {
+    const d = CAPD[n.id], f = F_();
+    startDialogue(n.name, n.race, n.color, (msg || d.g) + ' [Perakmu: ' + gameData.coins + ']',
+      d.s.map(id => { const it = GD[id]; return { label: it.n + ' — ' + it.p + ' Perak' + (it.g && f['bg_' + id] ? ' ✔ dimiliki' : ' (' + it.i + ')'), action: () => buy(n, id) }; })
+        .concat([{ label: 'Selesai berbelanja', action: closeDialogue }]));
+  }
+  function buy(n, id) {
+    const it = GD[id], f = F_();
+    if (it.g && f['bg_' + id]) return shop(n, 'Kau sudah memiliki ' + it.n + '.');
+    if (gameData.coins < it.p) return shop(n, 'Perakmu belum cukup untuk ' + it.n + '.');
+    gameData.coins -= it.p;
+    if (id === 'inap') { gameData.hp = gameData.maxHp; gameData.heat = 100; }
+    else if (it.g) {
+      f['bg_' + id] = 1;
+      if (it.t === 'a') { gameData.weaponBonus += it.v; gameData.weaponName = 'Senjata Aurelion (+' + gameData.weaponBonus + ')'; }
+      else { gameData.maxHp += it.v; gameData.hp += it.v; }
+    } else addItem(id, it.n, 1, it.d, true);
+    updateUI();
+    shop(n, id === 'inap' ? 'Kau tidur nyenyak. HP & Suhu pulih penuh!' : 'Terima kasih! ' + it.n + ' kini milikmu.');
+  }
+  const _io = interactWithNPC;
+  interactWithNPC = function (n) {
+    const d = CAPD[n.id];
+    if (!d || !d.s) return _io(n);
+    startDialogue(n.name, n.race, n.color, d.g, [
+      { label: 'Lihat dagangan', action: () => shop(n) },
+      { label: 'Bicara', action: () => _io(n) },
+      { label: 'Pergi', action: closeDialogue }]);
+  };
+  // Makanan & tonik baru dapat dipakai dari inventori (herb, brew, whetstone tetap memakai efek lama)
+  const _uii = window.useInventoryItem;
+  window.useInventoryItem = function (id) {
+    const e = FD[id], it = gameData.inventory.find(i => i.id === id);
+    if (!e || !it || it.qty <= 0) return _uii(id);
+    if (gameData.hp >= gameData.maxHp && gameData.heat >= 100) return startDialogue('Inventori', e.n, '#98c379', 'Kesehatan dan Suhu Tubuhmu masih penuh.', []);
+    it.qty--; gameData.hp = Math.min(gameData.maxHp, gameData.hp + e.hp); gameData.heat = Math.min(100, gameData.heat + e.ht); updateUI();
+  };
+  // Hanya NPC di dalam layar yang digambar/diproses (peta besar tetap ringan)
+  const _gan = getActiveNPCs;
+  getActiveNPCs = function () {
+    const a = _gan();
+    return currentMapId !== 'capital' ? a : a.filter(n => n.x > camera.x - 160 && n.x < camera.x + canvas.width + 160 && n.y > camera.y - 96 && n.y < camera.y + canvas.height + 96);
+  };
+  // Warga jalanan berjalan pelan di sekitar posisi awalnya
+  const _up7 = update;
+  update = function () {
+    _up7();
+    if (currentMapId !== 'capital' || currentState !== STATE.EXPLORE) return;
+    for (const n of npcsByMap.capital) {
+      const d = CAPD[n.id];
+      if (!d || !d.w || Math.abs(n.x - player.x) > 800 || Math.abs(n.y - player.y) > 600) continue;
+      if (n.tx === undefined) { n.hx = n.tx = n.x; n.hy = n.ty = n.y; n.wt = 0; }
+      if (n.x !== n.tx || n.y !== n.ty) { n.x += Math.sign(n.tx - n.x); n.y += Math.sign(n.ty - n.y); }
+      else if (--n.wt < 0) {
+        n.wt = 60 + Math.floor(Math.random() * 240);
+        const dr = [[1, 0], [-1, 0], [0, 1], [0, -1]][Math.floor(Math.random() * 4)], nc = n.tx / T + dr[0], nr = n.ty / T + dr[1];
+        if (Math.abs(nc - n.hx / T) <= 4 && Math.abs(nr - n.hy / T) <= 3 && WORLD_MAP[nr] && !SOLID_TILES.has(WORLD_MAP[nr][nc]) && WORLD_MAP[nr][nc] !== 9 && Math.hypot(nc * T - player.x, nr * T - player.y) > 48) { n.tx = nc * T; n.ty = nr * T; }
+      }
+    }
+  };
+  // Label distrik & bangunan penting
+  const _r7 = render;
+  render = function () {
+    _r7();
+    if (currentMapId !== 'capital') return;
+    ctx.save(); ctx.font = 'bold 10px "Courier New", monospace'; ctx.textAlign = 'center';
+    for (const [c, r, t, k] of LB) {
+      const x = c * T - camera.x, y = r * T - camera.y;
+      if (x < -200 || x > canvas.width + 200 || y < -20 || y > canvas.height + 20) continue;
+      const w = ctx.measureText(t).width + 8;
+      ctx.fillStyle = 'rgba(20,16,12,0.78)'; ctx.fillRect(x - w / 2, y - 10, w, 13);
+      ctx.fillStyle = k; ctx.fillText(t, x, y);
+    }
+    ctx.restore();
+  };
+  // Simpanan lama di Ibu Kota (peta 100x56) bisa mendarat di dinding peta baru: pindahkan ke gerbang barat
+  const _lg7 = window.loadGame;
+  window.loadGame = function () {
+    const r = _lg7.apply(this, arguments);
+    if (currentMapId === 'capital') {
+      const c = Math.floor((player.x + 16) / T), q = Math.floor((player.y + 20) / T);
+      if (!WORLD_MAP[q] || SOLID_TILES.has(WORLD_MAP[q][c])) { player.x = 2.6 * T; player.y = 49.4 * T; updateCamera(); }
+    }
+    return r;
   };
   try {
     const titles = [...document.querySelectorAll('.panel-title')];
