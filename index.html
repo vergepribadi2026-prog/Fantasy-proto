@@ -436,6 +436,31 @@
       touch-action: none;
     }
 
+
+    /* ===== Joystick analog (menggantikan D-Pad) ===== */
+    .joystick {
+      position: relative; width: 132px; height: 132px; flex: none; border-radius: 50%;
+      background: radial-gradient(circle, rgba(20, 17, 14, .55) 0%, rgba(36, 29, 23, .75) 68%, rgba(56, 46, 36, .85) 100%);
+      border: 2px solid var(--parchment-border); box-shadow: inset 0 0 14px rgba(0, 0, 0, .8), 0 3px 0 #0e0b09;
+      touch-action: none; cursor: grab;
+    }
+    .joystick::after { content: ''; position: absolute; inset: -16px; border-radius: 50%; }  /* area sentuh lebih luas */
+    .joy-ring {
+      position: absolute; inset: 14%; border-radius: 50%; pointer-events: none;
+      border: 1px dashed rgba(212, 175, 55, .35);
+      background:
+        linear-gradient(rgba(212,175,55,.22), rgba(212,175,55,.22)) center / 1px 70% no-repeat,
+        linear-gradient(rgba(212,175,55,.22), rgba(212,175,55,.22)) center / 70% 1px no-repeat;
+    }
+    .joy-knob {
+      position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px;
+      border-radius: 50%; pointer-events: none; will-change: transform;
+      transform: translate(var(--jx, 0px), var(--jy, 0px));
+      background: radial-gradient(circle at 35% 30%, #7a5e3f 0%, #3a2c1f 70%, #241b12 100%);
+      border: 2px solid var(--gold-accent); box-shadow: 0 3px 6px rgba(0, 0, 0, .7), inset 0 0 8px rgba(0, 0, 0, .5);
+    }
+    .joystick.active .joy-knob { border-color: #fff3b0; background: radial-gradient(circle at 35% 30%, #a98650 0%, #4d3a26 70%, #2c2116 100%); }
+
     .dpad-btn.pressed,
     .dpad-btn:active {
       background: #524334;
@@ -683,10 +708,8 @@
         gap: 6px;
       }
 
-      .dpad-grid {
-        grid-template-columns: repeat(3, 48px);
-        grid-template-rows: repeat(3, 44px);
-      }
+      .joystick { width: 118px; height: 118px; }
+      .joy-knob { width: 50px; height: 50px; margin: -25px 0 0 -25px; }
     }
 
     /* ==========================================================================
@@ -917,14 +940,12 @@
       pointer-events: none;
     }
     html.m-land .touch-controls.show-pad { display: block; }
-    html.m-land .dpad-grid {
-      position: absolute; left: calc(14px + env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-      grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(3, 46px); gap: 4px;
-      pointer-events: auto; opacity: .62;
+    html.m-land .joystick {
+      position: absolute; left: calc(22px + env(safe-area-inset-left, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+      width: 118px; height: 118px; pointer-events: auto; opacity: .68;
     }
-    html.m-land .dpad-btn { background: rgba(44, 35, 27, .72); box-shadow: 0 2px 0 rgba(14, 11, 9, .6); font-size: 18px; }
-    html.m-land .dpad-btn.pressed { background: rgba(212, 175, 55, .75); color: #1a1208; }
-    html.m-land .dpad-center { background: rgba(20, 17, 14, .35); }
+    html.m-land .joystick.active { opacity: .9; }
+    html.m-land .joy-knob { width: 50px; height: 50px; margin: -25px 0 0 -25px; }
     html.m-land .action-pad {
       position: absolute; right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px));
       width: 118px; max-width: none; pointer-events: auto; opacity: .72; flex: none;
@@ -936,7 +957,7 @@
     html.m-land .quick-num-row { display: none; }
     /* Saat pertarungan: sembunyikan kontrol. Saat dialog: sembunyikan D-pad saja */
     html.m-land .canvas-container.in-combat ~ .touch-controls { display: none; }
-    html.m-land .canvas-container.in-dialog ~ .touch-controls .dpad-grid { display: none; }
+    html.m-land .canvas-container.in-dialog ~ .touch-controls .joystick { display: none; }
 
     /* Ukuran HUD, dock, popup, dialog dibuat ringkas */
     html.m-land { --dock-right: 4px; --dock-top: 46px; --dock-top-l: 6px; --dock-btn-w: 38px; --dock-btn-h: 34px; --dock-gap: 3px; --dock-zone: calc(4px + 38px + 6px); }
@@ -979,6 +1000,56 @@
     .canvas-container.in-combat #shortcutDockM { display: none; }
     #menuFsBtn { display: none; }
     html.m-land #menuFsBtn { display: inline-block; }
+  </style>
+
+  <style id="minimap-css">
+    /* ======================================================================
+       MINIMAP BERTAHAP (shortcut 🗺 / tombol M):  tertutup → kecil → besar → tertutup
+       ====================================================================== */
+    :root { --mm-w: 160px; }
+    html.m-land { --mm-w: 112px; }
+    #mmMini {
+      position: absolute; z-index: 8; right: var(--dock-zone); top: var(--dock-top);
+      width: var(--mm-w); display: none; cursor: pointer; touch-action: manipulation;
+      background: rgba(12, 10, 8, .55); border: 2px solid rgba(115, 93, 70, .85);
+      box-shadow: 0 0 0 1px #000, 0 4px 10px rgba(0, 0, 0, .55); border-radius: 4px; overflow: hidden;
+    }
+    #mmMini.show { display: block; }
+    #mmMini canvas { width: 100%; height: auto; aspect-ratio: 100 / 68; display: block; image-rendering: pixelated; opacity: .92; }
+    #mmMini .mm-tag {
+      position: absolute; left: 0; right: 0; bottom: 0; padding: 1px 4px; font-size: 9px; font-weight: bold;
+      color: var(--gold-accent); background: rgba(10, 8, 6, .72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      text-shadow: 1px 1px 0 #000; pointer-events: none;
+    }
+    #mmMini .mm-ex {
+      position: absolute; top: 1px; right: 2px; font-size: 10px; color: #ffd966; pointer-events: none;
+      text-shadow: 0 0 3px #000, 1px 1px 0 #000;
+    }
+    #mmLarge {
+      position: absolute; z-index: 9; top: 8px; bottom: 8px; left: var(--dock-zone); right: var(--dock-zone);
+      max-width: 700px; margin: 0 auto; display: none; flex-direction: column;
+      background: rgba(22, 18, 14, .97); border: 3px solid var(--parchment-border);
+      box-shadow: 0 0 0 2px #000, 0 10px 30px rgba(0, 0, 0, .75), inset 0 0 14px rgba(0, 0, 0, .85);
+    }
+    #mmLarge.show { display: flex; }
+    #mmLarge .mm-title { font-size: 12px; font-weight: bold; color: var(--gold-accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #mmLarge .mm-btns { display: flex; gap: 6px; flex-shrink: 0; }
+    #mmLarge .mm-small {
+      background: #2b231c; color: var(--gold-accent); border: 1px solid var(--gold-accent);
+      font-family: inherit; font-size: 11px; font-weight: bold; padding: 4px 10px; cursor: pointer; touch-action: manipulation;
+    }
+    #mmLarge .mm-small:hover, #mmLarge .mm-small:active { background: var(--gold-accent); color: #000; }
+    #mmLarge .mm-body { flex: 1; min-height: 0; padding: 6px; display: flex; }
+    #mmLarge canvas { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; background: #000; }
+    #mmLarge .mm-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 4px 10px 6px; font-size: 10.5px; color: var(--text-muted); flex-shrink: 0; }
+    #mmLarge .mm-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+    .canvas-container.in-combat #mmMini, .canvas-container.in-combat #mmLarge { display: none !important; }
+    .canvas-container.in-dialog #mmLarge { display: none !important; }
+    html.m-land #mmLarge { top: 4px; bottom: 4px; }
+    html.m-land #mmLarge .popup-bar { padding: 3px 6px 3px 10px; }
+    html.m-land #mmLarge .mm-legend { display: none; }
+    html.m-land .canvas-container.popup-open #mmMini { visibility: hidden; }
+    @media (max-width: 600px) { #mmMini { top: var(--dock-top); } }
   </style>
 </head>
 <body>
@@ -1171,6 +1242,8 @@
           <div style="font-size: 11px; line-height: 1.55; color: var(--text-muted);">
             <div><strong>Peta 4 (Hutan Berburu):</strong> Lewati jalur <strong>Barat (Kiri)</strong> dari Desa Oakhaven.</div>
             <div><strong>Save/Load:</strong> Klik tombol <strong>💾 Simpan</strong> & <strong>📂 Muat</strong> di kanan atas kapan saja.</div>
+            <div><strong>Gerak (HP):</strong> geser <strong>Joystick Analog</strong> di kiri-bawah; makin jauh digeser, makin cepat.</div>
+            <div><strong>Minimap 🗺 (atau tombol M):</strong> tekan sekali = minimap kecil, tekan lagi = peta besar, tekan lagi = tutup. Ketuk minimap kecil untuk memperbesar.</div>
             <div><strong>Pintasan:</strong> Tombol <strong>Status, Misi, Tugas, Inventori, Panduan</strong> ada di kiri &amp; kanan layar. Tekan lagi, ✕ Tutup, atau Esc untuk menutup.</div>
           </div>
         </div>
@@ -1179,18 +1252,11 @@
         </div>
 
 
-        <!-- KONTROL SENTUH ANDROID (D-PAD VIRTUAL & TOMBOL AKSI) -->
+        <!-- KONTROL SENTUH ANDROID (JOYSTICK ANALOG & TOMBOL AKSI) -->
         <section class="touch-controls" id="touchControls">
-          <div class="dpad-grid">
-            <div></div>
-            <button type="button" class="dpad-btn" data-dir="w" aria-label="Atas">▲</button>
-            <div></div>
-            <button type="button" class="dpad-btn" data-dir="a" aria-label="Kiri">◀</button>
-            <div class="dpad-center"></div>
-            <button type="button" class="dpad-btn" data-dir="d" aria-label="Kanan">▶</button>
-            <div></div>
-            <button type="button" class="dpad-btn" data-dir="s" aria-label="Bawah">▼</button>
-            <div></div>
+          <div class="joystick" id="joystick" aria-label="Joystick analog (geser untuk bergerak)">
+            <div class="joy-ring"></div>
+            <div class="joy-knob" id="joyKnob"></div>
           </div>
 
           <div class="action-pad">
@@ -2624,7 +2690,7 @@
       dlgSpeaker.textContent = `EKSPLORASI — ${MAPS[currentMapId].name.toUpperCase()}`;
       dlgSpeaker.style.color = '#d4af37';
       dlgFaction.textContent = 'Mode Jelajah';
-      dlgText.textContent = 'Gunakan D-Pad Virtual (Android) atau WASD/Panah (PC) untuk bergerak. Dekati NPC, Pedagang, atau Monster lalu tekan [AKSI / E].';
+      dlgText.textContent = 'Gunakan Joystick Analog (Android) atau WASD/Panah (PC) untuk bergerak. Tombol 🗺 / M membuka Minimap. Dekati NPC, Pedagang, atau Monster lalu tekan [AKSI / E].';
       dlgChoices.innerHTML = '';
       dlgHint.textContent = 'Dekati NPC/Monster & tekan [AKSI / E]';
       activeChoices = [];
@@ -4360,8 +4426,12 @@
     // INPUT KEYBOARD (PC) & SENTUH VIRTUAL GAMEPAD (ANDROID)
     // ==========================================================================
     const keys = {};
+    const analog = { x: 0, y: 0 };   // arah joystick analog: -1..1 (sudah memperhitungkan dead-zone)
 
     function clearAllMovementKeys() {
+      analog.x = 0; analog.y = 0;
+      const jk = document.getElementById('joyKnob');
+      if (jk) { jk.style.setProperty('--jx', '0px'); jk.style.setProperty('--jy', '0px'); }
       keys['w'] = false;
       keys['a'] = false;
       keys['s'] = false;
@@ -4452,32 +4522,63 @@
       keys[e.key.toLowerCase()] = false;
     });
 
+    // ==========================================================================
+    // JOYSTICK ANALOG: geser knob ke segala arah; makin jauh geseran = makin cepat jalan.
+    // Memperhitungkan mode HP portrait (layar diputar 90° oleh CSS) lewat class html.m-rot.
+    // ==========================================================================
+    function initJoystick() {
+      const base = document.getElementById('joystick');
+      const knob = document.getElementById('joyKnob');
+      if (!base || !knob) return;
+      const DEAD = 0.16;
+      let pid = null;
+
+      function reset() {
+        pid = null;
+        analog.x = 0; analog.y = 0;
+        knob.style.setProperty('--jx', '0px');
+        knob.style.setProperty('--jy', '0px');
+        base.classList.remove('active');
+      }
+
+      function track(e) {
+        const r = base.getBoundingClientRect();           // pusat kotak tetap benar walau diputar
+        let gx = e.clientX - (r.left + r.width / 2);
+        let gy = e.clientY - (r.top + r.height / 2);
+        if (document.documentElement.classList.contains('m-rot')) { const t = gx; gx = gy; gy = -t; }  // koordinat layar → koordinat game
+        const maxD = base.offsetWidth * 0.34;
+        const len = Math.hypot(gx, gy);
+        if (len < 0.001) { analog.x = 0; analog.y = 0; return; }
+        const ux = gx / len, uy = gy / len;
+        const mag = Math.min(1, len / maxD);
+        const m = mag < DEAD ? 0 : Math.min(1, (mag - DEAD) / (1 - DEAD) * 1.08);
+        analog.x = ux * m; analog.y = uy * m;
+        const kd = Math.min(len, maxD);
+        knob.style.setProperty('--jx', (ux * kd).toFixed(1) + 'px');
+        knob.style.setProperty('--jy', (uy * kd).toFixed(1) + 'px');
+      }
+
+      base.addEventListener('pointerdown', (e) => {
+        if (pid !== null) return;
+        e.preventDefault();
+        pid = e.pointerId;
+        try { base.setPointerCapture(pid); } catch (_) {}
+        base.classList.add('active');
+        track(e);
+      });
+      base.addEventListener('pointermove', (e) => { if (e.pointerId === pid) { e.preventDefault(); track(e); } });
+      ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev =>
+        base.addEventListener(ev, (e) => { if (e.pointerId === pid) reset(); }));
+      base.addEventListener('contextmenu', (e) => e.preventDefault());
+      window.addEventListener('blur', reset);
+    }
+
     function initTouchControls() {
       if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
         document.getElementById('touchControls').classList.add('show-pad');
       }
 
-      const dpadButtons = document.querySelectorAll('.dpad-btn');
-      dpadButtons.forEach(btn => {
-        const dirKey = btn.getAttribute('data-dir');
-
-        const pressStart = (e) => {
-          e.preventDefault();
-          keys[dirKey] = true;
-          btn.classList.add('pressed');
-        };
-
-        const pressEnd = (e) => {
-          e.preventDefault();
-          keys[dirKey] = false;
-          btn.classList.remove('pressed');
-        };
-
-        btn.addEventListener('pointerdown', pressStart);
-        btn.addEventListener('pointerup', pressEnd);
-        btn.addEventListener('pointerleave', pressEnd);
-        btn.addEventListener('pointercancel', pressEnd);
-      });
+      initJoystick();
 
       const actionBtn = document.getElementById('btnTouchAction');
       actionBtn.addEventListener('pointerdown', (e) => {
@@ -4503,7 +4604,7 @@
               interactWithNPC(npc);
             } else {
               startDialogue('Terlalu Jauh', npc.name, npc.color,
-                `Dekatkan langkah Aldric ke arah ${npc.name} terlebih dahulu menggunakan D-Pad untuk berinteraksi.`,
+                `Dekatkan langkah Aldric ke arah ${npc.name} terlebih dahulu menggunakan Joystick untuk berinteraksi.`,
                 []
               );
             }
@@ -4604,6 +4705,12 @@
         if (dx !== 0 && dy !== 0) {
           dx *= 0.7071;
           dy *= 0.7071;
+        }
+
+        // Joystick analog (dipakai bila tidak ada input keyboard); kecepatan sebanding dengan geseran
+        if (dx === 0 && dy === 0 && (analog.x !== 0 || analog.y !== 0)) {
+          dx = analog.x * player.speed;
+          dy = analog.y * player.speed;
         }
 
         if (dx !== 0 && !isColliding(player.x + dx, player.y)) player.x += dx;
@@ -6191,6 +6298,165 @@
     window.addEventListener('orientationchange', function () { setTimeout(apply, 120); });
     // Cegah gestur scroll/zoom di layar permainan
     document.addEventListener('touchmove', function (e) { if (root.classList.contains('m-land') && !e.target.closest('.popup-body, .dialogue-panel, .combat-overlay')) e.preventDefault(); }, { passive: false });
+  })();
+  </script>
+  <script id="minimap-js">
+  (function () {
+    var box = document.getElementById('canvasContainer');
+    var dockR = document.getElementById('shortcutDock');
+    if (!box || !dockR) return;
+
+    // ---- elemen UI
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'dock-btn'; btn.id = 'btnMinimap';
+    btn.title = 'Minimap (M)'; btn.setAttribute('aria-label', 'Minimap');
+    btn.innerHTML = '<span class="ico">🗺</span><span class="lbl">Peta</span>';
+    dockR.appendChild(btn);
+
+    var mini = document.createElement('div');
+    mini.id = 'mmMini';
+    mini.innerHTML = '<canvas width="100" height="68"></canvas><span class="mm-tag"></span><span class="mm-ex">⤢</span>';
+    var large = document.createElement('div');
+    large.id = 'mmLarge'; large.setAttribute('role', 'dialog'); large.setAttribute('aria-label', 'Peta wilayah');
+    large.innerHTML =
+      '<div class="popup-bar"><span class="mm-title"></span><span class="mm-btns">' +
+      '<button type="button" class="mm-small" data-act="small">▾ Kecil</button>' +
+      '<button type="button" class="popup-close" data-act="close">✕ Tutup</button></span></div>' +
+      '<div class="mm-body"><canvas></canvas></div>' +
+      '<div class="mm-legend"><span><i style="background:#fff"></i>Kamu</span><span><i style="background:#ffd966"></i>NPC</span>' +
+      '<span><i style="background:#ff5a4d"></i>Monster</span><span><i style="background:#7ec8ff"></i>Kotak = area layar</span></div>';
+    box.appendChild(mini); box.appendChild(large);
+
+    var mc = mini.querySelector('canvas'), mx = mc.getContext('2d');
+    var lc = large.querySelector('canvas'), lx = lc.getContext('2d');
+    var miniTag = mini.querySelector('.mm-tag'), lgTitle = large.querySelector('.mm-title');
+    mx.imageSmoothingEnabled = false; lx.imageSmoothingEnabled = false;
+
+    // ---- status: 0 tertutup, 1 kecil, 2 besar
+    var state = 0;
+    function setState(s) {
+      state = s;
+      mini.classList.toggle('show', s === 1);
+      large.classList.toggle('show', s === 2);
+      btn.classList.toggle('active', s !== 0);
+      btn.title = s === 0 ? 'Minimap (M)' : s === 1 ? 'Perbesar peta (M)' : 'Tutup peta (M)';
+      if (s === 2) {   // tutup popup lain agar tidak bertumpuk
+        box.querySelectorAll('.info-popup.open .popup-close').forEach(function (b) { b.click(); });
+        var pm = document.getElementById('popMenu'); if (pm && pm.classList.contains('open')) pm.querySelector('.popup-close').click();
+      }
+      if (s) draw(true);
+    }
+    function cycle() { setState((state + 1) % 3); }
+    btn.addEventListener('click', function (e) { cycle(); if (e.detail) btn.blur(); });
+    mini.addEventListener('click', function () { setState(2); });
+    large.addEventListener('click', function (e) {
+      var a = e.target.closest('[data-act]'); if (!a) return;
+      setState(a.dataset.act === 'small' ? 1 : 0);
+    });
+    // tombol shortcut lain dibuka → peta besar mengecil
+    box.addEventListener('click', function (e) {
+      if (state === 2 && e.target.closest('.shortcut-dock .dock-btn') && !e.target.closest('#btnMinimap')) setState(1);
+    }, true);
+    // ketuk di luar peta besar → mengecil
+    box.addEventListener('pointerdown', function (e) {
+      if (state === 2 && !e.target.closest('#mmLarge, .shortcut-dock')) setState(1);
+    });
+    window.addEventListener('keydown', function (e) {
+      var k = e.key.toLowerCase();
+      if (k === 'escape' && state === 2) { setState(1); e.stopImmediatePropagation(); return; }
+      if (k === 'm' && !e.ctrlKey && !e.metaKey && !e.altKey && typeof currentState !== 'undefined' && currentState === STATE.EXPLORE) cycle();
+    }, true);
+
+    // ---- bitmap peta (1 px per tile) di-cache per grid
+    var colorCache = {}, bmCache = new WeakMap();
+    function tileColor(id) {
+      var c = colorCache[id]; if (c) return c;
+      var cv = tileTextures[id], rgb = [0, 0, 0];
+      if (cv && cv.getContext) {
+        try {
+          var d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data, r = 0, g = 0, b = 0, n = 0;
+          for (var i = 0; i < d.length; i += 4) { var a = d[i + 3]; if (a > 40) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; } }
+          if (n) rgb = [r / n | 0, g / n | 0, b / n | 0];
+        } catch (_) {}
+      }
+      return (colorCache[id] = rgb);
+    }
+    function bitmapFor(grid) {
+      var bm = bmCache.get(grid); if (bm) return bm;
+      var rows = grid.length, cols = grid[0].length;
+      bm = document.createElement('canvas'); bm.width = cols; bm.height = rows;
+      var x = bm.getContext('2d'), img = x.createImageData(cols, rows), D = img.data;
+      for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) {
+        var col = tileColor(grid[r][c]), o = (r * cols + c) * 4;
+        var solid = SOLID_TILES.has(grid[r][c]) ? 0.82 : 1;   // area terhalang sedikit lebih gelap
+        D[o] = col[0] * solid; D[o + 1] = col[1] * solid; D[o + 2] = col[2] * solid; D[o + 3] = 255;
+      }
+      x.putImageData(img, 0, 0);
+      bmCache.set(grid, bm);
+      return bm;
+    }
+
+    function dotColor(n) { return n.isMonster || /^wf_|wolf|treant|beetle|golem/.test(n.id || '') ? '#ff5a4d' : '#ffd966'; }
+
+    // ---- gambar peta kecil (jendela sekitar pemain)
+    var VW = 25, VH = 17;
+    function drawMini() {
+      var grid = WORLD_MAP, bm = bitmapFor(grid), cols = grid[0].length, rows = grid.length;
+      var W = mc.width, H = mc.height, sx = W / VW, sy = H / VH;
+      var pcx = (player.x + TILE_SIZE / 2) / TILE_SIZE, pcy = (player.y + TILE_SIZE / 2) / TILE_SIZE;
+      var x0 = pcx - VW / 2, y0 = pcy - VH / 2;
+      mx.fillStyle = '#050607'; mx.fillRect(0, 0, W, H);
+      var cx0 = Math.max(0, x0), cy0 = Math.max(0, y0), cx1 = Math.min(cols, x0 + VW), cy1 = Math.min(rows, y0 + VH);
+      if (cx1 > cx0 && cy1 > cy0) mx.drawImage(bm, cx0, cy0, cx1 - cx0, cy1 - cy0, (cx0 - x0) * sx, (cy0 - y0) * sy, (cx1 - cx0) * sx, (cy1 - cy0) * sy);
+      var npcs = getActiveNPCs();
+      for (var i = 0; i < npcs.length; i++) {
+        var n = npcs[i], ex = ((n.x + 16) / TILE_SIZE - x0) * sx, ey = ((n.y + 16) / TILE_SIZE - y0) * sy;
+        if (ex < 0 || ey < 0 || ex > W || ey > H) continue;
+        mx.fillStyle = '#000'; mx.fillRect(ex - 2.5, ey - 2.5, 5, 5);
+        mx.fillStyle = dotColor(n); mx.fillRect(ex - 1.5, ey - 1.5, 3, 3);
+      }
+      var px = (pcx - x0) * sx, py = (pcy - y0) * sy, pulse = 0.5 + 0.5 * Math.sin(Date.now() / 220);
+      mx.fillStyle = 'rgba(255,255,255,' + (0.25 + 0.25 * pulse).toFixed(2) + ')';
+      mx.beginPath(); mx.arc(px, py, 5 + 2 * pulse, 0, 6.283); mx.fill();
+      mx.fillStyle = '#000'; mx.fillRect(px - 3, py - 3, 6, 6);
+      mx.fillStyle = '#fff'; mx.fillRect(px - 2, py - 2, 4, 4);
+      miniTag.textContent = (MAPS[currentMapId].short || MAPS[currentMapId].name);
+    }
+
+    // ---- gambar peta besar (seluruh wilayah)
+    function drawLarge() {
+      var grid = WORLD_MAP, bm = bitmapFor(grid), cols = grid[0].length, rows = grid.length;
+      var k = Math.max(2, Math.floor(Math.min(900 / cols, 620 / rows)));
+      if (lc.width !== cols * k || lc.height !== rows * k) { lc.width = cols * k; lc.height = rows * k; lx.imageSmoothingEnabled = false; }
+      lx.drawImage(bm, 0, 0, cols * k, rows * k);
+      // area layar (kamera)
+      lx.strokeStyle = 'rgba(126,200,255,.95)'; lx.lineWidth = Math.max(1, k * 0.35);
+      lx.strokeRect(camera.x / TILE_SIZE * k, camera.y / TILE_SIZE * k, canvas.width / TILE_SIZE * k, canvas.height / TILE_SIZE * k);
+      var npcs = getActiveNPCs(), rr = Math.max(2, k * 0.55);
+      for (var i = 0; i < npcs.length; i++) {
+        var n = npcs[i], ex = (n.x + 16) / TILE_SIZE * k, ey = (n.y + 16) / TILE_SIZE * k;
+        lx.fillStyle = '#000'; lx.beginPath(); lx.arc(ex, ey, rr + 1, 0, 6.283); lx.fill();
+        lx.fillStyle = dotColor(n); lx.beginPath(); lx.arc(ex, ey, rr, 0, 6.283); lx.fill();
+      }
+      var px = (player.x + TILE_SIZE / 2) / TILE_SIZE * k, py = (player.y + TILE_SIZE / 2) / TILE_SIZE * k, pulse = 0.5 + 0.5 * Math.sin(Date.now() / 220);
+      lx.fillStyle = 'rgba(255,255,255,' + (0.2 + 0.25 * pulse).toFixed(2) + ')';
+      lx.beginPath(); lx.arc(px, py, rr * (2.2 + pulse), 0, 6.283); lx.fill();
+      lx.fillStyle = '#000'; lx.beginPath(); lx.arc(px, py, rr + 1.5, 0, 6.283); lx.fill();
+      lx.fillStyle = '#fff'; lx.beginPath(); lx.arc(px, py, rr, 0, 6.283); lx.fill();
+      lgTitle.textContent = '🗺 ' + MAPS[currentMapId].name + '  [' + Math.floor((player.x + 16) / TILE_SIZE) + ', ' + Math.floor((player.y + 16) / TILE_SIZE) + ' / ' + cols + 'x' + rows + ']';
+    }
+
+    // ---- loop gambar (±12 fps, hanya saat terbuka & tidak sedang bertarung)
+    var last = 0;
+    function draw(force) {
+      if (!state) return;
+      try { if (state === 1) drawMini(); else drawLarge(); } catch (err) { /* peta belum siap */ }
+    }
+    function loop(t) {
+      if (state && !document.hidden && (t - last > 80) && !box.classList.contains('in-combat')) { last = t; draw(); }
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
   })();
   </script>
 </body>
