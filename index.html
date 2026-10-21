@@ -1011,8 +1011,8 @@
     .canvas-container.in-combat #shortcutDockM { display: none; }
     #settingsBtns { display: flex; flex-direction: column; gap: 8px; }
     #settingsBtns .btn-sys { width: 100%; padding: 9px 10px; font-size: 12px; }
-    #menuFsBtn { display: none; }
-    html.m-land #menuFsBtn { display: inline-block; }
+    #menuFsBtn { display: inline-block; }
+    #popMenu { right: var(--dock-zone); top: var(--dock-top); width: min(340px, calc(100% - 2 * var(--dock-zone))); max-height: calc(100% - var(--dock-top) - 8px); overflow: auto; }
   </style>
 
   <style id="minimap-css">
@@ -5856,7 +5856,7 @@
     const RS = 180000, RB = 360000; // respawn monster biasa 3 menit, bos Wendigo 6 menit
     // Monster Jalan Setapak (elf_road) punya n.rs sendiri (lebih cepat, area farming)
     const rsOf = id => { const n = npcsByMap.wild_forest.concat(npcsByMap.elf_road || []).find(m => m.id === id); return (n && n.rs) || (id === 'wf_wendigo' ? RB : RS); };
-    const fresh = () => ({ dead: {}, act: [], sp: {}, dl: { d: '', l: [], taken: false, cl: [] } });
+    const fresh = () => ({ dead: {}, act: [], sp: {}, wq: {}, dl: { d: '', l: [], taken: false, cl: [] } });
     const S = () => gameData.fvx || (gameData.fvx = fresh());
     let pv = {}, TS = [];
     const toast = m => TS.push({ m, u: Date.now() + 3800 });
@@ -5869,7 +5869,17 @@
     const take = (id, n) => { const it = inv(id); if (it) it.qty = Math.max(0, it.qty - n); };
     // Pecah petunjuk misi dunia menjadi langkah-langkah
     const steps = h => String(h || '').split(/\s*(?:[.;]\s+|\s&\s(?=[a-z])|,\s+(?=[a-z]))/).map(x => x.trim().replace(/\.$/, '')).filter(Boolean).map(x => x.charAt(0).toUpperCase() + x.slice(1));
-    const worldOpen = () => (window.__qBase || []).concat(window.__qCap || []).filter(q => !q.done).sort((x, y) => (x.map === currentMapId ? 0 : 1) - (y.map === currentMapId ? 0 : 1));
+    // Misi dunia baru dianggap 'sedang dijalankan' setelah pemain memulainya (bicara dengan NPC pemberi misi / masuk wilayah berburu)
+    const WQ_NPC = { mira: 'Pondok Mira', henrik: 'Gerobak Pasokan', brokk: 'Gerobak Pasokan', senna: 'Gerobak Pasokan', cart: 'Gerobak Pasokan',
+      vaelen_potion: 'Hutan Belantara Vaelen', garruk_loot: 'Hutan Belantara Vaelen', elandor: 'Toko Elandor', orin: 'Prasasti Orin', rune_stone: 'Prasasti Orin',
+      tilda: 'Uap Tilda', bramwell: 'Bir Bramwell', glow_shroom: 'Bir Bramwell', gretta: 'Gretta & Elincia', elincia: 'Gretta & Elincia',
+      kael: 'Liontin Penambang Kael', lost_cart: 'Liontin Penambang Kael', durgan: 'Thane Durgan', caelen: 'Embun Perak', silver_flower: 'Embun Perak', thalorien: 'Suaka Thalorien' };
+    const wqSet = () => S().wq || (S().wq = {});
+    const wqStart = key => { if (!key) return; const base = window.__qBase || []; let ch = false;
+      base.forEach(q => { if (q.title.indexOf(key) >= 0 && !wqSet()[q.title]) { wqSet()[q.title] = 1; ch = true; } });
+      if (ch) { window.__trkL = null; panel(); } };
+    const wqOn = q => q.map === 'capital' ? !!q.started : !!wqSet()[q.title];
+    const worldOpen = () => (window.__qBase || []).concat(window.__qCap || []).filter(q => !q.done && wqOn(q)).sort((x, y) => (x.map === currentMapId ? 0 : 1) - (y.map === currentMapId ? 0 : 1));
     // Daftar baris untuk HUD (semua misi: guild + dunia), dipotong agar muat
     function trackLines() {
       const out = [], MAXL = 9, A = S().act, W = worldOpen(); let hidden = 0;
@@ -5933,26 +5943,18 @@
       if (!box) return;
       const a = S().act, esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
       const world = (window.__qBase || []).concat(window.__qCap || []);
-      const open = world.filter(q => !q.done).sort((x, y) => (x.map === currentMapId ? 0 : 1) - (y.map === currentMapId ? 0 : 1));
+      const open = worldOpen();
       const doneN = world.filter(q => q.done).length;
-      const sec = t => `<div style="margin:8px 0 4px;color:#d4af37;font-weight:bold;font-size:11px;border-bottom:1px dashed #4a4036;">${t}</div>`;
       let h = '';
-      if (a.length) {
-        h += sec('📋 Tugas Guild');
-        h += a.map(q => `<div class="quest-item"><strong class="${done(q) ? 'q-done' : 'q-active'}">${done(q) ? '✔' : '◈'} ${q.title}</strong>` +
-          q.obj.map(o => `<br><span style="color:#b8afa6;">${prog(o) >= o.n ? '☑' : '☐'} ${o.txt} (${prog(o)}/${o.n})</span>`).join('') +
-          (done(q) ? '<br><span style="color:#ffd166;">➜ Lapor ke Guild di Oakhaven</span>' : '') + '</div>').join('');
-      }
-      if (open.length) {
-        h += sec('📜 Misi Lain (Dunia & Wilayah) — langkah-langkah');
-        h += open.map(q => {
-          const m = (typeof MAPS !== 'undefined' && MAPS[q.map]) ? (MAPS[q.map].short || MAPS[q.map].name) : '';
-          const here = q.map === currentMapId ? ' <span style="color:#80ed99;">📍 di sini</span>' : (m ? ` <span style="color:#8c8275;">(${esc(m)})</span>` : '');
-          return `<div class="quest-item"><strong class="q-active">◈ ${esc(q.title)}</strong>${here}` + steps(q.hint).map((x, i) => `<br><span style="color:#b8afa6;">☐ ${i + 1}. ${esc(x)}</span>`).join('') + '</div>';
-        }).join('');
-      }
-      if (!a.length && !open.length) h = '<div class="quest-item" style="color:#8c8275;">Belum ada tugas aktif. Ambil misi di Guild Adventurer (Oakhaven).</div>';
-      else if (!a.length) h = '<div class="quest-item" style="color:#8c8275;">Tidak ada tugas Guild. Ambil di Guild Adventurer (Oakhaven).</div>' + h;
+      h += a.map(q => `<div class="quest-item"><strong class="${done(q) ? 'q-done' : 'q-active'}">${done(q) ? '✔' : '◈'} ${q.title}</strong>` +
+        q.obj.map(o => `<br><span style="color:#b8afa6;">${prog(o) >= o.n ? '☑' : '☐'} ${o.txt} (${prog(o)}/${o.n})</span>`).join('') +
+        (done(q) ? '<br><span style="color:#ffd166;">➜ Lapor ke Guild di Oakhaven</span>' : '') + '</div>').join('');
+      h += open.map(q => {
+        const m = (typeof MAPS !== 'undefined' && MAPS[q.map]) ? (MAPS[q.map].short || MAPS[q.map].name) : '';
+        const here = q.map === currentMapId ? ' <span style="color:#80ed99;">📍 di sini</span>' : (m ? ` <span style="color:#8c8275;">(${esc(m)})</span>` : '');
+        return `<div class="quest-item"><strong class="q-active">◈ ${esc(q.title)}</strong>${here}` + steps(q.hint).map((x, i) => `<br><span style="color:#b8afa6;">☐ ${i + 1}. ${esc(x)}</span>`).join('') + '</div>';
+      }).join('');
+      if (!a.length && !open.length) h = '<div class="quest-item" style="color:#8c8275;">Belum ada tugas yang sedang dijalankan. Ambil misi di Guild Adventurer (Oakhaven) atau bicara dengan penduduk. Daftar semua misi ada di 📜 Misi.</div>';
       if (doneN) h += `<div class="quest-item" style="color:#98c379;">✔ ${doneN} misi sudah selesai (lihat Jurnal Misi).</div>`;
       box.innerHTML = h;
     }
@@ -6089,9 +6091,9 @@
     p.innerHTML = '<div class="panel-title"><span>📋 Tugas Aktif (Semua Misi)</span></div><div class="quest-box" id="fvx-box"></div>';
     sec.insertAdjacentElement('afterend', p);
 
-    const _ia = interactWithNPC; interactWithNPC = function (n) { ev('talk', n.id); if (n.id === 'guild_clerk') return guildMenu(); return _ia(n); };
+    const _ia = interactWithNPC; interactWithNPC = function (n) { ev('talk', n.id); wqStart(WQ_NPC[n.id]); if (n.id === 'guild_clerk') return guildMenu(); return _ia(n); };
     const _ai = addItem; addItem = function (id, name, qty, desc, usable) { _ai(id, name, qty, desc, usable); if (LOOT_PRICES[id]) { ev('loot', id, qty); ev('loot', '*', qty); } };
-    const _sm = switchMap; switchMap = function (m, c, r) { _sm(m, c, r); ev('visit', m); };
+    const _sm = switchMap; switchMap = function (m, c, r) { _sm(m, c, r); ev('visit', m); if (m === 'wild_forest') wqStart('Hutan Belantara Vaelen'); };
     const _ui = updateUI; updateUI = function () { _ui(); panel(); };
     const _up = update; let fc = 0; update = function () { _up(); if (++fc % 30 === 0) tk(); };
     const _rd = render; render = function () { _rd(); hud(); };
@@ -6793,7 +6795,7 @@
       const q = a[8]; if (!q) return; tot++;
       const st = f['cq_' + a[0]] || 0; if (st === 2) done++;
       const hint = st === 2 ? 'Telah diselesaikan.' : st === 1 ? 'Syarat: ' + q.l + ' (' + needState(q.n)[1] + '). Lapor ke ' + a[1] + ' (' + a[4] + ',' + a[5] + ').' : 'Temui ' + a[1] + ' (' + a[4] + ',' + a[5] + ') di Aurelion.';
-      cap.push({ map: 'capital', done: st === 2, title: '[Ibu Kota] ' + q.t, hint: hint });
+      cap.push({ map: 'capital', done: st === 2, started: st === 1, title: '[Ibu Kota] ' + q.t, hint: hint });
       html += '<div class="quest-item"><strong class="' + (st === 2 ? 'q-done' : 'q-active') + '">' + (st === 2 ? '✔' : '◈') + ' [Ibu Kota] ' + q.t + '</strong><br><span style="color:#b8afa6;">' + hint + '</span></div>';
     });
     window.__qCap = cap;
@@ -7244,35 +7246,9 @@
     var badges = document.querySelector('.header-bar .status-badges');
     var badgesHome = badges ? badges.parentNode : null;
 
-    // ---- Menu sistem di dalam layar (menampung Simpan/Muat/Musik/Gamepad + info Perak & reputasi)
-    var dock = document.createElement('nav');
-    dock.className = 'shortcut-dock dock-r';
-    dock.id = 'shortcutDockM';
-    dock.style.top = 'auto'; dock.style.bottom = 'auto';
-    dock.innerHTML = '<button type="button" class="dock-btn" id="btnMenuM" title="Menu" aria-label="Menu"><span class="ico">☰</span><span class="lbl">Menu</span></button>';
-    var menuBtn = dock.querySelector('button');
-    var pop = document.createElement('div');
-    pop.id = 'popMenu'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Menu');
-    pop.innerHTML = '<div class="popup-bar"><span class="popup-hint">Menu</span><button type="button" class="popup-close">✕ Tutup</button></div><div class="popup-body" id="popMenuBody"></div>';
+    // ---- Layar Penuh masuk ke Setelan; reputasi (Manusia/Dwarf/Elf) masuk ke panel Status; Perak sudah ada di Inventori
     var fsBtn = document.createElement('button');
     fsBtn.type = 'button'; fsBtn.className = 'btn-sys'; fsBtn.id = 'menuFsBtn'; fsBtn.textContent = '⛶ Layar Penuh';
-    var menuOpen = false;
-
-    function setMenu(on) {
-      menuOpen = on;
-      pop.classList.toggle('open', on);
-      menuBtn.classList.toggle('active', on);
-      if (on) { // tutup popup lain yang sedang terbuka
-        box.querySelectorAll('.info-popup.open .popup-close').forEach(function (b) { b.click(); });
-      }
-    }
-    dock.querySelector('button').addEventListener('click', function () { setMenu(!menuOpen); });
-    pop.querySelector('.popup-close').addEventListener('click', function () { setMenu(false); });
-    // Tombol shortcut lain dibuka -> menu menutup
-    box.addEventListener('click', function (e) { if (e.target.closest('.shortcut-dock .dock-btn') && !e.target.closest('#btnMenuM')) setMenu(false); }, true);
-    box.addEventListener('pointerdown', function (e) { if (menuOpen && !e.target.closest('#popMenu, #btnMenuM')) setMenu(false); });
-    window.addEventListener('keydown', function (e) { if (e.key === 'Escape' && menuOpen) setMenu(false); }, true);
-
     fsBtn.addEventListener('click', function () {
       var el = document.documentElement;
       var req = el.requestFullscreen || el.webkitRequestFullscreen;
@@ -7289,18 +7265,19 @@
     var attached = false;
     function attach() {
       if (attached) return; attached = true;
-      box.appendChild(pop);
-      var dr = document.getElementById('shortcutDock'); if (dr) dr.appendChild(menuBtn);
-      document.getElementById('popMenuBody').appendChild(badges);
-      var sbx = document.getElementById('settingsBtns'); (sbx || badges).appendChild(fsBtn);
-    }
-    function detach() {
-      if (!attached) return; attached = false;
-      setMenu(false);
-      if (badgesHome && badges) { badgesHome.appendChild(badges); }
-      if (fsBtn.parentNode) fsBtn.parentNode.removeChild(fsBtn);
-      if (menuBtn.parentNode) menuBtn.parentNode.removeChild(menuBtn);
-      if (pop.parentNode) pop.parentNode.removeChild(pop);
+      var sbx = document.getElementById('settingsBtns'); if (sbx) sbx.appendChild(fsBtn);
+      var sb = document.querySelector('#popStatus .popup-body');
+      if (sb && badges) {
+        var sec = document.createElement('div'); sec.className = 'panel-section';
+        sec.innerHTML = '<div class="panel-title"><span>🤝 Reputasi</span></div><div id="repList" style="display:flex;flex-direction:column;gap:5px;"></div>';
+        var list = sec.querySelector('#repList');
+        ['rep-human', 'rep-karst', 'rep-aethel'].forEach(function (id) {
+          var el = document.getElementById(id), bd = el && el.closest('.badge');
+          if (bd) list.appendChild(bd);
+        });
+        sb.appendChild(sec);
+        var pk = document.getElementById('ui-coin'), pb = pk && pk.closest('.badge'); if (pb) pb.style.display = 'none';
+      }
     }
 
     function apply() {
@@ -7313,13 +7290,12 @@
         root.style.setProperty('--iw', iw + 'px');
         root.style.setProperty('--sw', (portrait ? ih : iw) + 'px');
         root.style.setProperty('--sh', (portrait ? iw : ih) + 'px');
-        attach();
         var pad = document.getElementById('touchControls');
         if (pad) pad.classList.add('show-pad');
       } else {
         ['--iw', '--sw', '--sh'].forEach(function (v) { root.style.removeProperty(v); });
-        detach();
       }
+      attach(); // tombol Menu (☰) tersedia di HP maupun PC
     }
     apply();
     window.addEventListener('resize', apply);
