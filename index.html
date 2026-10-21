@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>Ash & Rime: Chronicles of the Vaelen Vale (4 Maps, Hunting & Save/Load Edition)</title>
+  <title>Ash & Rime: Chronicles of the Vaelen Vale (v7.6 - Floating Joystick)</title>
   <style>
     /* ==========================================================================
        1. STYLE.CSS - DESAIN RESPONSIF PC & ANDROID + VIRTUAL GAMEPAD + SAVE BAR
@@ -942,9 +942,18 @@
     html.m-land .touch-controls.show-pad { display: block; }
     html.m-land .joystick {
       position: absolute; left: calc(22px + env(safe-area-inset-left, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-      width: 118px; height: 118px; pointer-events: auto; opacity: .68;
+      width: 118px; height: 118px; pointer-events: none; opacity: .38;
     }
-    html.m-land .joystick.active { opacity: .9; }
+    html.m-land .joystick.active { opacity: .92; }
+    /* Area joystick melayang: HANYA kiri-bawah layar (di bawah tombol dock kiri, jauh dari area kanan/atas) */
+    .joy-zone { display: none; }
+    html.m-land .touch-controls.show-pad .joy-zone {
+      display: block; position: absolute; left: 0; bottom: 0; width: 40%; height: 52%;
+      pointer-events: auto; touch-action: none;
+      border: 0; background: none;
+    }
+    html.m-land .canvas-container.in-dialog ~ .touch-controls .joy-zone { display: none; }
+    html.m-land .canvas-container:has(.info-popup.open, #popMenu.open, #mmLarge.show) ~ .touch-controls .joy-zone { display: none; }
     html.m-land .joy-knob { width: 50px; height: 50px; margin: -25px 0 0 -25px; }
     html.m-land .action-pad {
       position: absolute; right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px));
@@ -1244,7 +1253,7 @@
             <div><strong>Altar Teleportasi:</strong> ada di Hutan Elf (dekat Suaka) dan di tengah Pasar Rakyat Barat, Aurelion. Berinteraksi dengan altar untuk berpindah langsung antar keduanya (dua arah, gratis).</div>
             <div><strong>Jalan Setapak (Hutan→Ibu Kota):</strong> hutan lebih terang, monster tersebar jarang (respawn ±2 menit). Pengepul loot Roan ada di Pos Api Unggun tengah jalan.</div>
             <div><strong>Save/Load:</strong> Klik tombol <strong>💾 Simpan</strong> & <strong>📂 Muat</strong> di kanan atas kapan saja.</div>
-            <div><strong>Gerak (HP):</strong> geser <strong>Joystick Analog</strong> di kiri-bawah; makin jauh digeser, makin cepat.</div>
+            <div><strong>Gerak (HP):</strong> sentuh <strong>area kiri-bawah</strong> layar; joystick melayang muncul di titik sentuhmu. Makin jauh digeser, makin cepat.</div>
             <div><strong>Minimap 🗺 (atau tombol M):</strong> tekan sekali = minimap kecil, tekan lagi = peta besar, tekan lagi = tutup. Ketuk minimap kecil untuk memperbesar.</div>
             <div><strong>Pintasan:</strong> Tombol <strong>Status, Misi, Tugas, Inventori, Panduan</strong> ada di kiri &amp; kanan layar. Tekan lagi, ✕ Tutup, atau Esc untuk menutup.</div>
           </div>
@@ -1256,6 +1265,7 @@
 
         <!-- KONTROL SENTUH ANDROID (JOYSTICK ANALOG & TOMBOL AKSI) -->
         <section class="touch-controls" id="touchControls">
+          <div class="joy-zone" id="joyZone" aria-label="Area joystick melayang (sentuh di sini untuk bergerak)"></div>
           <div class="joystick" id="joystick" aria-label="Joystick analog (geser untuk bergerak)">
             <div class="joy-ring"></div>
             <div class="joy-knob" id="joyKnob"></div>
@@ -5253,23 +5263,30 @@
     function initJoystick() {
       const base = document.getElementById('joystick');
       const knob = document.getElementById('joyKnob');
+      const zone = document.getElementById('joyZone');
       if (!base || !knob) return;
       const DEAD = 0.16;
       let pid = null;
+      let activeEl = null;     // elemen yang menangkap pointer (zona melayang atau basis tetap)
+      const rotated = () => document.documentElement.classList.contains('m-rot');
+      const floating = () => document.documentElement.classList.contains('m-land') && !!zone;
 
       function reset() {
-        pid = null;
+        if (activeEl && pid !== null) { try { activeEl.releasePointerCapture(pid); } catch (_) {} }
+        pid = null; activeEl = null;
         analog.x = 0; analog.y = 0;
         knob.style.setProperty('--jx', '0px');
         knob.style.setProperty('--jy', '0px');
         base.classList.remove('active');
+        // kembali ke posisi bawaan (kiri-bawah)
+        base.style.left = ''; base.style.top = ''; base.style.bottom = '';
       }
 
       function track(e) {
         const r = base.getBoundingClientRect();           // pusat kotak tetap benar walau diputar
         let gx = e.clientX - (r.left + r.width / 2);
         let gy = e.clientY - (r.top + r.height / 2);
-        if (document.documentElement.classList.contains('m-rot')) { const t = gx; gx = gy; gy = -t; }  // koordinat layar → koordinat game
+        if (rotated()) { const t = gx; gx = gy; gy = -t; }  // koordinat layar → koordinat game
         const maxD = base.offsetWidth * 0.34;
         const len = Math.hypot(gx, gy);
         if (len < 0.001) { analog.x = 0; analog.y = 0; return; }
@@ -5282,18 +5299,40 @@
         knob.style.setProperty('--jy', (uy * kd).toFixed(1) + 'px');
       }
 
-      base.addEventListener('pointerdown', (e) => {
-        if (pid !== null) return;
-        e.preventDefault();
-        pid = e.pointerId;
-        try { base.setPointerCapture(pid); } catch (_) {}
-        base.classList.add('active');
-        track(e);
-      });
-      base.addEventListener('pointermove', (e) => { if (e.pointerId === pid) { e.preventDefault(); track(e); } });
-      ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev =>
-        base.addEventListener(ev, (e) => { if (e.pointerId === pid) reset(); }));
-      base.addEventListener('contextmenu', (e) => e.preventDefault());
+      // Pindahkan basis joystick ke titik sentuh, DIBATASI di dalam area zona
+      function placeBase(e) {
+        const cr = zone.parentNode.getBoundingClientRect();
+        let lx, ly;                                       // koordinat lokal (sistem koordinat game)
+        if (rotated()) { lx = e.clientY - cr.top; ly = cr.right - e.clientX; }
+        else { lx = e.clientX - cr.left; ly = e.clientY - cr.top; }
+        const R = base.offsetWidth / 2;
+        const minX = zone.offsetLeft + R, maxX = zone.offsetLeft + zone.offsetWidth - R;
+        const minY = zone.offsetTop + R,  maxY = zone.offsetTop + zone.offsetHeight - R;
+        const cx = Math.min(Math.max(lx, minX), Math.max(minX, maxX));
+        const cy = Math.min(Math.max(ly, minY), Math.max(minY, maxY));
+        base.style.left = (cx - R) + 'px';
+        base.style.top = (cy - R) + 'px';
+        base.style.bottom = 'auto';
+      }
+
+      function bind(el, onStart) {
+        el.addEventListener('pointerdown', (e) => {
+          if (pid !== null) return;
+          e.preventDefault();
+          pid = e.pointerId; activeEl = el;
+          try { el.setPointerCapture(pid); } catch (_) {}
+          if (onStart) onStart(e);
+          base.classList.add('active');
+          track(e);
+        });
+        el.addEventListener('pointermove', (e) => { if (e.pointerId === pid) { e.preventDefault(); track(e); } });
+        ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev =>
+          el.addEventListener(ev, (e) => { if (e.pointerId === pid) reset(); }));
+        el.addEventListener('contextmenu', (e) => e.preventDefault());
+      }
+
+      bind(base);                                          // mode tetap (PC / tablet)
+      if (zone) bind(zone, (e) => { if (floating()) placeBase(e); });  // mode melayang (HP)
       window.addEventListener('blur', reset);
     }
 
@@ -7723,7 +7762,7 @@
           <h4>Kontrol</h4>
           <ul>
             <li><b>PC:</b> gerak dengan keyboard, interaksi dengan tombol aksi, <b>M</b> = minimap/musik, <b>Esc</b> = tutup panel.</li>
-            <li><b>HP:</b> joystick analog di kiri-bawah; tombol pintasan di kiri &amp; kanan layar.</li>
+            <li><b>HP:</b> joystick melayang (sentuh area kiri-bawah); tombol pintasan di kiri &amp; kanan layar.</li>
             <li><b>Simpan &amp; Muat:</b> tombol <b>💾 Simpan</b> membuat file cadangan atau kode simpanan; muat lewat menu ini atau tombol <b>📂 Muat</b>.</li>
           </ul>
         </div>
