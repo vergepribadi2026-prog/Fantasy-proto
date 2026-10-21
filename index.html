@@ -1688,8 +1688,507 @@
       return offCanvas;
     }
 
+
+    // ==========================================================================
+    // GENERATOR SPRITE KARAKTER DETAIL (render 4x: outline, shading, highlight, tekstur)
+    // ==========================================================================
+    function _shadeHex(hex, f) {
+      let h = String(hex).replace('#', '');
+      if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      const n = parseInt(h, 16);
+      if (isNaN(n)) return hex;
+      let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+      if (f >= 0) { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; }
+      else { r *= (1 + f); g *= (1 + f); b *= (1 + f); }
+      return 'rgb(' + Math.round(r) + ',' + Math.round(g) + ',' + Math.round(b) + ')';
+    }
+
+
+    function _parseHex(hex) {
+      const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex).trim());
+      if (!m) return null;
+      let h = m[1];
+      if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      const n = parseInt(h, 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+
+    function createCharSprite(matrix, palette, kind) {
+      const S = 4, W = 16 * S;
+      const cv = document.createElement('canvas');
+      cv.width = W; cv.height = W;
+      const c = cv.getContext('2d');
+      const at = (r, ch) => {
+        const row = matrix[r] || '';
+        const v = row[ch];
+        return (v && v !== '.' && palette[v]) ? v : null;
+      };
+      const grid = [];
+      for (let r = 0; r < 16; r++) { grid[r] = []; for (let q = 0; q < 16; q++) grid[r][q] = at(r, q); }
+      const get = (r, q) => (r < 0 || q < 0 || r > 15 || q > 15) ? null : grid[r][q];
+
+      // Lapisan dasar: gradasi per sel + tekstur halus
+      for (let r = 0; r < 16; r++) {
+        for (let q = 0; q < 16; q++) {
+          const ch = grid[r][q];
+          if (!ch) continue;
+          const col = palette[ch];
+          const x = q * S, y = r * S;
+          const g = c.createLinearGradient(x, y, x + S, y + S);
+          g.addColorStop(0, _shadeHex(col, 0.16));
+          g.addColorStop(0.55, col);
+          g.addColorStop(1, _shadeHex(col, -0.2));
+          c.fillStyle = g;
+          c.fillRect(x, y, S, S);
+          // tekstur: satu titik gelap/terang deterministik
+          const hsh = (r * 31 + q * 17 + ch.charCodeAt(0) * 7) % 5;
+          if (hsh === 0) { c.fillStyle = 'rgba(255,255,255,0.10)'; c.fillRect(x + 1, y + 1, 1, 1); }
+          else if (hsh === 1) { c.fillStyle = 'rgba(0,0,0,0.12)'; c.fillRect(x + 2, y + 2, 1, 1); }
+        }
+      }
+      // Volume: sorot di tepi atas/kiri area warna, bayangan di tepi bawah/kanan
+      for (let r = 0; r < 16; r++) {
+        for (let q = 0; q < 16; q++) {
+          const ch = grid[r][q];
+          if (!ch) continue;
+          const x = q * S, y = r * S;
+          if (get(r - 1, q) !== ch) { c.fillStyle = 'rgba(255,255,255,0.20)'; c.fillRect(x, y, S, 1); }
+          if (get(r, q - 1) !== ch) { c.fillStyle = 'rgba(255,255,255,0.10)'; c.fillRect(x, y, 1, S); }
+          if (get(r + 1, q) !== ch) { c.fillStyle = 'rgba(0,0,0,0.28)'; c.fillRect(x, y + S - 1, S, 1); }
+          if (get(r, q + 1) !== ch) { c.fillStyle = 'rgba(0,0,0,0.16)'; c.fillRect(x + S - 1, y, 1, S); }
+        }
+      }
+      // Kilau mata: sel gelap yang bertetangga horizontal dengan sel terang/kulit
+      for (let r = 0; r < 16; r++) {
+        for (let q = 0; q < 16; q++) {
+          const ch = grid[r][q];
+          if (ch !== 'e') continue;
+          const x = q * S, y = r * S;
+          c.fillStyle = 'rgba(255,255,255,0.75)';
+          c.fillRect(x + 1, y, 1, 1);
+        }
+      }
+      // Tekstur khusus: bulu/sisik (monster) atau urat daun (tanaman & pohon)
+      if (kind === 'monster' || kind === 'plant' || kind === 'tree') {
+        for (let r = 0; r < 16; r++) {
+          for (let q = 0; q < 16; q++) {
+            const ch = grid[r][q];
+            if (!ch) continue;
+            const x = q * S, y = r * S;
+            const hh = (r * 53 + q * 29 + ch.charCodeAt(0) * 11) % 12;
+            if (kind === 'monster') {
+              if (hh % 3 !== 2) { c.fillStyle = 'rgba(255,255,255,0.14)'; c.fillRect(x + (hh % 3), y + (hh % 2), 1, 2); }
+              c.fillStyle = 'rgba(0,0,0,0.20)'; c.fillRect(x + ((hh + 2) % 4), y + 1 + (hh % 2), 1, 2);
+              if (get(r - 1, q) === ch && get(r + 1, q) !== ch) { c.fillStyle = 'rgba(0,0,0,0.10)'; c.fillRect(x, y + 2, S, 2); }
+            } else {
+              if (hh < 4) { c.fillStyle = 'rgba(255,255,255,0.16)'; c.fillRect(x + (hh % 3), y, 1, 3); }
+              if (hh > 8) { c.fillStyle = 'rgba(0,0,0,0.18)'; c.fillRect(x + 1 + (hh % 2), y + 1, 1, 3); }
+            }
+          }
+        }
+      }
+      // Outline gelap di sekeliling siluet
+      for (let r = 0; r < 16; r++) {
+        for (let q = 0; q < 16; q++) {
+          const ch = grid[r][q];
+          if (!ch) continue;
+          const x = q * S, y = r * S;
+          c.fillStyle = _shadeHex(palette[ch], -0.78);
+          if (!get(r - 1, q)) c.fillRect(x, y, S, 1);
+          if (!get(r + 1, q)) c.fillRect(x, y + S - 1, S, 1);
+          if (!get(r, q - 1)) c.fillRect(x, y, 1, S);
+          if (!get(r, q + 1)) c.fillRect(x + S - 1, y, 1, S);
+        }
+      }
+      // Deteksi titik bercahaya (mata monster, kuncup/bintik tanaman) untuk animasi berkedip
+      const glow = [];
+      if (kind === 'monster' || kind === 'plant' || kind === 'tree') {
+        const counts = {};
+        for (let r = 0; r < 16; r++) for (let q = 0; q < 16; q++) { const ch = grid[r][q]; if (ch) counts[ch] = (counts[ch] || 0) + 1; }
+        for (const ch in counts) {
+          const rgb = _parseHex(palette[ch]);
+          if (!rgb) continue;
+          const R = rgb[0], G = rgb[1], B = rgb[2];
+          const lum = 0.3 * R + 0.59 * G + 0.11 * B;
+          const sat = (Math.max(R, G, B) - Math.min(R, G, B)) / (Math.max(R, G, B) || 1);
+          let hot = false;
+          if (kind === 'monster') hot = counts[ch] <= 8 && sat > 0.5 && lum > 80 && (R > 190 || (B > 190 && G > 150));
+          else if (kind === 'plant') hot = counts[ch] <= 10 && lum > 190;
+          else hot = counts[ch] <= 24 && lum > 200;
+          if (!hot) continue;
+          for (let r = 0; r < 16; r++) for (let q = 0; q < 16; q++) {
+            if (grid[r][q] === ch && glow.length < 10) glow.push({ x: q * S + S / 2, y: r * S + S / 2, c: R + ',' + G + ',' + B });
+          }
+        }
+      }
+      cv.kind = kind || '';
+      cv.glow = glow;
+      return cv;
+    }
+
     const tileTextures = {};
+    const treeSprites = {};
     const sprites = {};
+
+
+    function strHash(str) { let h = 0; str = String(str); for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return h; }
+    const SPRITE_SIZE = { wolf: 50, treant: 62, beetle: 46, golem: 60, bear: 56, spider: 52, stag: 56, tiger: 54, wendigo: 66, flower: 42, shroom: 42 };
+    const SPRITE_AURA = { wendigo: '144,224,239', golem: '255,140,60', treant: '120,200,100' };
+
+    // Menggambar sprite hidup: napas, langkah, flip arah, mata menyala, aura, tanaman bergoyang
+    function drawLiveSprite(img, x, y, o) {
+      o = o || {};
+      if (img.width <= 32) { ctx.drawImage(img, Math.round(x), Math.round(y)); return; }
+      if (img.frames) img = o.moving ? img.frames[Math.sin(o.step || 0) > 0 ? 1 : 2] : img.frames[0]; // frame langkah
+      const kind = img.kind || '';
+      const size = o.size || 40;
+      const ph = o.phase || 0;
+      const cx = x + 16, feet = y + 31;
+      const isMon = kind === 'monster';
+      const breathe = Math.sin(tick * (isMon ? 0.07 : 0.06) + ph) * (isMon ? 0.035 : 0.025);
+      const w = size * (1 - breathe * 0.5), h = size * (1 + breathe);
+      const hop = o.moving ? -Math.abs(Math.sin(o.step || 0)) * 2.2 : 0;
+      const bob = (o.bob || 0) + hop;
+      const sc = size / 40;
+      const pulse = 0.5 + 0.5 * Math.sin(tick * 0.05 + ph);
+      let auraRgb = o.aura || null;
+      if (!auraRgb && kind === 'plant' && img.glow && img.glow.length) auraRgb = img.glow[0].c;
+      if (auraRgb) {
+        const rad = (o.aura ? 28 : 18) * sc;
+        const g = ctx.createRadialGradient(cx, feet - 8, 2, cx, feet - 8, rad);
+        g.addColorStop(0, 'rgba(' + auraRgb + ',' + (0.14 + 0.12 * pulse).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(' + auraRgb + ',0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(cx - rad, feet - 8 - rad, rad * 2, rad * 2);
+      }
+      ctx.fillStyle = 'rgba(0,0,0,' + (0.38 + hop * 0.05).toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.ellipse(cx, y + 29, 11 * sc, 3.6 * sc, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.translate(cx, feet + bob);
+      if (o.flip) ctx.scale(-1, 1);
+      if (kind === 'plant') {
+        const sway = Math.sin(tick * 0.045 + ph) * 0.06 + Math.sin(tick * 0.013 + ph * 2) * 0.03;
+        ctx.transform(1, 0, sway, 1, 0, 0);
+      } else if (o.moving) {
+        ctx.rotate(Math.sin(o.step || 0) * 0.05);
+      }
+      const off = kind === 'plant' ? h * 0.26 : h * 0.1;
+      const top = -h + off;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, -w / 2, top, w, h);
+      if (img.glow && img.glow.length) {
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < img.glow.length; i++) {
+          const gp = img.glow[i];
+          const gx = -w / 2 + gp.x / 64 * w, gy = top + gp.y / 64 * h;
+          const a = 0.35 + 0.3 * Math.sin(tick * 0.1 + ph + i * 1.7);
+          ctx.fillStyle = 'rgba(' + gp.c + ',' + (a * 0.22).toFixed(3) + ')';
+          ctx.beginPath(); ctx.arc(gx, gy, 3.2 * sc, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = 'rgba(' + gp.c + ',' + (a * 0.7).toFixed(3) + ')';
+          ctx.beginPath(); ctx.arc(gx, gy, 1.3 * sc, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      ctx.restore();
+      if (kind === 'plant' && auraRgb) {
+        for (let i = 0; i < 3; i++) {
+          const t = (tick * 0.008 + ph * 0.3 + i / 3) % 1;
+          const mx = cx + Math.sin(t * 6.283 + i * 2 + ph) * 9;
+          const my = feet - 10 - t * 24;
+          ctx.fillStyle = 'rgba(' + auraRgb + ',' + (Math.sin(t * Math.PI) * 0.85).toFixed(3) + ')';
+          ctx.fillRect(mx, my, 1.6, 1.6);
+        }
+      }
+    }
+
+    // Pohon & hamparan bunga bercahaya: bergoyang tertiup angin, berkilau
+    function drawTree(img0, x, y, r, c) {
+      const img = img0.variants ? img0.variants[(r * 31 + c * 17 + ((r * c) >> 1)) % img0.variants.length] : img0;
+      const sway = (Math.sin(tick * 0.035 + c * 0.9 + r * 0.6) * 0.5 + Math.sin(tick * 0.011 + c * 0.21) * 0.5) * 0.04;
+      const size = 48;
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.ellipse(x + 16, y + 30, 12, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.save();
+      ctx.translate(x + 16, y + 31);
+      ctx.transform(1, 0, sway, 1, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(img, -size / 2, -size + size * 0.08, size, size);
+      ctx.restore();
+    }
+
+    function drawGlowBed(x, y, r, c) {
+      const p = 0.5 + 0.5 * Math.sin(tick * 0.07 + r * 1.3 + c * 0.7);
+      const g = ctx.createRadialGradient(x + 16, y + 16, 2, x + 16, y + 16, 26);
+      g.addColorStop(0, 'rgba(140,230,255,' + (0.16 + 0.16 * p).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(140,230,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - 10, y - 10, 52, 52);
+      for (let i = 0; i < 2; i++) {
+        const t = (tick * 0.008 + (r * 5 + c * 3) * 0.13 + i * 0.5) % 1;
+        const mx = x + 16 + Math.sin(t * 8.2 + i * 3) * 7, my = y + 16 - t * 18;
+        ctx.fillStyle = 'rgba(200,245,255,' + (Math.sin(t * Math.PI) * 0.8).toFixed(3) + ')';
+        ctx.fillRect(mx, my, 1.5, 1.5);
+      }
+    }
+
+    // ==========================================================================
+    // SPRITE PIKSEL DETAIL 48x48 — tampak samping, selalu MENGHADAP KANAN (di-flip saat ke kiri)
+    // ==========================================================================
+    const PW = 48;
+    function nz(x, y, s) { let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(s || 0, 1274126177)) >>> 0; h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+    function _hx(hex, f) {
+      const n = parseInt(String(hex).replace('#', ''), 16);
+      let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+      if (f >= 0) { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; } else { r *= 1 + f; g *= 1 + f; b *= 1 + f; }
+      const h = v => ('0' + Math.max(0, Math.min(255, Math.round(v))).toString(16)).slice(-2);
+      return '#' + h(r) + h(g) + h(b);
+    }
+    function pxNew() {
+      const g = Array.from({ length: PW }, () => Array(PW).fill(null));
+      const o = {
+        g,
+        p(x, y, k) { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < PW && y < PW) g[y][x] = k; },
+        ell(cx, cy, rx, ry, k) { for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) { const dx = (x - cx) / rx, dy = (y - cy) / ry; if (dx * dx + dy * dy <= 1) o.p(x, y, k); } },
+        line(x0, y0, x1, y1, t, k) { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 2)); for (let i = 0; i <= n; i++) { const x = x0 + (x1 - x0) * i / n, y = y0 + (y1 - y0) * i / n; if (t <= 1.2) o.p(x, y, k); else o.ell(x, y, t / 2, t / 2, k); } },
+        poly(pts, k) {
+          let x0 = 99, x1 = -99, y0 = 99, y1 = -99;
+          pts.forEach(q => { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); });
+          for (let y = Math.floor(y0); y <= y1; y++) for (let x = Math.floor(x0); x <= x1; x++) {
+            let ins = false;
+            for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const a = pts[i], b = pts[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) ins = !ins; }
+            if (ins) o.p(x, y, k);
+          }
+        },
+        rect(x, y, w, h, k) { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) o.p(x + i, y + j, k); },
+        at(x, y) { return (x < 0 || y < 0 || x >= PW || y >= PW) ? null : g[y][x]; },
+        each(f) { for (let y = 0; y < PW; y++) for (let x = 0; x < PW; x++) { const r = f(x, y, g[y][x]); if (r !== undefined) g[y][x] = r; } }
+      };
+      return o;
+    }
+    // Render: pencahayaan kiri-atas (3 nada per area), noise bulu, outline berwarna
+    function pxRender(o, pal, kind, glowKeys) {
+      const cv = document.createElement('canvas'); cv.width = cv.height = PW;
+      const c = cv.getContext('2d'), g = o.g, cache = {};
+      const col = (k, f) => { const id = k + f; return cache[id] || (cache[id] = _hx(pal[k], f)); };
+      const glow = [];
+      for (let y = 0; y < PW; y++) for (let x = 0; x < PW; x++) {
+        const k = g[y][x]; if (!k || !pal[k]) continue;
+        let f = 0;
+        if (o.at(x, y - 1) !== k) f = 0.2; else if (o.at(x, y - 2) !== k) f = 0.08;
+        if (o.at(x, y + 1) !== k) f = -0.22; else if (o.at(x, y + 2) !== k) f = -0.1;
+        if (!f) { if (o.at(x - 1, y) !== k) f = 0.1; else if (o.at(x + 1, y) !== k) f = -0.1; }
+        const r = nz(x, y, 7); if (r < 0.12) f -= 0.07; else if (r > 0.9) f += 0.06;
+        c.fillStyle = col(k, Math.round(f * 20) / 20); c.fillRect(x, y, 1, 1);
+        if (glowKeys && glowKeys.indexOf(k) >= 0 && glow.length < 8) { const rgb = _parseHex(pal[k]); glow.push({ x: (x + 0.5) * 64 / PW, y: (y + 0.5) * 64 / PW, c: rgb[0] + ',' + rgb[1] + ',' + rgb[2] }); }
+      }
+      for (let y = 0; y < PW; y++) for (let x = 0; x < PW; x++) {
+        if (g[y][x]) continue;
+        const nk = o.at(x - 1, y) || o.at(x + 1, y) || o.at(x, y - 1) || o.at(x, y + 1);
+        if (nk && pal[nk]) { c.fillStyle = col(nk, -0.72); c.fillRect(x, y, 1, 1); }
+      }
+      cv.kind = kind; cv.glow = glow;
+      return cv;
+    }
+    function pxSprite(draw, pal, kind, glowKeys, nFrames) {
+      const P = Object.assign({}, pal); if (P.b && !P.D) P.D = _hx(P.b, -0.3);
+      const fr = [];
+      for (let i = 0; i < (nFrames || 1); i++) { const o = pxNew(); draw(o, i); fr.push(pxRender(o, P, kind, glowKeys)); }
+      const s = fr[0]; s.frames = fr.length > 1 ? fr : null; return s;
+    }
+    const swOf = fr => fr === 1 ? 3 : fr === 2 ? -3 : 0;
+    function legs4(o, xh, xs, top, gy, t, kn, kf, fr, bend, far, claw) {
+      const s = swOf(fr);
+      const L = (x, sw, k) => {
+        const kx = x + bend + sw * 0.3, ky = top + (gy - top) * 0.5;
+        o.line(x, top, kx, ky, t, k); o.line(kx, ky, x + sw, gy - 1, Math.max(2, t - 1), k); o.ell(x + sw + 1, gy - 1, t / 2 + 1, 1.4, k);
+        if (claw) { o.p(x + sw + t / 2 + 2, gy - 1, claw); o.p(x + sw + t / 2 + 2, gy, claw); }
+      };
+      if (far) { L(xh - 1, -s, kf); L(xs - 1, s, kf); } else { L(xh + 1, s, kn); L(xs + 1, -s, kn); }
+    }
+
+    // ---------- Monster ----------
+    const drawWolf = (o, fr) => {
+      o.line(12, 27, 7, 23, 3, 'b'); o.line(7, 23, 5, 17, 3, 'b'); o.line(5, 16, 5, 12, 2, 't');
+      legs4(o, 15, 30, 32, 44, 4, 'b', 'D', fr, 1, true);
+      o.ell(22, 28, 11, 6, 'b'); o.ell(15, 29, 6, 7, 'b'); o.ell(30, 28, 6, 7, 'b'); o.ell(22, 33, 9, 2, 'l'); o.ell(28, 24, 6, 3, 'D');
+      o.poly([[31, 21], [37, 17], [40, 25], [33, 31]], 'b'); o.ell(38, 21, 5, 4, 'b');
+      o.poly([[40, 19], [46, 22], [46, 25], [40, 26]], 'b'); o.poly([[40, 24], [46, 24], [46, 25], [40, 26]], 'l');
+      o.p(46, 22, 'n'); o.p(46, 23, 'n'); o.line(41, 25, 45, 25, 1, 'd'); o.p(44, 26, 'w'); o.p(42, 26, 'w');
+      o.poly([[35, 19], [36, 12], [40, 18]], 'b'); o.p(37, 15, 'd'); o.poly([[32, 20], [32, 14], [35, 19]], 'D');
+      o.p(41, 20, 'e'); o.p(42, 20, 'e'); o.line(15, 22, 29, 21, 1, 'd');
+      legs4(o, 15, 30, 32, 44, 4, 'b', 'D', fr, 1, false);
+      o.each((x, y, k) => { if (k !== 'b') return; const r = nz(x, y, 3); if (r < 0.1) return 'd'; if (r > 0.94) return 'l'; });
+    };
+    const drawBear = (o, fr) => {
+      legs4(o, 12, 31, 34, 44, 6, 'b', 'D', fr, 0, true, 'w');
+      o.ell(20, 27, 13, 9, 'b'); o.ell(13, 29, 7, 8, 'b'); o.ell(31, 29, 7, 9, 'b'); o.ell(28, 21, 7, 6, 'b'); o.ell(21, 35, 9, 2, 'D');
+      [[14, 20], [19, 17], [24, 15], [29, 15]].forEach(([x, y], i) => o.poly([[x - 2, y + 4], [x + 1, y - 5 - (i % 2) * 2], [x + 3, y + 4]], 'c'));
+      o.ell(38, 26, 5, 5, 'b'); o.ell(43, 28, 4, 3, 's'); o.p(46, 27, 'n'); o.p(45, 27, 'n');
+      o.ell(36, 20, 2.5, 2.5, 'b'); o.p(36, 20, 'd'); o.ell(40, 20, 2.5, 2.5, 'D');
+      o.p(40, 24, 'e'); o.p(41, 24, 'e'); o.line(41, 31, 45, 31, 1, 'd');
+      legs4(o, 12, 31, 34, 44, 6, 'b', 'D', fr, 0, false, 'w');
+      o.each((x, y, k) => { if (k !== 'b') return; const r = nz(x, y, 4); if (r < 0.12) return 'D'; if (r > 0.93) return 'l'; });
+    };
+    const drawSpider = (o, fr) => {
+      const s = fr === 1 ? 2 : fr === 2 ? -2 : 0;
+      const leg = (i, k, dxo) => { const bx = 26 + i * 1.2 + dxo, dx = [-15, -8, 5, 13][i] + dxo; const kx = bx + dx * 0.5, ky = 14 + (i % 2) * 2; o.line(bx, 29, kx, ky, 2, k); o.line(kx, ky, bx + dx + (i % 2 ? s : -s), 44, 2, k); };
+      for (let i = 0; i < 4; i++) leg(i, 'D', -3);
+      o.ell(15, 29, 10, 8, 'b'); o.ell(28, 29, 6, 5, 'b');
+      o.poly([[11, 25], [19, 25], [15, 29]], 'v'); o.poly([[11, 34], [19, 34], [15, 30]], 'v');
+      o.ell(33, 29, 3, 3.5, 'D'); o.p(35, 27, 'e'); o.p(36, 28, 'e'); o.p(35, 29, 'e'); o.p(36, 26, 'e'); o.line(35, 32, 36, 35, 1, 'w');
+      o.line(9, 27, 7, 31, 1, 'l');
+      for (let i = 0; i < 4; i++) leg(i, 'l', 0);
+      o.each((x, y, k) => { if (k === 'b' && nz(x, y, 6) < 0.1) return 'l'; });
+    };
+    const drawStag = (o, fr) => {
+      o.ell(10, 22, 2, 3, 'w');
+      legs4(o, 14, 28, 27, 44, 3, 'b', 'D', fr, 1, true);
+      o.ell(21, 25, 10, 5, 'b'); o.ell(14, 25, 5, 6, 'b'); o.ell(27, 24, 5, 6, 'b'); o.ell(21, 29, 8, 2, 'l');
+      o.poly([[27, 21], [34, 12], [38, 15], [31, 27]], 'b'); o.ell(38, 13, 4, 3, 'b');
+      o.poly([[40, 12], [46, 15], [44, 17], [40, 16]], 'b'); o.p(46, 15, 'n'); o.p(39, 12, 'e');
+      o.poly([[34, 11], [31, 8], [35, 9]], 'D');
+      const A = (pts, k) => pts.reduce((a, p) => { if (a) o.line(a[0], a[1], p[0], p[1], 2, k); return p; }, null);
+      A([[34, 10], [29, 6], [25, 3]], 'C'); A([[29, 6], [28, 1]], 'C');
+      A([[37, 10], [36, 5], [33, 1]], 'c'); A([[36, 6], [41, 3]], 'c'); A([[35, 4], [31, 4]], 'c');
+      legs4(o, 14, 28, 27, 44, 3, 'b', 'D', fr, 1, false);
+      o.each((x, y, k) => { if (k === 'b' && y > 19 && y < 30 && x < 31 && nz(x, y, 8) > 0.92) return 'w'; });
+    };
+    const drawTiger = (o, fr) => {
+      o.line(11, 26, 6, 29, 3, 'T'); o.line(6, 29, 5, 38, 3, 'T');
+      legs4(o, 15, 30, 31, 44, 4, 'b', 'D', fr, 1, true);
+      o.ell(22, 26, 12, 6, 'b'); o.ell(14, 27, 6, 7, 'b'); o.ell(31, 27, 6, 7, 'b'); o.ell(22, 31, 9, 2, 'l');
+      o.poly([[32, 21], [37, 18], [41, 26], [34, 31]], 'b'); o.ell(38, 22, 5, 5, 'b'); o.ell(42, 25, 3, 3, 'l'); o.ell(37, 27, 3, 2, 'l');
+      o.p(44, 24, 'n'); o.ell(35, 17, 2, 2, 'b'); o.p(35, 17, 'd'); o.ell(39, 17, 2, 2, 'D');
+      o.p(40, 21, 'e'); o.p(41, 21, 'e'); o.p(43, 28, 'w'); o.p(43, 29, 'w');
+      legs4(o, 15, 30, 31, 44, 4, 'b', 'D', fr, 1, false);
+      o.each((x, y, k) => {
+        if (k === 'T') return (y % 4 === 0 || y > 36) ? 'd' : undefined;
+        if (k === 'b' && y < 31 && x > 8 && x < 37 && ((x - y * 0.35) % 4.5 + 4.5) % 4.5 < 1.3 && nz(x, y, 5) > 0.15) return 'd';
+        if (k === 'b' && x >= 34 && x < 41 && y < 25 && (x + y) % 4 === 0) return 'd';
+        if (k === 'D' && (x + y) % 5 === 0) return 'd';
+      });
+    };
+    const drawBeetle = (o, fr) => {
+      const s = swOf(fr);
+      [17, 24, 31].forEach((x, i) => { const sg = i % 2 ? s : -s; o.line(x, 38, x - 3, 41, 2, 'd'); o.line(x - 3, 41, x - 5 + sg, 44, 2, 'd'); });
+      o.ell(23, 34, 14, 10, 'b'); o.each((x, y, k) => (y > 39 && k === 'b') ? null : undefined);
+      o.ell(19, 28, 6, 3, 'l'); o.line(24, 24, 24, 40, 1, 'd'); o.ell(17, 34, 2, 2, 'y'); o.ell(31, 34, 2, 2, 'y'); o.ell(24, 29, 2, 1.5, 'y');
+      o.ell(38, 35, 4, 4, 'D'); o.line(40, 32, 46, 27, 2, 'd'); o.line(41, 37, 46, 38, 2, 'd'); o.line(39, 31, 43, 25, 1, 'd'); o.p(39, 34, 'e'); o.p(40, 34, 'e');
+    };
+    const drawTreant = (o, fr) => {
+      const s = fr === 1 ? 2 : fr === 2 ? -2 : 0;
+      o.line(19, 34, 18 - s, 44, 7, 'D'); o.line(31, 34, 32 + s, 44, 7, 'b'); o.line(14 - s, 44, 22 - s, 44, 2, 'd'); o.line(29 + s, 44, 37 + s, 44, 2, 'd');
+      o.line(13, 22, 7, 31, 4, 'D'); o.line(36, 22, 42, 31, 4, 'b'); o.ell(42, 32, 3, 3, 'b'); o.line(42, 34, 45, 38, 1, 'd'); o.line(41, 34, 41, 39, 1, 'd');
+      o.poly([[14, 16], [36, 16], [34, 37], [16, 37]], 'b'); o.ell(25, 26, 10, 11, 'b'); o.ell(27, 12, 8, 7, 'b');
+      o.rect(28, 10, 2, 2, 'e'); o.rect(33, 10, 2, 2, 'e'); o.line(27, 8, 35, 9, 1, 'd'); o.line(29, 16, 34, 16, 1, 'd'); o.ell(24, 27, 3, 4, 'p');
+      o.each((x, y, k) => { if (k !== 'b') return; if ((x * 7 + y * 3) % 11 === 0 || nz(x, y, 2) > 0.93) return 'd'; if (nz(x, y, 6) < 0.07) return 'l'; });
+      [[22, 4, 11, 5], [12, 9, 5, 4], [35, 8, 7, 4], [27, 3, 7, 3], [16, 17, 4, 2], [33, 17, 4, 2]].forEach(b => o.ell(b[0], b[1], b[2], b[3], 'g'));
+      o.each((x, y, k) => { if (k !== 'g') return; const r = nz(x, y, 9); if (r < 0.3) return 'G'; if (r > 0.82) return 'h'; });
+    };
+    const drawGolem = (o, fr) => {
+      const s = fr === 1 ? 2 : fr === 2 ? -2 : 0;
+      o.rect(16 - s, 34, 8, 10, 'D'); o.rect(27 + s, 34, 8, 10, 'i'); o.rect(14 - s, 42, 11, 3, 'd'); o.rect(26 + s, 42, 11, 3, 'd');
+      o.rect(3, 19, 8, 14, 'D'); o.rect(2, 32, 10, 8, 'D'); o.rect(39, 19, 8, 14, 'i'); o.rect(38, 32, 10, 8, 'i');
+      o.poly([[13, 15], [37, 15], [34, 35], [16, 35]], 'i'); o.ell(9, 17, 6, 5, 'g'); o.ell(41, 17, 6, 5, 'g');
+      o.rect(21, 11, 9, 4, 'D'); o.rect(18, 2, 15, 11, 'i'); o.rect(25, 6, 7, 3, 'c'); o.ell(26, 25, 4, 4, 'c');
+      o.line(18, 18, 22, 29, 1, 'd'); o.line(32, 19, 29, 31, 1, 'c'); o.line(43, 24, 44, 31, 1, 'd'); o.line(6, 24, 5, 31, 1, 'd'); o.line(21, 3, 23, 9, 1, 'd');
+      o.each((x, y, k) => { if ((k === 'i' || k === 'D') && (y % 6 === 0 || (x + ((y / 6) | 0) * 3) % 8 === 0)) return 'd'; if (k === 'i' && nz(x, y, 4) > 0.92) return 'l'; });
+    };
+    const drawWendigo = (o, fr) => {
+      const s = fr === 1 ? 2 : fr === 2 ? -2 : 0;
+      o.line(18, 13, 14, 25, 2, 'D'); o.line(14, 25, 12, 38, 2, 'D'); o.p(11, 40, 'c'); o.p(12, 41, 'c'); o.p(13, 40, 'c');
+      o.line(23, 31, 21 - s, 38, 3, 'D'); o.line(21 - s, 38, 23 - s, 44, 3, 'D'); o.line(27, 31, 29 + s, 38, 3, 'd'); o.line(29 + s, 38, 31 + s, 44, 3, 'd');
+      o.poly([[17, 13], [28, 11], [31, 31], [20, 33]], 'd'); for (let y = 17; y < 29; y += 3) o.line(21, y, 28, y + 1, 1, 'w');
+      o.ell(23, 13, 5, 3, 's'); o.ell(33, 10, 4, 4, 'w'); o.poly([[35, 10], [41, 12], [36, 14]], 'w');
+      o.p(35, 9, 'e'); o.p(36, 9, 'e'); o.p(39, 13, 'd');
+      o.line(32, 6, 30, 1, 2, 'a'); o.line(31, 3, 26, 2, 1, 'a'); o.line(33, 6, 37, 1, 1, 'a'); o.line(34, 4, 39, 4, 1, 'a');
+      o.line(26, 14, 31, 25, 2, 'd'); o.line(31, 25, 32, 37, 2, 'd'); o.p(31, 39, 'c'); o.p(32, 39, 'c'); o.p(33, 39, 'c');
+      o.each((x, y, k) => { if (k === 's' && nz(x, y, 3) > 0.5) return 'w'; });
+    };
+    // ---------- Tanaman ----------
+    const drawFlower = o => {
+      o.line(24, 43, 24, 22, 2, 'g'); o.ell(19, 36, 5, 2.5, 'g'); o.ell(29, 32, 5, 2.5, 'g'); o.ell(13, 40, 2, 2, 'c'); o.ell(35, 41, 2, 2, 's');
+      o.line(10, 44, 12, 38, 1, 'g'); o.line(37, 44, 38, 37, 1, 'g'); o.line(13, 44, 12, 40, 1, 'g');
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; o.ell(24 + Math.cos(a) * 7, 17 + Math.sin(a) * 7, 3, 3, 's'); }
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + 0.4; o.ell(24 + Math.cos(a) * 4.5, 17 + Math.sin(a) * 4.5, 2.2, 2.2, 'c'); }
+      o.ell(24, 17, 3, 3, 'f');
+    };
+    const drawShroom = o => {
+      o.line(8, 44, 8, 39, 3, 's'); o.ell(8, 38, 5, 3, 'o'); o.p(7, 37, 'y'); o.line(36, 44, 36, 40, 3, 's'); o.ell(36, 39, 4, 2.5, 'o'); o.p(37, 38, 'y');
+      o.poly([[20, 44], [22, 28], [28, 28], [30, 44]], 's'); o.ell(24, 25, 15, 10, 'o'); o.each((x, y, k) => (y > 29 && k === 'o') ? null : undefined);
+      o.ell(24, 29, 13, 1.5, 'D'); o.ell(17, 22, 3, 2, 'y'); o.ell(27, 19, 3, 2, 'y'); o.ell(33, 24, 2, 1.5, 'y'); o.ell(22, 25, 1.5, 1, 'y'); o.line(12, 44, 16, 44, 1, 'g'); o.line(31, 44, 34, 44, 1, 'g');
+    };
+    // ---------- Pohon (bermacam bentuk) ----------
+    function crown(o, blobs, top, bot) {
+      blobs.forEach(b => o.ell(b[0], b[1], b[2], b[3], 'm'));
+      o.each((x, y, k) => {
+        if (k !== 'm') return;
+        const t = (y - top) / (bot - top), v = nz(x >> 1, y >> 1, 3) * 0.7 + nz(x, y, 9) * 0.3;
+        if (t > 0.85) return 'u'; const sc = v - 0.45 * t;
+        return sc > 0.62 ? 'l' : sc > 0.28 ? 'm' : 'd';
+      });
+    }
+    function trunk(o, x, top, bot, w) {
+      o.poly([[x - w / 2, top], [x + w / 2, top], [x + w / 2 + 1.5, bot], [x - w / 2 - 1.5, bot]], 'k');
+      o.each((px, py, k) => { if (k !== 'k') return; if (px <= x - w / 2 + 0.5) return 'K'; if (px >= x + w / 2 - 0.5) return 'q'; if (nz(px, py, 12) < 0.1) return 'q'; });
+      o.ell(x - w, bot, 2, 1, 'K'); o.ell(x + w, bot, 2, 1, 'q');
+    }
+    const treeOak = o => { trunk(o, 24, 28, 44, 5); crown(o, [[24, 17, 17, 12], [14, 20, 7, 6], [34, 20, 7, 6], [24, 9, 10, 6]], 4, 31); };
+    const treeSpread = o => {
+      trunk(o, 24, 28, 44, 5);
+      [[24, 30, 11, 24], [24, 30, 37, 21], [24, 28, 24, 17], [24, 28, 17, 17], [24, 28, 33, 13]].forEach(b => o.line(b[0], b[1], b[2], b[3], 2, 'k'));
+      crown(o, [[10, 19, 7, 5], [20, 11, 9, 7], [34, 13, 8, 6], [40, 24, 6, 4], [24, 22, 6, 4], [15, 27, 7, 4], [28, 18, 5, 4]], 4, 30);
+      o.rect(8, 44, 32, 1, 'd');
+    };
+    const treeAutumn = o => {
+      trunk(o, 24, 26, 44, 5);
+      crown(o, [[24, 15, 19, 10], [12, 21, 8, 6], [37, 21, 9, 6], [24, 8, 10, 5]], 3, 28);
+      [[24, 32, 14, 23], [24, 30, 35, 21], [24, 28, 24, 20], [18, 25, 20, 19]].forEach(b => o.line(b[0], b[1], b[2], b[3], 2, 'k'));
+      o.ell(24, 43, 13, 1.5, 'm'); for (let i = 0; i < 12; i++) o.p(6 + nz(i, 1, 21) * 36, 30 + nz(i, 2, 21) * 13, i % 2 ? 'l' : 'm');
+    };
+    const treePine = (o, snow, tiers) => {
+      o.rect(22, 38, 5, 6, 'k'); o.rect(22, 38, 1, 6, 'K');
+      for (let i = 0; i < tiers; i++) { const ap = 3 + i * (34 / tiers), bs = ap + 36 / tiers + 5, hw = 6 + i * (11 / (tiers - 1)); o.poly([[24, ap], [24 + hw, bs], [24 - hw, bs]], 'm'); }
+      o.each((x, y, k) => {
+        if (k !== 'm') return; const t = y / 38, v = nz(x, y, 14);
+        if (snow && o.at(x, y - 1) !== 'm' && v > 0.25) return 's'; if (snow && o.at(x, y - 2) !== 'm' && v > 0.7) return 's';
+        if (x < 24 - (y * 0.12) && v > 0.55) return 'l'; if (x > 24 + 3 && v < 0.35 + t * 0.2) return 'd';
+      });
+    };
+    const treeBirch = o => {
+      o.poly([[22, 24], [26, 24], [27, 44], [21, 44]], 'w'); o.each((x, y, k) => { if (k === 'w' && ((y * 5 + x) % 9 === 0 || nz(x, y, 15) < 0.08)) return 'q'; if (k === 'w' && x >= 26) return 'k'; });
+      crown(o, [[24, 14, 11, 12], [17, 20, 6, 6], [31, 20, 6, 6], [24, 6, 7, 5]], 2, 28);
+    };
+    const TP = (m, l, d, u) => ({ m, l, d, u, k: '#7a4426', K: '#a9683d', q: '#3a1f1a', w: '#e8e2d4', s: '#e6f1f2' });
+
+    function buildDetailedWorld() {
+      const A3 = 3;
+      sprites.wolf = pxSprite(drawWolf, { b: '#6b7480', l: '#aab4be', d: '#2f353d', e: '#ff3b3b', w: '#f2f2f2', n: '#15171a', t: '#c9d0d8' }, 'monster', ['e'], A3);
+      sprites.bear = pxSprite(drawBear, { b: '#47525a', l: '#8aa0ad', d: '#1e272c', e: '#ff4d6d', w: '#e0fbfc', n: '#111', s: '#b9cfd6', c: '#a8e8f5' }, 'monster', ['e'], A3);
+      sprites.spider = pxSprite(drawSpider, { b: '#2a2630', l: '#5a5463', d: '#111', e: '#ff0055', v: '#9d4edd', w: '#eee' }, 'monster', ['e', 'v'], A3);
+      sprites.stag = pxSprite(drawStag, { b: '#8a5a2d', l: '#d9b98a', d: '#2a1a0c', w: '#f2e4cc', n: '#1a1008', e: '#caf0f8', c: '#72efdd', C: '#2fa59b' }, 'monster', ['e'], A3);
+      sprites.tiger = pxSprite(drawTiger, { b: '#d9822b', T: '#d9822b', D: '#a85a1c', l: '#f3dfc0', d: '#1a1514', n: '#3a1f1a', e: '#ffd23b', w: '#fff' }, 'monster', ['e'], A3);
+      sprites.beetle = pxSprite(drawBeetle, { b: '#b33a0a', l: '#ff8a2a', d: '#261c1a', y: '#ffd966', e: '#ffee00' }, 'monster', ['e'], A3);
+      sprites.treant = pxSprite(drawTreant, { b: '#5a3b22', l: '#7a5230', d: '#26170c', g: '#2f7a3a', G: '#5fb94f', h: '#1d4d27', e: '#ffcc33', p: '#b04dd1' }, 'monster', ['e', 'p'], A3);
+      sprites.golem = pxSprite(drawGolem, { i: '#7a8792', D: '#55616b', d: '#2e3438', l: '#a4b1bb', g: '#b89338', c: '#ff5500' }, 'monster', ['c'], A3);
+      sprites.wendigo = pxSprite(drawWendigo, { d: '#2b2d42', D: '#3b3e5a', w: '#edf2f4', a: '#a9b4c6', e: '#ef233c', s: '#7fd8ef', c: '#90e0ef' }, 'monster', ['e'], A3);
+      sprites.flower = pxSprite(drawFlower, { g: '#3c8c5c', s: '#d9f7ff', c: '#70d6ff', f: '#ffffff' }, 'plant', ['f'], 1);
+      sprites.shroom = pxSprite(drawShroom, { o: '#e8641a', D: '#8f3510', y: '#ffe27a', s: '#e3d6bf', g: '#3f8a4a' }, 'plant', ['y'], 1);
+      const mk = (fn, pal) => pxSprite(fn, pal, 'tree', null, 1);
+      const oak = mk(treeOak, TP('#4fae56', '#a8cf52', '#2e7567', '#254a4a'));
+      const oakDark = mk(treeOak, TP('#2f7a52', '#6fae6a', '#1f5a4a', '#183a38'));
+      const spread = mk(treeSpread, TP('#3f9a3f', '#7fd13b', '#25702f', '#1c4a24'));
+      const spreadDark = mk(treeSpread, TP('#2f6a45', '#5f9f58', '#1f4a38', '#16322a'));
+      const autumn = mk(treeAutumn, Object.assign(TP('#ff9b3d', '#ffd35a', '#e0603a', '#a8454a'), { k: '#6b2c3a', K: '#8f4552', q: '#3d1824' }));
+      const pineSnow = mk(o => treePine(o, true, 4), TP('#1f4d3a', '#3c7d5c', '#12301f', '#0c2016'));
+      const pineDark = mk(o => treePine(o, false, 5), TP('#1d4a2e', '#3d7d49', '#10301c', '#0a2012'));
+      const birch = mk(treeBirch, TP('#7fc24a', '#c4e86a', '#46902f', '#2f6a28'));
+      treeSprites[2] = pineSnow; pineSnow.variants = [pineSnow, pineDark, pineSnow, oakDark, pineDark, spreadDark, autumn, pineSnow];
+      treeSprites[10] = oak; oak.variants = [oak, spread, birch, autumn, spread, oak, birch];
+      Object.keys(treeSprites).forEach(k => treeSprites[k].variants.forEach(v => { v.glow = []; v.kind = 'tree'; }));
+    }
 
     function initGraphics() {
       tileTextures[0] = createPixelSprite([
@@ -1712,6 +2211,12 @@
         ".ssttttttttttts.","stttttttttttttts","..ssstttttttss..","....tttttttt....",
         "......bbbb......","......bbbb......",".....dddddd.....","................"
       ], { s: "#9fb3b5", t: "#182b20", b: "#3b2818", d: "#141a14" });
+      treeSprites[2] = createCharSprite([
+        ".......ss.......","......ssss......",".....stttts.....","....stttttts....",
+        ".....ssssss.....","...ssttttttss...","..stttttttttts..","...sssttttsss...",
+        ".ssttttttttttts.","stttttttttttttts","..ssstttttttss..","....tttttttt....",
+        "......bbbb......","......bbbb......",".....dddddd.....","................"
+      ], { s: "#9fb3b5", t: "#182b20", b: "#3b2818", d: "#141a14" }, 'tree');
 
       tileTextures[3] = createPixelSprite([
         "bbbbbbbbbbbbbbbb","bssssssbbssssssb","bssssssbbssssssb","bddddddbbddddddb",
@@ -1768,6 +2273,12 @@
         ".gllssssssssllg.","..ggllllllllgg..","....gggggggg....","......wwww......",
         "......wwww......",".....wwwwww.....","....dddddddd....","................"
       ], { g: "#275942", l: "#4ca67c", s: "#b5e8d0", w: "#b8afa6", d: "#182920" });
+      treeSprites[10] = createCharSprite([
+        "......gggg......","....ggllllgg....","...gllssssllg...","..gllssssssllg..",
+        "..glsssssssslg..","...ggllllllgg...","..ggllllllllgg..",".gllssssssssllg.",
+        ".gllssssssssllg.","..ggllllllllgg..","....gggggggg....","......wwww......",
+        "......wwww......",".....wwwwww.....","....dddddddd....","................"
+      ], { g: "#275942", l: "#4ca67c", s: "#b5e8d0", w: "#b8afa6", d: "#182920" }, 'tree');
 
       tileTextures[11] = createPixelSprite([
         "bbbbbbbbbbbbbbbb","bmmmmmmbbmmmmmmb","bmggggmbbmggggmb","bmggggmbbmggggmb",
@@ -1833,175 +2344,175 @@
       ], { i: "#8c969e", d: "#454a4f", w: "#4a321f", b: "#2e1f13" });
 
       // SPRITE KARAKTER UTAMA & NPC LAMA
-      sprites.aldric = createPixelSprite([
+      sprites.aldric = createCharSprite([
         ".....hhhhhh.....","....hhhhhhhh....","....hssssssh....","....hseeeseh....",
         "....hssssssh....",".....ssssss.....","...iiiiiiiiii...","..icccccccccci..",
         "..icccccccccci..","..icccbbbbccci..","...cccccccccc...","...cccccccccc...",
         "....bbbbbbbb....","....bbb..bbb....","....lll..lll....","....lll..lll...."
       ], { h: "#2b221a", s: "#d9b396", e: "#1a1a1a", i: "#7a848c", c: "#284664", b: "#3d2b1f", l: "#1c1612" });
 
-      sprites.henrik = createPixelSprite([
+      sprites.henrik = createCharSprite([
         "....ffffffff....","...ffffffffff...","....ssssssss....","....seeeees.....",
         "....ssssssss....",".....bbbbbb.....","...rrrrrrrrrr...","..frrrrrrrrrrf..",
         "..frrrggggrrrf..","..rrrrrrrrrrrr..","...rrrrrrrrrr...","...rrrrrrrrrr...",
         "....rrrrrrrr....","....lll..lll....","....lll..lll....","................"
       ], { f: "#4a3828", s: "#cfa88a", e: "#111", b: "#756d65", r: "#7a2424", g: "#c5a059", l: "#1f1916" });
 
-      sprites.brokk = createPixelSprite([
+      sprites.brokk = createCharSprite([
         "................","................",".....kkkkkk.....","....kkkkkkkk....",
         "....keeeeeek....","....bbbbbbbb....","...bbbbbbbbbb...","..kaabbbbbbaak..",
         "..kaaaaaaaaaak..","..kaaaaaaaaaak..","..kaaaaaaaaaak..","...aaaaaaaaaa...",
         "...kkkkkkkkkk...","...llll..llll...","...llll..llll...","................"
       ], { k: "#6b737a", e: "#e6a145", b: "#b85d28", a: "#3b2c22", l: "#211c18" });
 
-      sprites.senna = createPixelSprite([
+      sprites.senna = createCharSprite([
         "..tt........tt..","...tt.mmmm.tt...","....mmmmmmmm....","....mssssssm....",
         "....mseeeesm....",".....ssssss.....","....mmmmmmmm....","...mmmmmmmmmm...",
         "...mmmggggmmm...","...mmmggggmmm...","....mmmmmmmm....","....mmmmmmmm....",
         "....gggggggg....",".....ll..ll.....",".....ll..ll.....",".....ll..ll....."
       ], { t: "#6e5239", m: "#2e4d34", s: "#dce8e3", e: "#2b593f", g: "#4f7552", l: "#263326" });
 
-      sprites.cart = createPixelSprite([
+      sprites.cart = createCharSprite([
         "................","................","....wwwwwwww....","...wccccccccw...",
         "..wccccccccccw..","..wwwwwwwwwwww..","..wbbbbbbbbbbw..","..wwwwwwwwwwww..",
         "...wbbbbbbbbw...","..ddwwwwwwwwdd..",".d..d......d..d.",".dddd......dddd.",
         "................","................","................","................"
       ], { w: "#6e4e32", b: "#47311d", c: "#292c30", d: "#24190e" });
 
-      sprites.thalorien = createPixelSprite([
+      sprites.thalorien = createCharSprite([
         ".gg..........gg.","..gg.cccccc.gg..","....cccccccc....","....cssssssc....",
         "....cseeeesc....",".....ssssss.....","...geeeeeeeeg...","..geeeeeeeeeeg..",
         "..geeggggggeeg..","..geeeeeeeeeeg..","...eeeeeeeeee...","...eeeeeeeeee...",
         "....gggggggg....","....eee..eee....","....lll..lll....","................"
       ], { g: "#d4af37", c: "#d9e8e3", s: "#e3f2ed", e: "#1f5c47", l: "#14382b" });
 
-      sprites.lyraelle = createPixelSprite([
+      sprites.lyraelle = createCharSprite([
         "...tt......tt...","....hhhhhhhh....","....hssssssh....","....hseeeesh....",
         ".....ssssss.....","...mmmmmmmmmm...","..bmmmmmmmmmmb..","..bmmmggggmmmb..",
         "..bmmmmmmmmmmb..","...mmmmmmmmmm...","....bbbbbbbb....","....mmmmmmmm....",
         "....lll..lll....","....lll..lll....","................","................"
       ], { t: "#8c6d46", h: "#c4d9ce", s: "#dce8e3", e: "#2b6e52", m: "#2d593e", g: "#78ab88", b: "#5c4028", l: "#1d2e22" });
 
-      sprites.wolf = createPixelSprite([
+      sprites.wolf = createCharSprite([
         "................","..ww........ww..","..www......www..","..wwwwwwwwwwww..",
         ".wwwwrwwwwrwwww.",".wwwwwwwwwwwwww.","..wwwwwwwwwwww..","...wwwwwwwwww...",
         "..wwwwwwwwwwww..",".wwwwwwwwwwwwww.",".wwwwwwwwwwwwww.","..www..www..www.",
         "..www..www..www.","..dd...dd...dd..","................","................"
-      ], { w: "#6c8796", r: "#ff3b3b", d: "#2c3a42" });
+      ], { w: "#6c8796", r: "#ff3b3b", d: "#2c3a42" }, 'monster');
 
-      sprites.treant = createPixelSprite([
+      sprites.treant = createCharSprite([
         ".bb..........bb.","..bbb.bbbb.bbb..","...bbbbbbbbbb...","..bbbbbbbbbbbb..",
         "..bbbrrccrrbbb..","..bbbrrccrrbbb..","...bbbbbbbbbb...",".bbbbbbbbbbbbbb.",
         "bbbbbbppppbbbbbb","bbbbbbppppbbbbbb",".bbbbbbbbbbbbbb.","..bbbbbbbbbbbb..",
         "...bbbb..bbbb...","...bbbb..bbbb...","..ddddd..ddddd..","................"
-      ], { b: "#3d291a", r: "#ff4d00", c: "#ffcc00", p: "#7a297a", d: "#21150d" });
+      ], { b: "#3d291a", r: "#ff4d00", c: "#ffcc00", p: "#7a297a", d: "#21150d" }, 'monster');
 
-      sprites.durgan = createPixelSprite([
+      sprites.durgan = createCharSprite([
         "................","....gggggggg....","...ggkkgkkgkg...","....kkkkkkkk....",
         "....keeeeeek....","...wwwwwwwwww...","..wwwwwwwwwwww..","..grrwwwwwwrrg..",
         "..grrrrrrrrrrg..","..grrrggggrrrg..","...rrrrrrrrrr...","...wwwwwwwwww...",
         "...kkkkkkkkkk...","...llll..llll...","...llll..llll...","................"
       ], { g: "#f0c446", k: "#757d85", e: "#ffae42", w: "#d9e0e6", r: "#8a2424", l: "#26201c" });
 
-      sprites.hilde = createPixelSprite([
+      sprites.hilde = createCharSprite([
         "................","....bbbbbbbb....","...bbbbbbbbbb...","....kkkkkkkk....",
         "....keeeeeek....","....bbbbbbbb....","..ssaaaaaaaaas..","..ssaaaaaaaaas..",
         "..ssaaaiiiiaas..","..ssaaaaaaaaas..","...aaaaaaaaaa...","...kkkkkkkkkk...",
         "...llll..llll...","...llll..llll...","................","................"
       ], { b: "#9e4720", k: "#7a828a", e: "#ffc266", s: "#9ba6b0", a: "#473325", i: "#d4af37", l: "#241d18" });
 
-      sprites.balin = createPixelSprite([
+      sprites.balin = createCharSprite([
         "................",".....iiyyii.....","....iiiiiiii....","....kkkkkkkk....",
         "....keeeeeek....","....bbbbbbbb....","...bbbbbbbbbb...","..mmmmbbbbmmmm..",
         "..mmmmmmmmmmmm..","..mmmmggggmmmm..","...mmmmmmmmmm...","...kkkkkkkkkk...",
         "...llll..llll...","...llll..llll...","................","................"
       ], { i: "#5c6670", y: "#ffea70", k: "#6b737a", e: "#e6a145", b: "#8c6239", m: "#36454f", g: "#c59b38", l: "#1f1a17" });
 
-      sprites.beetle = createPixelSprite([
+      sprites.beetle = createCharSprite([
         "................","................","....oo....oo....","...oooooooooo...",
         "..orrrrrrrrrro..",".orrrryyyyrrrro.",".orryyyyyyyyrro.",".orrrryyyyrrrro.",
         "..orrrrrrrrrro..","..dddddddddddd..",".dd..dd..dd..dd.",".d...d....d...d.",
         "................","................","................","................"
-      ], { o: "#ff6600", r: "#8f1d00", y: "#ffd966", d: "#261c1a" });
+      ], { o: "#ff6600", r: "#8f1d00", y: "#ffd966", d: "#261c1a" }, 'monster');
 
-      sprites.golem = createPixelSprite([
+      sprites.golem = createCharSprite([
         "....iiiiiiii....","...iiiiiiiiii...","...iiccccccii...","...iiccccccii...",
         "....iiiiiiii....",".ggggiiiiiiigggg","ggggiiiiiiiiiggg","gggiiicccciiiigg",
         "gggiiicccciiiigg","ggggiiiiiiiiiggg",".ggggiiiiiiigggg","...iiiiiiiiii...",
         "...iiii..iiii...","...iiii..iiii...","..ddddd..ddddd..","................"
-      ], { i: "#6c7882", c: "#ff5500", g: "#b89338", d: "#2e3438" });
+      ], { i: "#6c7882", c: "#ff5500", g: "#b89338", d: "#2e3438" }, 'monster');
 
-      sprites.mira = createPixelSprite([
+      sprites.mira = createCharSprite([
         "....wwwwwwww....","...wwwwwwwwww...","...wwssssssww...","...wwseeeesww...",
         "....ssssssss....","...pppppppppp...","..pppppppppppp..","..pppwwwwwwppp..",
         "..pppppppppppp..","...pppppppppp...","...wwwwwwwwww...","...pppppppppp...",
         "....lll..lll....","....lll..lll....","................","................"
       ], { w: "#8c7a6b", s: "#d9b396", e: "#1a1a1a", p: "#4a5d6e", l: "#26201b" });
 
-      sprites.caelen = createPixelSprite([
+      sprites.caelen = createCharSprite([
         "..tt........tt..","...tt.gggg.tt...","....gggggggg....","....gssssssg....",
         "....gseeeesg....",".....ssssss.....","...bbbbbbbbbb...","..bbbbbbbbbbbb..",
         "..bbbggggggbbb..","..bbbbbbbbbbbb..","...bbbbbbbbbb...","....bbbbbbbb....",
         "....lll..lll....","....lll..lll....","................","................"
       ], { t: "#7a5c3e", g: "#b8d9c9", s: "#e3f2ed", e: "#1f5c47", b: "#2c5e4f", l: "#18332b" });
 
-      sprites.flower = createPixelSprite([
+      sprites.flower = createCharSprite([
         "................","......ssss......","....ssccccss....","...sccffffccs...",
         "...sccffffccs...","....ssccccss....","......gggg......","....gggggggg....",
         "...ggg....ggg...","....gg....gg....","......gggg......",".....dddddd.....",
         "................","................","................","................"
-      ], { s: "#d9f7ff", c: "#70d6ff", f: "#ffffff", g: "#3c8c5c", d: "#243829" });
+      ], { s: "#d9f7ff", c: "#70d6ff", f: "#ffffff", g: "#3c8c5c", d: "#243829" }, 'plant');
 
-      sprites.orin = createPixelSprite([
+      sprites.orin = createCharSprite([
         "................","....pppppppp....","...pppppppppp...","....kkkkkkkk....",
         "....keeeeeek....","...wwwwwwwwww...","..wwwwwwwwwwww..","..ppppwwwwpppp..",
         "..ppppggggpppp..","..pppppppppppp..","...pppppppppp...","...wwwwwwwwww...",
         "...kkkkkkkkkk...","...llll..llll...","................","................"
       ], { p: "#3c4f7a", k: "#757d85", e: "#70d6ff", w: "#cfd8dc", g: "#d4af37", l: "#1f242d" });
 
-      sprites.rune_stone = createPixelSprite([
+      sprites.rune_stone = createCharSprite([
         "....ssssssss....","..ssssssssssss..","..sdddddddddds..","..sdccccccccds..",
         "..sdddddddddds..","..sdcrrrrrrcds..","..sdddddddddds..","..sdcggggggcds..",
         "..sdddddddddds..","..sdccccccccds..","..sdddddddddds..","..ssssssssssss..",
         ".ssssssssssssss.",".dddddddddddddd.","................","................"
       ], { s: "#576069", d: "#2b3036", c: "#5ce1e6", r: "#ff7b54", g: "#ffd966" });
 
-      sprites.bramwell = createPixelSprite([
+      sprites.bramwell = createCharSprite([
         "................",".....hhhhhh.....","....kkkkkkkk....","....keeeeeek....",
         "...bbbbbbbbbb...","..bbbbbbbbbbbb..","..ggggbbbbgggg..","..ggggwwwwgggg..",
         "..ggggwwwwgggg..","..gggggggggggg..","...gggggggggg...","...kkkkkkkkkk...",
         "...llll..llll...","...llll..llll...","................","................"
       ], { h: "#5c4028", k: "#7d848c", e: "#ffc266", b: "#d47a2c", g: "#5e432d", w: "#d9cfc3", l: "#241c16" });
 
-      sprites.shroom = createPixelSprite([
+      sprites.shroom = createCharSprite([
         "................",".....oooooo.....","...oooooooooo...","..ooyyyyyyyyoo..",
         "..oooooooooooo..",".....ssssss.....",".....ssssss.....","..oooo....oooo..",
         ".ooyyoo..ooyyoo.","..oooo....oooo..","...ss......ss...","..dddddddddddd..",
         "................","................","................","................"
-      ], { o: "#ff7b00", y: "#ffee70", s: "#d9ccb8", d: "#2b241f" });
+      ], { o: "#ff7b00", y: "#ffee70", s: "#d9ccb8", d: "#2b241f" }, 'plant');
 
-      sprites.tilda = createPixelSprite([
+      sprites.tilda = createCharSprite([
         "................","....cccccccc....","...cggccccggc...","....kkkkkkkk....",
         "....keeeeeek....","....rrrrrrrr....","..bbbbbbbbbbbb..","..bbccccccccbb..",
         "..bbccyyyyccbb..","..bbbbbbbbbbbb..","...bbbbbbbbbb...","...kkkkkkkkkk...",
         "...llll..llll...","...llll..llll...","................","................"
       ], { c: "#4a6475", g: "#70e0ff", k: "#7a828a", e: "#ffd166", r: "#b84a28", b: "#3d352e", y: "#ff9f1c", l: "#1f1b18" });
 
-      sprites.gretta = createPixelSprite([
+      sprites.gretta = createCharSprite([
         "................","....gggggggg....","...gmmmmmmmmg...","....kkkkkkkk....",
         "....keeeeeek....","....mmmmmmmm....","..mmmmmmmmmmmm..","..mmggggggggmm..",
         "..mmggccccggmm..","..mmmmmmmmmmmm..","...mmmmmmmmmm...","...kkkkkkkkkk...",
         "...llll..llll...","...llll..llll...","................","................"
       ], { g: "#f0c446", m: "#6e2b62", k: "#7a828a", e: "#ffbf69", c: "#48cae4", l: "#241921" });
 
-      sprites.elincia = createPixelSprite([
+      sprites.elincia = createCharSprite([
         "..tt........tt..","...tt.yyyy.tt...","....yyyyyyyy....","....yssssssy....",
         "....yseeeesy....",".....ssssss.....","...tttttttttt...","..tttttttttttt..",
         "..tttggggggttt..","..tttttttttttt..","...tttttttttt...","....tttttttt....",
         "....lll..lll....","....lll..lll....","................","................"
       ], { t: "#246a73", y: "#e8d8b5", s: "#e3f2ed", e: "#2b6e52", g: "#f0c446", l: "#163b40" });
 
-      sprites.kael = createPixelSprite([
+      sprites.kael = createCharSprite([
         "................","................",".....iiiiii.....","....kkkkkkkk....",
         "....keeeeeek....","....bbbbbbbb....","...cccccccccc...","..cccccccccccc..",
         "..ccccbbbbcccc..","..cccccccccccc..","...cccccccccc...","...kkkkkkkkkk...",
@@ -2012,7 +2523,7 @@
       // SPRITE BARU: PENJUAL SENJATA ELF, 2 NPC HUTAN BERBURU, & 5 SPESIES MONSTER
       // ========================================================================
       // Elandor (Penempa Senjata & Pertahanan Elf di Suaka Elf)
-      sprites.elandor = createPixelSprite([
+      sprites.elandor = createCharSprite([
         "..gg........gg..","...gg.ssss.gg...","....ssssssss....","....sffffffs....",
         "....sfeeeefs....",".....ffffff.....","...gggggggggg...","..ggeeeeeeeeegg.",
         "..ggeeggggggeegg","..ggeeeeeeeeegg.","...eeeeeeeeee...","....gggggggg....",
@@ -2020,7 +2531,7 @@
       ], { g: "#ffd166", s: "#d8f3dc", f: "#e3f2ed", e: "#1b4332", l: "#081c15" });
 
       // Vaelen (NPC 1 Hutan Belantara: Penjual Potion Rimba)
-      sprites.vaelen = createPixelSprite([
+      sprites.vaelen = createCharSprite([
         ".....pppppp.....","....pppppppp....","...pppssssppp...","...ppseeeespp...",
         "....ssssssss....","...pppppppppp...","..ppppcccccccc..","..pppccggggccpp.",
         "..pppccggggccpp.","..ppppcccccccc..","...pppppppppp...","...pppppppppp...",
@@ -2028,7 +2539,7 @@
       ], { p: "#3c096c", s: "#e0c3fc", e: "#72efdd", c: "#5a189a", g: "#80ffdb", l: "#10002b" });
 
       // Garruk (NPC 2 Hutan Belantara: Pengepul Loot Hasil Berburu)
-      sprites.garruk = createPixelSprite([
+      sprites.garruk = createCharSprite([
         "....ffffffff....","...ffffffffff...","...ffssssssff...","...ffseeeesff...",
         "....bbbbbbbb....","...bbbbbbbbbb...","..ffffffffffff..","..ffbbbbbbbbff..",
         "..ffbbggggbbff..","..ffffffffffff..","...bbbbbbbbbb...","...ffffffffff...",
@@ -2036,44 +2547,45 @@
       ], { f: "#582f0e", s: "#d4a373", e: "#111111", b: "#332211", g: "#ffd166", l: "#1f140a" });
 
       // Monster Baru 1: Beruang Cakar Es (Frostclaw Bear)
-      sprites.bear = createPixelSprite([
+      sprites.bear = createCharSprite([
         "..bb........bb..","..bbbb....bbbb..","..bbbbbbbbbbbb..",".bbbbirbbribbbb.",
         ".bbbbbbbbbbbbbb.","..bbbbwwwwbbbb..","..bbbbddddbbbb..",".bbbbbbbbbbbbbb.",
         "bbbbbbbbbbbbbbbb","bbbbbbbbbbbbbbbb",".bbbbbbbbbbbbbb.","..bbbbbbbbbbbb..",
         "..bbbb....bbbb..","..bbbb....bbbb..","..cccc....cccc..","................"
-      ], { b: "#5c6b73", i: "#9db4c0", r: "#ff4d6d", w: "#c2dfe3", d: "#253237", c: "#e0fbfc" });
+      ], { b: "#5c6b73", i: "#9db4c0", r: "#ff4d6d", w: "#c2dfe3", d: "#253237", c: "#e0fbfc" }, 'monster');
 
       // Monster Baru 2: Laba-Laba Kabut Hitam (Mistweaver Spider)
-      sprites.spider = createPixelSprite([
+      sprites.spider = createCharSprite([
         "................","..ll........ll..",".l..l.dddd.l..l.","l...lddddddl...l",
         "...lddrrrrddl...","..ll.dddddd.ll..",".l..dddddddd..l.","...dddvvvvddd...",
         "..llddvvvvddll..",".l..dddddddd..l.","l....dddddd....l","...ll......ll...",
         "..l..........l..","................","................","................"
-      ], { l: "#353535", d: "#1b1b1e", r: "#ff0055", v: "#9d4edd" });
+      ], { l: "#353535", d: "#1b1b1e", r: "#ff0055", v: "#9d4edd" }, 'monster');
 
       // Monster Baru 3: Rusa Tanduk Kristal (Crystalhorn Stag)
-      sprites.stag = createPixelSprite([
+      sprites.stag = createCharSprite([
         ".cc..........cc.",".ccc..cccc..ccc.","..cccc....cccc..","....cccccccc....",
         "....bbbbbbbb....","...bbbeeeebbb...","....bbbbbbbb....",".....bbbbbb.....",
         "...bbbbbbbbbb...","..bbbbwwwwbbbb..","..bbbbbbbbbbbb..","...bbbbbbbbbb...",
         "...bb..bb..bb...","...bb..bb..bb...","...cc..cc..cc...","................"
-      ], { c: "#72efdd", b: "#6f4518", e: "#caf0f8", w: "#a47148" });
+      ], { c: "#72efdd", b: "#6f4518", e: "#caf0f8", w: "#a47148" }, 'monster');
 
       // Monster Baru 4: Harimau Taring Abu (Ashfang Sabertooth)
-      sprites.tiger = createPixelSprite([
+      sprites.tiger = createCharSprite([
         "................","..oo........oo..","..oooooooooooo..",".ookkooooookkoo.",
         ".oooorooooroooo.",".oooooooooooooo.","..oooff..ffooo..","...off....ffo...",
         "..ookkooooookk..",".ookkooooookkoo.",".oooooooooooooo.","..ooo..oo..ooo..",
         "..ooo..oo..ooo..","..kk...kk...kk..","................","................"
-      ], { o: "#d48c46", k: "#262322", r: "#ffbe0b", f: "#ffffff" });
+      ], { o: "#d48c46", k: "#262322", r: "#ffbe0b", f: "#ffffff" }, 'monster');
 
       // Monster Baru 5: Wendigo Lembah Beku (Rime Wendigo - Bos Hutan Belantara)
-      sprites.wendigo = createPixelSprite([
+      sprites.wendigo = createCharSprite([
         ".aa..........aa.","..aaa.wwww.aaa..","...aawwwwwwaa...","....wwrrrrww....",
         "....wwwwwwww....",".....dddddd.....","..ssddddddddss..",".sssddccccddsss.",
         ".ss.ddccccdd.ss.","....dddddddd....","....dddddddd....","...dddd..dddd...",
         "...ddd....ddd...","...ddd....ddd...","..cccc....cccc..","................"
-      ], { a: "#8d99ae", w: "#edf2f4", r: "#ef233c", d: "#2b2d42", s: "#48cae4", c: "#90e0ef" });
+      ], { a: "#8d99ae", w: "#edf2f4", r: "#ef233c", d: "#2b2d42", s: "#48cae4", c: "#90e0ef" }, 'monster');
+      buildDetailedWorld(); // sprite detail baru menimpa sprite lama
     }
 
     // ==========================================================================
@@ -2083,7 +2595,8 @@
       x: 14 * TILE_SIZE,
       y: 12 * TILE_SIZE,
       speed: 2.55,
-      stepFrame: 0
+      stepFrame: 0,
+      facing: 1
     };
 
     const npcsByMap = {
@@ -4710,6 +5223,57 @@
     // ==========================================================================
     let tick = 0;
 
+    // ==========================================================================
+    // MONSTER BERJALAN ACAK (hanya sebagian kecil; bos selalu diam)
+    // ==========================================================================
+    const WANDER_BOSS = new Set(['wendigo', 'golem', 'treant']);
+    function isWanderer(n) {
+      if (n._wd === undefined) n._wd = !!n.isMonster && !WANDER_BOSS.has(n.spriteKey) && (strHash(n.id) % 10) < 4;
+      return n._wd;
+    }
+    function monsterCanStand(n, nx, ny, act) {
+      const left = nx + 8, right = nx + TILE_SIZE - 8, top = ny + 14, bottom = ny + TILE_SIZE - 3;
+      if (left < 0 || top < 0 || right >= getMapCols() * TILE_SIZE || bottom >= getMapRows() * TILE_SIZE) return false;
+      if (Math.abs(nx - n.hx) > 3 * TILE_SIZE || Math.abs(ny - n.hy) > 3 * TILE_SIZE) return false;
+      const pts = [[left, top], [right, top], [left, bottom], [right, bottom]];
+      for (const pt of pts) {
+        const cc = Math.floor(pt[0] / TILE_SIZE), rr = Math.floor(pt[1] / TILE_SIZE);
+        if (SOLID_TILES.has(WORLD_MAP[rr][cc])) return false;
+      }
+      if (nx + TILE_SIZE > player.x - 8 && nx < player.x + TILE_SIZE + 8 && ny + TILE_SIZE > player.y - 8 && ny < player.y + TILE_SIZE + 8) return false;
+      for (const o of act) {
+        if (o === n) continue;
+        if (Math.abs(o.x - nx) < 24 && Math.abs(o.y - ny) < 24) return false;
+      }
+      return true;
+    }
+    function updateWanderers() {
+      const act = getActiveNPCs();
+      for (const n of act) {
+        if (!isWanderer(n)) continue;
+        if (n.hx === undefined) { n.hx = n.x; n.hy = n.y; n.wt = 20 + Math.random() * 100; n.tg = null; n.stuck = 0; n.facing = 1; }
+        n._moving = false;
+        if (Math.hypot(player.x - n.x, player.y - n.y) < 56) continue;
+        if (n.wt > 0) { n.wt--; continue; }
+        if (!n.tg) {
+          const ang = Math.random() * Math.PI * 2, len = 24 + Math.random() * 56;
+          n.tg = { x: n.x + Math.cos(ang) * len, y: n.y + Math.sin(ang) * len };
+          n.stuck = 0;
+        }
+        const dx = n.tg.x - n.x, dy = n.tg.y - n.y, d = Math.hypot(dx, dy);
+        if (d < 1.5) { n.tg = null; n.wt = 50 + Math.random() * 160; continue; }
+        const sp = 0.55, vx = dx / d * sp, vy = dy / d * sp;
+        let moved = false;
+        if (monsterCanStand(n, n.x + vx, n.y + vy, act)) { n.x += vx; n.y += vy; moved = true; }
+        else if (Math.abs(vx) > 0.05 && monsterCanStand(n, n.x + vx, n.y, act)) { n.x += vx; moved = true; }
+        else if (Math.abs(vy) > 0.05 && monsterCanStand(n, n.x, n.y + vy, act)) { n.y += vy; moved = true; }
+        if (moved) {
+          n._moving = true;
+          if (Math.abs(vx) > 0.05) n.facing = vx < 0 ? -1 : 1;
+        } else if (++n.stuck > 20) { n.tg = null; n.wt = 60 + Math.random() * 120; }
+      }
+    }
+
     function update() {
       tick++;
 
@@ -4737,7 +5301,9 @@
         if (dy !== 0 && !isColliding(player.x, player.y + dy)) player.y += dy;
 
         player.stepFrame = (dx !== 0 || dy !== 0) ? player.stepFrame + 0.2 : 0;
+        if (dx < 0) player.facing = -1; else if (dx > 0) player.facing = 1;
 
+        updateWanderers();
         updateCamera();
         checkMapTransition();
       }
@@ -4782,7 +5348,7 @@
             ctx.drawImage(tileTextures[currentMapId === 'wild_forest' ? 1 : 8], x, y);
           }
 
-          ctx.drawImage(tileTextures[tileId], x, y);
+          if (!(treeSprites[tileId])) ctx.drawImage(tileTextures[tileId], x, y);
 
           if (tileId === 7) {
             const flicker = Math.sin(tick * 0.15) * 4;
@@ -4810,6 +5376,15 @@
             ctx.fillStyle = grad;
             ctx.fillRect(x - 20, y - 20, 72, 72);
           }
+        }
+      }
+
+      // Lapisan tanaman (di atas tile sekitarnya agar tajuk tidak terpotong)
+      for (let r = startRow; r <= endRow; r++) {
+        for (let c = startCol; c <= endCol; c++) {
+          const tid = WORLD_MAP[r][c];
+          if (treeSprites[tid]) drawTree(treeSprites[tid], c * TILE_SIZE, r * TILE_SIZE, r, c);
+          else if (tid === 9) drawGlowBed(c * TILE_SIZE, r * TILE_SIZE, r, c);
         }
       }
 
@@ -4877,9 +5452,16 @@
       for (const npc of getActiveNPCs()) {
         const monsterOffset = npc.isMonster ? Math.sin(tick * 0.12 + npc.x) * 1.5 : 0;
 
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-        ctx.fillRect(npc.x + 6, npc.y + 26, 20, 4);
-        ctx.drawImage(sprites[npc.spriteKey], Math.round(npc.x), Math.round(npc.y + monsterOffset));
+        if (npc.isMonster && !npc._moving && Math.hypot(player.x - npc.x, player.y - npc.y) < 130) npc.facing = player.x < npc.x ? -1 : 1;
+        const _spr = sprites[npc.spriteKey];
+        if (_spr && _spr.width > 32) {
+          if (npc._ph === undefined) npc._ph = (strHash(npc.id || npc.spriteKey) % 628) / 100;
+          drawLiveSprite(_spr, npc.x, npc.y, { phase: npc._ph, moving: !!npc._moving, step: tick * 0.22 + npc._ph * 3, flip: npc.facing < 0, size: SPRITE_SIZE[npc.spriteKey], aura: SPRITE_AURA[npc.spriteKey] });
+        } else {
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+          ctx.fillRect(npc.x + 6, npc.y + 26, 20, 4);
+          ctx.drawImage(_spr, Math.round(npc.x), Math.round(npc.y + monsterOffset));
+        }
 
         ctx.font = 'bold 10px "Courier New", monospace';
         ctx.textAlign = 'center';
@@ -4892,9 +5474,7 @@
       }
 
       const bobOffset = Math.sin(player.stepFrame) * 1.5;
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      ctx.fillRect(Math.round(player.x) + 6, Math.round(player.y) + 27, 20, 4);
-      ctx.drawImage(sprites.aldric, Math.round(player.x), Math.round(player.y + bobOffset));
+      drawLiveSprite(sprites.aldric, Math.round(player.x), Math.round(player.y), { phase: 0, bob: bobOffset, moving: player.stepFrame > 0, step: player.stepFrame * 2, flip: player.facing < 0 });
 
       if (nearbyNPC && currentState === STATE.EXPLORE) {
         const actionVerb = nearbyNPC.isMonster ? 'Buru/Lawan' : 'Interaksi';
