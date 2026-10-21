@@ -905,6 +905,7 @@
         <button class="btn-sys save-btn" onclick="saveGame()" title="Simpan Progres Permainan">💾 Simpan</button>
         <button class="btn-sys load-btn" onclick="loadGame()" title="Muat Progres Permainan">📂 Muat</button>
         <button class="btn-sys" onclick="toggleTouchPad()" title="Tampilkan/Sembunyikan Kontrol Sentuh Android">📱 Gamepad</button>
+        <button class="btn-sys" id="btnMusic" onclick="toggleMusic()" title="Musik latar (tekan M)">🎵 Musik: ON</button>
       </div>
     </header>
 
@@ -4964,7 +4965,7 @@
 (function () {
   const T = TILE_SIZE, RC = 120, RR = 26, CC = 200, CR = 100, OX = 50, OY = 22;
   const mk = (R, C, v) => Array.from({ length: R }, () => Array(C).fill(v));
-  let seed = 20261020;
+  let seed = (function () { try { let s = +localStorage.getItem('fv6_city_seed'); if (!s) { s = Math.floor(Math.random() * 4294967294) + 1; localStorage.setItem('fv6_city_seed', String(s)); } return s; } catch (e) { return 20261020; } })();
   const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
   const pathRow = c => Math.round(12 + Math.sin(c * 0.07) * 6 + Math.sin(c * 0.19) * 2);
 
@@ -5045,31 +5046,286 @@
   CAP.forEach(a => { a[4] += OX; a[5] += OY; });
   const CAPD = {}; CAP.forEach(a => CAPD['cap_' + a[0]] = { g: a[7], q: a[8], n: a[1], k: a[0], x: a[4], y: a[5] });
 
+  // ===== V8: TEKSTUR BANGUNAN PROSEDURAL — atap, dinding, jendela, pintu, lapak pasar, dekorasi, tanah =====
+  const TX = {}, GRND = new Set(), BLD_CORE = []; let NID = 200;
+  const pick = a => a[Math.floor(rnd() * a.length)];
+  const ri = (a, b) => a + Math.floor(rnd() * (b - a + 1));
+  const hsh = (a, b, c) => { let h = Math.imul(a + 7, 374761393) ^ Math.imul(b + 13, 668265263) ^ Math.imul(c + 29, 1274126177); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+  const bx = (x, c, X, Y, W, H) => { x.fillStyle = c; x.fillRect(X, Y, W, H); };
+  function reg(key, solid, draw) {
+    if (TX[key] !== undefined) return TX[key];
+    const id = NID++, cv = document.createElement('canvas');
+    cv.width = cv.height = T;
+    const x = cv.getContext('2d'); x.imageSmoothingEnabled = false; x.scale(T / 16, T / 16);
+    draw(x, id);
+    tileTextures[id] = cv; TX[key] = id;
+    if (solid) SOLID_TILES.add(id);
+    if (key.startsWith('g|')) GRND.add(id);
+    return id;
+  }
+
+  // --- tanah: rumput bersalju, paving, tanah liat ---
+  const gGrass = v => reg('g|grass|' + v, false, (x, id) => {
+    x.drawImage(tileTextures[0], 0, 0, 16, 16);
+    for (let i = 0; i < 9; i++) bx(x, hsh(id, i, 3) < 0.5 ? '#2f4a2c' : '#3b5a35', Math.floor(hsh(id, i, 1) * 15), Math.floor(hsh(id, i, 2) * 15), 1, 1);
+    if (v === 1) for (let i = 0; i < 4; i++) bx(x, ['#d9e6ee', '#f2d36b', '#e68fb0', '#b8a3f0'][i], Math.floor(hsh(id, i, 4) * 14) + 1, Math.floor(hsh(id, i, 5) * 14) + 1, 1, 1);
+    if (v === 2) for (let i = 0; i < 3; i++) { const sx = Math.floor(hsh(id, i, 6) * 12), sy = Math.floor(hsh(id, i, 7) * 13); bx(x, '#dfe9ef', sx, sy, 3, 1); bx(x, '#bccbd5', sx + 1, sy + 1, 2, 1); }
+  });
+  const gCob = v => reg('g|cob|' + v, false, (x, id) => {
+    x.drawImage(tileTextures[8], 0, 0, 16, 16);
+    if (v === 1) { bx(x, 'rgba(255,255,255,0.07)', 0, 0, 16, 16); }
+    for (let i = 0; i < 5; i++) bx(x, hsh(id, i, 5) < 0.5 ? '#3f444c' : '#2a2e34', Math.floor(hsh(id, i, 1) * 12), Math.floor(hsh(id, i, 2) * 13), 3, 2);
+    if (v === 2) for (let i = 0; i < 4; i++) bx(x, '#3b5a35', Math.floor(hsh(id, i, 8) * 14), Math.floor(hsh(id, i, 9) * 14), 2, 1);
+  });
+  const gDirt = v => reg('g|dirt|' + v, false, (x, id) => {
+    x.drawImage(tileTextures[1], 0, 0, 16, 16);
+    if (v === 1) { bx(x, '#33281d', 0, 5, 16, 1); bx(x, '#33281d', 0, 11, 16, 1); }
+    for (let i = 0; i < 4; i++) bx(x, '#6a5a48', Math.floor(hsh(id, i, 1) * 14), Math.floor(hsh(id, i, 2) * 14), 1, 1);
+  });
+
+  // --- lantai dalam rumah ---
+  const fPlank = v => reg('f|plank|' + v, false, (x, id) => {
+    bx(x, ['#5a4028', '#644830', '#503822'][v], 0, 0, 16, 16);
+    for (let y = 0; y < 16; y += 4) { bx(x, '#3a2816', 0, y + 3, 16, 1); bx(x, 'rgba(255,255,255,0.06)', 0, y, 16, 1); bx(x, '#3a2816', 2 + Math.floor(hsh(id, y, 1) * 11), y, 1, 3); }
+  });
+  const fRug = v => reg('f|rug|' + v, false, (x, id) => {
+    const cl = [['#7a2b2b', '#c9a24a'], ['#2c4a73', '#d8c58a'], ['#4a6b3a', '#c9a24a']][v];
+    bx(x, '#5a4028', 0, 0, 16, 16); bx(x, cl[0], 1, 1, 14, 14);
+    bx(x, cl[1], 1, 1, 14, 1); bx(x, cl[1], 1, 14, 14, 1); bx(x, cl[1], 1, 1, 1, 14); bx(x, cl[1], 14, 1, 1, 14);
+    bx(x, cl[1], 7, 5, 2, 6); bx(x, cl[1], 5, 7, 6, 2);
+  });
+
+  // --- atap (genting): kind 0 satu baris, 1 baris punggung, 2 baris lereng; edge 0 tengah, 1 kiri, 2 kanan, 3 cerobong ---
+  const ROOFS = [['#8e3b2e', '#b4533f', '#5f2219'], ['#3f5a78', '#5b7da0', '#27384b'], ['#4b6b3c', '#6d9457', '#2f4626'], ['#a58a4c', '#c8ac66', '#6e5a2e'],
+    ['#b5622e', '#d98649', '#7a3f19'], ['#6a4a78', '#8e6ba0', '#43294f'], ['#9aa7b1', '#dfe7ec', '#66737d'], ['#2f6a66', '#4a928c', '#1c4440']];
+  function roofTile(ci, kind, edge, snow) {
+    return reg(['roof', ci, kind, edge, snow].join('|'), true, (x, id) => {
+      const [b, l, d] = ROOFS[ci];
+      bx(x, b, 0, 0, 16, 16);
+      for (let row = 0; row < 4; row++) {
+        const y = row * 4, off = (row % 2) * 2;
+        bx(x, l, 0, y, 16, 1); bx(x, d, 0, y + 3, 16, 1);
+        for (let k = 0; k < 5; k++) { const vx = off + k * 4; if (vx < 16) bx(x, d, vx, y + 1, 1, 2); }
+        for (let k = 0; k < 4; k++) if (hsh(id, row, k) < 0.25) bx(x, 'rgba(255,255,255,0.08)', off + k * 4 + 1, y + 1, 3, 2);
+      }
+      if (kind !== 2) { bx(x, d, 0, 0, 16, 1); bx(x, l, 0, 1, 16, 2); bx(x, d, 0, 3, 16, 1); }
+      if (kind !== 1) { bx(x, 'rgba(0,0,0,0.28)', 0, 12, 16, 1); bx(x, 'rgba(0,0,0,0.55)', 0, 13, 16, 3); }
+      if (edge === 1) { bx(x, d, 0, 0, 2, 16); bx(x, 'rgba(0,0,0,0.3)', 2, 0, 1, 16); }
+      if (edge === 2) { bx(x, d, 14, 0, 2, 16); bx(x, 'rgba(0,0,0,0.3)', 13, 0, 1, 16); }
+      if (edge === 3 && kind !== 2) {
+        bx(x, '#4a433c', 9, 0, 5, 9); bx(x, '#6d655d', 9, 0, 5, 2); bx(x, '#1c1815', 10, 0, 3, 1);
+        bx(x, '#38322c', 9, 4, 5, 1); bx(x, '#38322c', 9, 7, 5, 1); bx(x, 'rgba(0,0,0,0.3)', 9, 9, 5, 1);
+      }
+      if (snow) for (let i = 0; i < 5; i++) {
+        const sx = Math.floor(hsh(id, i, 7) * 13), sy = kind !== 2 ? Math.floor(hsh(id, i, 8) * 5) : Math.floor(hsh(id, i, 8) * 11);
+        bx(x, '#eef4f7', sx, sy, 3, 1); bx(x, '#cfdbe2', sx + 1, sy + 1, 2, 1);
+      }
+    });
+  }
+
+  // --- dinding: gaya 0 plester+rangka kayu, 1 batu, 2 kayu gelondong, 3 bata, 4 marmer ---
+  const STY = [
+    [['#cdbf9f', '#4a3524', '#a89a7b'], ['#dbc9a0', '#4a3524', '#b3a37c'], ['#c9b3a0', '#4a3524', '#a38f7a']],
+    [['#8a8479', '#5e5950', '#6c675e'], ['#7d8288', '#555a60', '#63686d'], ['#8b7d6b', '#5f5547', '#6e6354']],
+    [['#6a4a2b', '#3d2915', '#7b5a38'], ['#5c4129', '#33210f', '#6e4f33'], ['#74512f', '#42301a', '#876641']],
+    [['#9a4f3c', '#6b3326', '#b8917f'], ['#a2563f', '#70382a', '#c09a88'], ['#8c4a3a', '#612e22', '#aa8574']],
+    [['#c3cad1', '#8d97a1', '#e1e6ea'], ['#b9c3cc', '#848f9a', '#d8dfe5'], ['#cdc8c0', '#948f87', '#e6e2da']]
+  ];
+  const SHUT = ['#3f6b52', '#4a5f8a', '#8a3f3f', '#8a6a2f'];
+  const AWNW = [['#b8352f', '#eadfc4'], ['#2f5aa8', '#eadfc4']];
+  // ty: 0 polos, 1 jendela berdaun, 2 jendela+pot bunga, 3 jendela tinggi, 4 lentera, 5/6 jendela dengan kanopi toko
+  function wallTile(st, pa, ty, foot, side) {
+    return reg(['wall', st, pa, ty, foot, side].join('|'), true, (x, id) => {
+      const [b, bm, sh] = STY[st][pa];
+      bx(x, b, 0, 0, 16, 16);
+      if (st === 0) {
+        bx(x, bm, 0, 0, 16, 1); bx(x, bm, 0, 0, 1, 16); bx(x, bm, 15, 0, 1, 16);
+        if (ty === 0 || ty === 4) for (let i = 0; i < 12; i++) { bx(x, bm, 2 + i, 2 + i, 1, 1); bx(x, bm, 13 - i, 2 + i, 1, 1); }
+        for (let i = 0; i < 4; i++) if (hsh(id, i, 1) < 0.4) bx(x, sh, 2 + Math.floor(hsh(id, i, 2) * 11), 2 + Math.floor(hsh(id, i, 3) * 11), 2, 1);
+      } else if (st === 1 || st === 4) {
+        const bh = st === 4 ? 8 : 4, bw = st === 4 ? 8 : 5;
+        for (let y = 0; y < 16; y += bh) {
+          bx(x, sh, 0, y + bh - 1, 16, 1);
+          const o = ((y / bh) % 2) * (bw >> 1);
+          for (let xx = o; xx < 16; xx += bw) bx(x, sh, xx, y, 1, bh);
+          if (hsh(id, y, 4) < 0.5) bx(x, 'rgba(255,255,255,0.08)', 1 + Math.floor(hsh(id, y, 5) * 8), y + 1, 4, 1);
+        }
+        if (st === 4) { bx(x, '#d4af37', 0, 0, 16, 1); }
+      } else if (st === 2) {
+        for (let y = 0; y < 16; y += 4) {
+          bx(x, sh, 0, y, 16, 1); bx(x, bm, 0, y + 3, 16, 1);
+          bx(x, bm, 2 + Math.floor(hsh(id, y, 1) * 11), y + 1, 1, 1);
+        }
+        bx(x, bm, 0, 0, 1, 16); bx(x, bm, 15, 0, 1, 16);
+      } else {
+        for (let y = 0; y < 16; y += 2) {
+          bx(x, sh, 0, y + 1, 16, 1);
+          const o = ((y / 2) % 2) * 2;
+          for (let xx = o; xx < 16; xx += 4) bx(x, sh, xx, y, 1, 1);
+        }
+      }
+      if (foot) { bx(x, '#4a4742', 0, 13, 16, 3); bx(x, '#6a665f', 0, 13, 16, 1); bx(x, 'rgba(0,0,0,0.25)', 0, 15, 16, 1); }
+      if (ty === 1 || ty === 2 || ty === 5 || ty === 6) {
+        bx(x, '#2a1c10', 3, 4, 10, 8); bx(x, '#f0c75e', 4, 5, 8, 6);
+        bx(x, '#2a1c10', 7, 5, 2, 6); bx(x, '#2a1c10', 4, 8, 8, 1); bx(x, 'rgba(255,255,255,0.35)', 4, 5, 2, 1);
+        if (ty <= 2 && st !== 1 && st !== 4) { bx(x, SHUT[pa], 1, 4, 2, 8); bx(x, SHUT[pa], 13, 4, 2, 8); }
+        bx(x, '#6b5a47', 2, 12, 12, 1);
+        if (ty === 2) {
+          bx(x, '#5a3a1e', 3, 12, 10, 2);
+          ['#e0457b', '#f2c744', '#ff8fb1', '#b388ff', '#ff7043'].forEach((c, i) => { bx(x, c, 3 + i * 2, 11, 1, 1); bx(x, '#3c8c4a', 4 + i * 2, 12, 1, 1); });
+        }
+      }
+      if (ty === 3) {
+        bx(x, '#241a12', 4, 2, 8, 12); bx(x, '#8fc3dd', 5, 3, 6, 10); bx(x, '#241a12', 7, 3, 2, 10); bx(x, '#241a12', 5, 7, 6, 1);
+        bx(x, '#d9b24a', 5, 3, 2, 2); bx(x, '#c0504d', 9, 9, 2, 2); bx(x, 'rgba(255,255,255,0.3)', 5, 4, 1, 3);
+      }
+      if (ty === 4) {
+        bx(x, 'rgba(255,200,80,0.18)', 4, 3, 8, 9); bx(x, '#2a2a2a', 7, 3, 2, 1); bx(x, '#2a2a2a', 7, 4, 1, 1);
+        bx(x, '#ffd35a', 6, 5, 3, 3); bx(x, '#ff9f1a', 7, 6, 1, 1);
+      }
+      if (ty === 5 || ty === 6) {
+        const [a1, a2] = AWNW[ty - 5];
+        for (let xx = 0; xx < 16; xx += 2) { const c = (xx / 2) % 2 ? a2 : a1; bx(x, c, xx, 1, 2, 5); bx(x, c, xx, 6, 2, (xx / 2) % 2 ? 1 : 2); }
+        bx(x, 'rgba(0,0,0,0.3)', 0, 8, 16, 1);
+      }
+      if (side === 1) bx(x, 'rgba(0,0,0,0.28)', 0, 0, 2, 16);
+      if (side === 2) bx(x, 'rgba(0,0,0,0.28)', 14, 0, 2, 16);
+      bx(x, 'rgba(0,0,0,0.22)', 0, 0, 16, 1);
+    });
+  }
+  // pintu terbuka (bisa dilewati), dua petak: half 0 kiri, 1 kanan
+  function doorTile(st, pa, half) {
+    return reg(['door', st, pa, half].join('|'), false, (x) => {
+      const [b, bm] = STY[st][pa];
+      bx(x, b, 0, 0, 16, 16); bx(x, bm, 0, 0, 16, 3); bx(x, 'rgba(0,0,0,0.25)', 0, 3, 16, 1);
+      const ox = half ? 0 : 2;
+      bx(x, '#1d130b', ox, 3, 14, 11); bx(x, '#3a2916', ox, 9, 14, 5); bx(x, 'rgba(255,200,110,0.14)', ox, 4, 14, 5);
+      if (half) { bx(x, bm, 14, 3, 2, 11); bx(x, '#6b4a28', 12, 3, 2, 11); bx(x, '#4a321a', 13, 3, 1, 11); }
+      else { bx(x, bm, 0, 3, 2, 11); bx(x, '#6b4a28', 2, 3, 2, 11); bx(x, '#4a321a', 2, 3, 1, 11); }
+      bx(x, '#8a857c', 0, 14, 16, 2); bx(x, '#a9a49a', 0, 14, 16, 1);
+    });
+  }
+
+  // --- lapak pasar ---
+  const AWN = [['#b8352f', '#eadfc4'], ['#2f5aa8', '#eadfc4'], ['#3f7d4a', '#eadfc4'], ['#c9902a', '#eadfc4'], ['#7a3f8f', '#eadfc4']];
+  function goodsDraw(x, g, id) {
+    const dots = (cols, y) => cols.forEach((c, i) => { bx(x, c, 2 + i * 4, y, 3, 3); bx(x, 'rgba(255,255,255,0.35)', 2 + i * 4, y, 1, 1); });
+    if (g === 'bread') dots(['#c98a45', '#d9a05a', '#b87a38', '#d9a05a'], 11);
+    else if (g === 'fruit') dots(['#cc3b3b', '#7cb342', '#e8872a', '#cc3b3b'], 11);
+    else if (g === 'cheese') dots(['#f2d04a', '#e6c03a', '#f2d04a', '#e6c03a'], 11);
+    else if (g === 'meat') { for (let i = 0; i < 4; i++) { bx(x, '#c75c5c', 2 + i * 4, 11, 3, 3); bx(x, '#f0d0c8', 2 + i * 4, 11, 3, 1); } }
+    else if (g === 'fish') { for (let i = 0; i < 3; i++) { bx(x, '#9fb4c4', 2 + i * 5, 12, 4, 2); bx(x, '#6f8798', 6 + i * 5, 12, 1, 2); } }
+    else if (g === 'potion') { ['#5aa9e6', '#e84a8a', '#9b5de5', '#4cc38a'].forEach((c, i) => { bx(x, c, 2 + i * 4, 11, 2, 3); bx(x, '#c9b38a', 2 + i * 4, 10, 2, 1); }); }
+    else if (g === 'weapon') { for (let i = 0; i < 4; i++) { bx(x, '#aab4bc', 3 + i * 3, 10, 1, 5); bx(x, '#6b4a28', 2 + i * 3, 13, 3, 1); } }
+    else if (g === 'cloth') dots(['#b83280', '#2b6cb0', '#d69e2e', '#2f855a'], 11);
+    else if (g === 'drink') { bx(x, '#4a321a', 3, 10, 5, 5); bx(x, '#4a321a', 9, 10, 5, 5); bx(x, '#3a3a3a', 3, 12, 5, 1); bx(x, '#3a3a3a', 9, 12, 5, 1); }
+    else dots(['#6aa84f', '#8bc34a', '#6aa84f', '#8bc34a'], 11);
+  }
+  // pos: 0 kiri, 1 tengah, 2 kanan
+  function stallTile(ai, goods, pos) {
+    return reg(['stall', ai, goods, pos].join('|'), true, (x, id) => {
+      const [c1, c2] = AWN[ai];
+      bx(x, '#6b4a2b', 0, 0, 16, 16); bx(x, '#4a321a', 0, 15, 16, 1);
+      for (let xx = 0; xx < 16; xx += 2) { const c = (xx / 2) % 2 ? c2 : c1; bx(x, c, xx, 0, 2, 7); bx(x, c, xx, 7, 2, (xx / 2) % 2 ? 1 : 2); }
+      bx(x, 'rgba(0,0,0,0.38)', 0, 9, 16, 2);
+      goodsDraw(x, goods, id);
+      if (pos === 0) bx(x, '#3d2915', 0, 0, 1, 16);
+      if (pos === 2) bx(x, '#3d2915', 15, 0, 1, 16);
+    });
+  }
+  const GOODS_FOR = t => /roti|kue/i.test(t) ? 'bread' : /daging/i.test(t) ? 'meat' : /ikan/i.test(t) ? 'fish' : /sayur|buah/i.test(t) ? 'fruit' : /keju|madu/i.test(t) ? 'cheese' :
+    /anggur|bir/i.test(t) ? 'drink' : /apoteker|herbal|jimat|teh/i.test(t) ? 'potion' : /senjata|besi/i.test(t) ? 'weapon' : /penjahit/i.test(t) ? 'cloth' : 'fruit';
+
+  // --- dekorasi: tong, peti, jerami, sumur, semak ---
+  function decorTile(kind, base) {
+    return reg(['d', kind, base].join('|'), true, (x) => {
+      x.drawImage(tileTextures[base === 'dirt' ? 1 : base === 'grass' ? 0 : 8], 0, 0, 16, 16);
+      if (kind === 'barrel') {
+        bx(x, 'rgba(0,0,0,0.3)', 3, 14, 10, 1); bx(x, '#5a3a1e', 4, 3, 8, 11); bx(x, '#7a5230', 5, 3, 6, 11);
+        bx(x, '#3a3a3a', 4, 5, 8, 1); bx(x, '#3a3a3a', 4, 10, 8, 1); bx(x, '#8a6238', 5, 2, 6, 2);
+      } else if (kind === 'crate') {
+        bx(x, 'rgba(0,0,0,0.3)', 2, 14, 12, 1); bx(x, '#7a5a34', 3, 5, 10, 9); bx(x, '#5a3f22', 3, 5, 10, 1);
+        bx(x, '#5a3f22', 3, 9, 10, 1); bx(x, '#5a3f22', 7, 5, 1, 9); bx(x, '#8a6a40', 5, 2, 6, 4); bx(x, '#5a3f22', 5, 2, 6, 1);
+      } else if (kind === 'hay') {
+        bx(x, 'rgba(0,0,0,0.3)', 2, 14, 12, 1); bx(x, '#c9a53a', 3, 5, 10, 9); bx(x, '#a8862a', 3, 7, 10, 1); bx(x, '#a8862a', 3, 11, 10, 1);
+        bx(x, '#e0c25a', 3, 5, 10, 1); bx(x, '#6b4a28', 3, 9, 10, 1);
+      } else if (kind === 'well') {
+        bx(x, '#4a321a', 3, 2, 1, 6); bx(x, '#4a321a', 12, 2, 1, 6); bx(x, '#8e3b2e', 2, 1, 12, 2); bx(x, '#5f2219', 2, 3, 12, 1);
+        bx(x, '#6e6860', 3, 7, 10, 7); bx(x, '#3a5a7a', 5, 8, 6, 4); bx(x, '#8f897f', 3, 7, 10, 1); bx(x, '#d8c8a0', 8, 3, 1, 5);
+      } else {
+        bx(x, 'rgba(0,0,0,0.3)', 2, 14, 12, 1); bx(x, '#2f5a33', 3, 5, 10, 9); bx(x, '#3f7a42', 4, 4, 8, 4); bx(x, '#2a4d2d', 4, 10, 8, 3);
+        bx(x, '#cc3b3b', 5, 7, 1, 1); bx(x, '#cc3b3b', 9, 9, 1, 1); bx(x, '#dfe9ef', 6, 4, 3, 1);
+      }
+    });
+  }
+
+  // --- tembok & menara istana ---
+  const castleCrenel = () => reg('castle|crenel', true, (x, id) => {
+    bx(x, '#5d6269', 0, 0, 16, 16);
+    for (let xx = 0; xx < 16; xx += 4) { bx(x, '#2c3036', xx + 3, 0, 1, 6); bx(x, '#2c3036', xx, 5, 4, 1); bx(x, '#7a8088', xx, 0, 3, 1); }
+    for (let y = 6; y < 16; y += 4) { bx(x, '#464b52', 0, y + 3, 16, 1); for (let xx = (y / 4 % 2) * 2; xx < 16; xx += 5) bx(x, '#464b52', xx, y, 1, 4); }
+  });
+  const castleWall = v => reg('castle|wall|' + v, true, (x, id) => {
+    bx(x, '#5d6269', 0, 0, 16, 16);
+    for (let y = 0; y < 16; y += 4) { bx(x, '#464b52', 0, y + 3, 16, 1); for (let xx = (y / 4 % 2) * 2; xx < 16; xx += 5) bx(x, '#464b52', xx, y, 1, 4); }
+    if (v === 1) { bx(x, '#a8322d', 5, 1, 6, 11); bx(x, '#d4af37', 5, 1, 6, 1); bx(x, '#d4af37', 5, 12, 6, 1); bx(x, '#d4af37', 7, 4, 2, 4); bx(x, '#a8322d', 7, 12, 2, 2); }
+    if (v === 2) { bx(x, '#14110e', 7, 3, 2, 9); bx(x, '#14110e', 5, 6, 6, 2); }
+    bx(x, 'rgba(0,0,0,0.2)', 0, 0, 16, 1);
+  });
+  const castleTower = () => reg('castle|tower', true, (x) => {
+    bx(x, '#3d4248', 0, 0, 16, 16); bx(x, '#6b7078', 1, 1, 14, 14); bx(x, '#575d65', 3, 3, 10, 10);
+    bx(x, '#a8322d', 5, 5, 6, 6); bx(x, '#c94a44', 6, 6, 4, 4); bx(x, '#d4af37', 7, 7, 2, 2);
+    bx(x, 'rgba(255,255,255,0.12)', 1, 1, 14, 1);
+  });
+
   function buildCapitalCore() {
     const CC = 100, CR = 56, g = mk(CR, CC, 8);
     const F = (r1, c1, r2, c2, t) => { for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) g[r][c] = t; };
-    const H = (r1, c1, r2, c2, dc, fl) => { F(r1, c1, r2, c2, 3); F(r1 + 1, c1 + 1, r2 - 1, c2 - 1, fl); g[r2][dc] = fl; g[r2][dc + 1] = fl; };
+    const H = (r1, c1, r2, c2, dc, fl, B) => { F(r1, c1, r2, c2, 3); F(r1 + 1, c1 + 1, r2 - 1, c2 - 1, fl); g[r2][dc] = fl; g[r2][dc + 1] = fl; BLD_CORE.push(Object.assign({ r1, c1, r2, c2, dc }, B)); };
     F(0, 0, 1, CC - 1, 3); F(CR - 2, 0, CR - 1, CC - 1, 3); F(0, 0, CR - 1, 1, 3); F(0, CC - 2, CR - 1, CC - 1, 3);
     F(27, 0, 28, 0, 9); F(27, 1, 28, 1, 8);
     F(26, 2, 29, 67, 1); F(2, 48, 53, 51, 1);
     for (const c of [6, 16, 36, 56, 66]) { g[25][c] = 7; g[30][c] = 7; }
     F(22, 8, 23, 11, 5);
     F(2, 24, 53, 25, 5); F(26, 24, 29, 25, 6); F(12, 24, 13, 25, 6); F(42, 24, 43, 25, 6);
-    for (const r of [4, 10, 16, 36, 42, 48]) for (const c of [3, 9, 15]) H(r, c, r + 3, c + 4, c + 2, 8);
-    H(4, 30, 17, 44, 37, 11);
+    // permukiman Kota Dalam: rumah acak berbagai ukuran, atap, dan warna
+    packBlock(g, 3, 20, 3, 22, { base: 'stone', grass: true, res: 0, emptyP: 0.12 });
+    packBlock(g, 33, 52, 3, 22, { base: 'stone', grass: true, res: 0, emptyP: 0.12 });
+    H(4, 30, 17, 44, 37, 11, { kind: 'temple', label: 'KUIL CAHAYA', ws: 4, pal: 0, ci: 6, rr: 3, big: true, snow: true, chim: -1 });
     for (const [r, c] of [[7, 33], [7, 41], [14, 33], [14, 41]]) g[r][c] = 12;
-    g[6][35] = 7; g[6][40] = 7;
-    for (const r of [5, 9, 13, 17, 21]) for (const c of [54, 57, 60, 63]) { g[r][c] = 4; g[r][c + 1] = 4; }
-    H(32, 28, 43, 44, 36, 8); g[33][30] = 7; g[33][42] = 7;
-    H(32, 54, 44, 66, 60, 8);
+    g[8][35] = 7; g[8][40] = 7;
+    H(32, 28, 43, 44, 36, 8, { kind: 'guild', label: 'GUILD AURELION', ws: 1, pal: 1, ci: 1, rr: 3, big: true, snow: true, chim: -1 });
+    g[36][30] = 7; g[36][42] = 7;
+    H(32, 54, 44, 66, 60, 8, { kind: 'hall', label: 'AULA KSATRIA', ws: 1, pal: 0, ci: 7, rr: 3, big: true, snow: true, chim: -1 });
     for (const [r, c] of [[36, 57], [36, 63], [40, 57], [40, 63]]) g[r][c] = 19;
+    // pasar kecil di Kota Dalam: lapak tersebar acak, tidak lagi berbaris rapi
+    for (const r0 of [5, 9, 13, 17, 21]) {
+      let x = 53 + ri(0, 1);
+      while (x + 1 <= 65) {
+        const w = rnd() < 0.3 ? 3 : 2, r = r0 + ri(-1, 1);
+        if (x + w - 1 > 65) break;
+        if (rnd() > 0.14) {
+          const ai = ri(0, AWN.length - 1), gd = pick(['bread', 'fruit', 'cheese', 'meat', 'potion', 'weapon', 'cloth', 'drink']);
+          for (let j = 0; j < w; j++) g[r][x + j] = stallTile(ai, gd, j === 0 ? 0 : j === w - 1 ? 2 : 1);
+          if (rnd() < 0.35 && g[r][x + w] === 8) g[r][x + w] = decorTile(pick(['barrel', 'crate']), 'stone');
+        }
+        x += w + ri(1, 3);
+      }
+    }
     F(12, 68, 43, 97, 5); F(14, 70, 41, 95, 11); F(16, 72, 39, 93, 3); F(18, 74, 37, 91, 11);
     F(27, 72, 28, 73, 11); F(27, 68, 28, 69, 6);
     for (const c of [76, 80, 84, 88]) { g[20][c] = 12; g[35][c] = 12; }
-    H(3, 74, 10, 92, 82, 8);
+    H(3, 74, 10, 92, 82, 8, { kind: 'academy', label: 'AKADEMI ARKANA', ws: 1, pal: 2, ci: 5, rr: 2, big: true, snow: true, chim: -1 });
     F(46, 56, 52, 96, 0);
-    for (let r = 46; r <= 52; r++) for (let c = 56; c <= 96; c++) if (rnd() < 0.2) g[r][c] = rnd() < 0.3 ? 10 : 2;
+    for (let r = 46; r <= 52; r++) for (let c = 56; c <= 96; c++) { if (rnd() < 0.2) g[r][c] = rnd() < 0.3 ? 10 : 2; else g[r][c] = gGrass(rnd() < 0.75 ? 0 : ri(1, 2)); }
     F(48, 74, 50, 80, 5);
+    for (const B of BLD_CORE) styleBuilding(g, B);
+    // tembok istana: benteng bergerigi + menara sudut
+    for (let r = 16; r <= 39; r++) for (let c = 72; c <= 93; c++) {
+      if (g[r][c] !== 3) continue;
+      const corner = (r <= 17 || r >= 38) && (c <= 73 || c >= 92);
+      g[r][c] = corner ? castleTower() : (r === 16 || r === 39) ? castleCrenel() : castleWall(hsh(r, c, 9) < 0.12 ? 1 : hsh(r, c, 5) < 0.2 ? 2 : 0);
+    }
     return g;
   }
 
@@ -5114,34 +5370,132 @@
     OCC.add(c + ',' + r);
   }
   const FF = (g, r1, c1, r2, c2, t) => { for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) g[r][c] = t; };
-  const HH = (g, r1, c1, r2, c2, dc, fl) => { FF(g, r1, c1, r2, c2, 3); FF(g, r1 + 1, c1 + 1, r2 - 1, c2 - 1, fl); g[r2][dc] = fl; g[r2][dc + 1] = fl; };
-  // Blok rumah: baris rumah tiap 6 petak, pintu menghadap jalan tanah di bawahnya; sebagian berpenghuni atau bangunan khusus
-  function res(g, r0, r1, c0, c1) {
-    for (let r = r0; r <= r1; r += 6) {
-      for (let c = c0; c + 4 <= c1; c += 7) {
-        const sp = SPC[r + ',' + c];
-        HH(g, r, c, r + 3, c + 4, c + 2, sp ? 11 : 8);
-        if (sp) { addN(c + 2, r + 2, sp[1], sp[2], sp[3], sp[4], sp[5]); LB.push([c + 2.5, r - 0.4, sp[0], '#ffd966']); }
-        else if (rnd() < 0.3) addN(c + 2, r + 2, pk(FN), 'Manusia — Warga Aurelion', pk(HS), pk(LN));
-      }
-      FF(g, r + 4, c0 - 1, r + 5, c1 + 1, 1);
+  const gStone = () => rnd() < 0.8 ? 8 : gCob(ri(0, 2));
+  const gGround = (base, r, c, s, grass) => {
+    if (grass && Math.sin(r * 0.37 + s) * Math.cos(c * 0.29 + s * 1.7) + 0.5 * Math.sin((r + c) * 0.21 + s * 2.3) > 0.6) return gGrass(rnd() < 0.5 ? 0 : rnd() < 0.5 ? 1 : 2);
+    return base === 'dirt' ? (rnd() < 0.82 ? 1 : gDirt(ri(0, 1))) : gStone();
+  };
+
+  // Menata bangunan pada sebuah persegi: atap berpunggung, dinding bergaya, jendela, pintu terbuka, lantai kayu
+  function styleBuilding(g, B) {
+    const { r1, c1, r2, c2, dc } = B, rr = B.rr || 1, big = !!B.big, ws = B.ws, pa = B.pal || 0, hall = B.kind !== 'house' && B.kind !== 'shop';
+    for (let r = r1; r < r1 + rr; r++) for (let c = c1; c <= c2; c++) {
+      const kind = rr === 1 ? 0 : (r === r1 ? 1 : 2);
+      const edge = c === c1 ? 1 : c === c2 ? 2 : (B.chim === c && r === r1 ? 3 : 0);
+      g[r][c] = roofTile(B.ci, kind, edge, B.snow ? 1 : 0);
+    }
+    if (!hall) for (let r = r1 + rr; r < r2; r++) for (let c = c1 + 1; c < c2; c++)
+      g[r][c] = (B.rug && B.rug[0] === r && B.rug[1] === c) ? fRug(B.rugv) : fPlank(ri(0, 2));
+    else if (B.kind !== 'temple') for (let r = r1 + rr; r < r2; r++) for (let c = c1 + 1; c < c2; c++) if (g[r][c] === 8) g[r][c] = fPlank(ri(0, 2));
+    for (let r = r1 + rr; r <= r2; r++) for (const c of [c1, c2]) {
+      const k = r - (r1 + rr), ty = r === r2 ? 0 : big ? (k % 3 === 1 ? 3 : 0) : (k % 2 === 0 ? 1 : 0);
+      g[r][c] = wallTile(ws, pa, ty, r === r2 ? 1 : 0, c === c1 ? 1 : 2);
+    }
+    for (let c = c1 + 1; c < c2; c++) {
+      if (c === dc || c === dc + 1) { g[r2][c] = doorTile(ws, pa, c === dc ? 0 : 1); continue; }
+      const ty = B.shop ? B.shop : big ? (((c - c1) % 3 === 1) ? 3 : 0) : pick([1, 1, 2, 0, 4]);
+      g[r2][c] = wallTile(ws, pa, ty, 1, 0);
     }
   }
-  // Pasar: 4 baris x n lapak (2 petak), tiap lapak dijaga satu pedagang yang menjual barangnya sendiri
-  function market(g, c0, n, off, label) {
-    FF(g, 36, c0 - 1, 61, c0 + 5 * n - 3, 1);
-    let k = 0;
-    for (const r of [38, 42, 54, 58]) for (let i = 0; i < n; i++, k++) {
-      const c = c0 + 5 * i, a = AR[(k + off) % AR.length];
-      g[r][c] = g[r][c + 1] = 4;
-      addN(c, r + 1, a.t, RACE[a.r] + ' — ' + pk(FN), a.s, pk(VL), a.g);
-      if (i % 2 === 0) { g[36][c + 2] = 7; g[61][c + 2] = 7; }
+
+  // Pekarangan kosong: pohon, jerami, peti, semak, dan petak bunga
+  function yardFill(g, l, dens) {
+    for (let r = l.r; r <= l.bottom; r++) for (let c = l.c; c < l.c + l.w; c++) {
+      const q = rnd();
+      if (q < dens * 0.35) g[r][c] = 2;
+      else if (q < dens * 0.5) g[r][c] = decorTile('bush', 'grass');
+      else if (q < dens * 0.62) g[r][c] = decorTile(pick(['hay', 'crate', 'barrel']), 'stone');
+      else if (q < dens + 0.25) g[r][c] = gGrass(ri(0, 2));
     }
+  }
+
+  // Pengepakan acak: ukuran rumah, jarak, tinggi, arah pintu, jalan berkelok, dan dekorasi semuanya diacak
+  function packBlock(g, r0, r1, c0, c1, cfg) {
+    const s = rnd() * 60, bands = [], blds = [], maxR = g.length - 1;
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) g[r][c] = gGround(cfg.base, r, c, s, cfg.grass);
+    let y = r0 + ri(0, 1);
+    while (y + 3 <= r1) {
+      const hmax = Math.min(ri(4, 6), r1 - y + 1), lots = [];
+      let c = c0 + ri(0, 2);
+      while (c + 4 <= c1) {
+        let w = ri(5, 7); if (c + w - 1 > c1) w = c1 - c + 1;
+        if (w < 5) break;
+        const h = ri(4, hmax), bottom = y + hmax - 1;
+        lots.push({ r: bottom - h + 1, c, w, h, bottom, empty: rnd() < (cfg.emptyP === undefined ? 0.13 : cfg.emptyP) });
+        c += w + pick([1, 1, 2, 2, 3, 4, 5]);
+      }
+      bands.push({ y, hmax, lots });
+      y += hmax + 2 + ri(0, 1);
+    }
+    const flat = bands.flatMap(b => b.lots).filter(l => !l.empty);
+    (cfg.specials || []).forEach(sp => {
+      const free = flat.filter(l => !l.sp), big = free.filter(l => l.w >= 6), pool = big.length ? big : free;
+      if (pool.length) pick(pool).sp = sp;
+    });
+    const lane = (r, c) => {
+      if (r < r0 || r > r1 + 1 || r > maxR || c < c0 - 1 || c > c1 + 1) return;
+      g[r][c] = cfg.base === 'dirt' ? (rnd() < 0.85 ? 1 : gDirt(ri(0, 1))) : (rnd() < 0.8 ? gCob(1) : gCob(0));
+    };
+    bands.forEach(b => {
+      b.lt = {};
+      for (let c = c0 - 1; c <= c1 + 1; c++) { const top = b.y + b.hmax + Math.round(Math.sin(c * 0.16 + b.y * 0.7) * 0.9); b.lt[c] = top; lane(top, c); lane(top + 1, c); }
+    });
+    bands.forEach(b => {
+      const doorCols = new Set();
+      b.lots.forEach(l => {
+        if (l.empty) { yardFill(g, l, 0.32); return; }
+        const sp = l.sp, dcc = l.c + 1 + ri(0, l.w - 4), rr = l.h >= 5 ? 2 : 1;
+        const B = { kind: sp ? 'shop' : 'house', r1: l.r, c1: l.c, r2: l.bottom, c2: l.c + l.w - 1, dc: dcc, rr, ws: pick([0, 0, 1, 2, 3, 3]), pal: ri(0, 2),
+          ci: sp ? pick([0, 1, 5, 7]) : pick([0, 1, 2, 3, 4, 5]), snow: rnd() < 0.5, chim: rnd() < 0.55 ? l.c + 1 + ri(0, l.w - 3) : -1, shop: sp ? pick([5, 6]) : 0 };
+        if (rnd() < 0.5) { B.rug = [ri(l.r + rr, l.bottom - 1), ri(l.c + 1, l.c + l.w - 2)]; B.rugv = ri(0, 2); }
+        styleBuilding(g, B); blds.push(B); doorCols.add(dcc); doorCols.add(dcc + 1);
+        for (const c of [dcc, dcc + 1]) for (let r = l.bottom + 1; r < b.lt[c]; r++) lane(r, c);
+        if (cfg.res) {
+          const cells = [];
+          for (let r = l.r + rr; r < l.bottom; r++) for (let c = l.c + 1; c < l.c + l.w - 1; c++) if (!(r === l.bottom - 1 && (c === dcc || c === dcc + 1))) cells.push([c, r]);
+          if (sp) { const p = pick(cells); addN(p[0], p[1], sp[1], sp[2], sp[3], sp[4], sp[5]); LB.push([l.c + l.w / 2, l.r - 0.35, sp[0], '#ffd966']); }
+          else if (rnd() < cfg.res) { const p = pick(cells); addN(p[0], p[1], pk(FN), 'Manusia — Warga Aurelion', pk(HS), pk(LN)); }
+        }
+      });
+      // dekorasi di sela bangunan: pohon, semak, tong, peti, jerami; sumur di celah lebar
+      const ground = t => t === 8 || t === 1 || GRND.has(t);
+      for (let r = b.y; r < b.y + b.hmax; r++) for (let c = c0; c <= c1; c++) {
+        if (!ground(g[r][c]) || doorCols.has(c)) continue;
+        const q = rnd();
+        if (q < 0.045) g[r][c] = 2;
+        else if (q < 0.065) g[r][c] = decorTile('bush', 'grass');
+        else if (q < 0.085) g[r][c] = decorTile(pick(['barrel', 'crate', 'hay']), cfg.base === 'dirt' ? 'dirt' : 'stone');
+      }
+      for (let i = 0; i + 1 < b.lots.length; i++) {
+        const a = b.lots[i], n = b.lots[i + 1], gw = n.c - (a.c + a.w);
+        if (gw >= 3 && rnd() < 0.55) { const wc = a.c + a.w + Math.floor(gw / 2), wr = b.y + b.hmax - 2; if (!doorCols.has(wc) && ground(g[wr][wc])) g[wr][wc] = decorTile('well', 'stone'); }
+      }
+      let lc = c0 + ri(2, 6);
+      while (lc <= c1) { const lr = b.lt[lc] + 1; if (!doorCols.has(lc) && lr <= r1 + 1 && lr <= maxR && ground(g[lr][lc])) g[lr][lc] = 7; lc += ri(7, 13); }
+    });
+    return blds;
+  }
+
+  // Pasar: lapak berkanopi tersebar tak beraturan (tinggi, lebar, warna, barang), pedagang berdiri di sisi lapaknya
+  function market(g, c0, n, off, label) {
+    const ce = c0 + 5 * n - 3;
+    for (let r = 36; r <= 61; r++) for (let c = c0 - 1; c <= ce; c++) g[r][c] = rnd() < 0.86 ? 1 : gDirt(ri(0, 1));
+    let k = 0;
+    for (const r0 of [38, 42, 54, 58]) for (let i = 0; i < n; i++, k++) {
+      if (rnd() < 0.1) continue;
+      const w = rnd() < 0.3 ? 3 : 2, r = r0 + ri(-1, 1);
+      const c = Math.min(c0 + 5 * i + ri(-1, 1), ce - w + 1);
+      const a = AR[(k + off) % AR.length], ai = ri(0, AWN.length - 1), gd = GOODS_FOR(a.t);
+      for (let j = 0; j < w; j++) g[r][c + j] = stallTile(ai, gd, j === 0 ? 0 : j === w - 1 ? 2 : 1);
+      addN(c + ri(0, w - 1), r + 1, a.t, RACE[a.r] + ' — ' + pick(FN), a.s, pick(VL), a.g);
+      if (rnd() < 0.4) { const dx = rnd() < 0.5 ? c - 1 : c + w; if (dx >= c0 - 1 && dx <= ce && (g[r][dx] === 1 || GRND.has(g[r][dx]))) g[r][dx] = decorTile(pick(['barrel', 'crate', 'hay']), 'dirt'); }
+    }
+    for (let i = 0; i < n; i += 2) { if (rnd() < 0.85) g[36][Math.min(c0 + 5 * i + 2 + ri(-1, 1), ce)] = 7; if (rnd() < 0.85) g[61][Math.min(c0 + 5 * i + 2 + ri(-1, 1), ce)] = 7; }
     LB.push([c0 + 5 * n / 2 - 1, 35, label, '#f4a261']);
   }
 
   function buildCapitalMap() {
-    const core = buildCapitalCore(), g = mk(CR, CC, 8);
+    const n0 = CAP.length, core = buildCapitalCore(), g = mk(CR, CC, 8);
     FF(g, 0, 0, 1, CC - 1, 3); FF(g, CR - 2, 0, CR - 1, CC - 1, 3); FF(g, 0, 0, CR - 1, 1, 3); FF(g, 0, CC - 2, CR - 1, CC - 1, 3);
     for (let r = 0; r < 56; r++) for (let c = 0; c < 100; c++) g[OY + r][OX + c] = core[r][c];
     FF(g, 20, 48, 21, 151, 1); FF(g, 78, 48, 79, 151, 1); FF(g, 20, 48, 79, 49, 1); FF(g, 20, 150, 79, 151, 1); // jalan lingkar
@@ -5149,13 +5503,50 @@
     FF(g, 49, 0, 50, 0, 9); FF(g, 49, 1, 50, 1, 8);                                                           // gerbang barat luar
     FF(g, 49, 50, 50, 51, 8); FF(g, 22, 98, 23, 101, 1); FF(g, 76, 98, 77, 101, 1);                           // gerbang Kota Dalam
     market(g, 4, 9, 0, 'PASAR RAKYAT BARAT'); market(g, 154, 9, 7, 'BAZAR TIGA BANGSA');
-    res(g, 3, 27, 3, 46); res(g, 67, 91, 3, 46); res(g, 3, 27, 153, 196); res(g, 67, 91, 153, 196);
-    res(g, 3, 15, 53, 97); res(g, 3, 15, 102, 146); res(g, 80, 92, 53, 97); res(g, 80, 92, 102, 146);
-    for (const [c, r] of [[3, 48], [3, 51], [98, 19], [101, 19], [98, 80], [101, 80]]) addN(c, r, 'Penjaga Kota', 'Manusia — Pengawal Gerbang', 'durgan', 'Semua pendatang disambut, asal tak membawa masalah.');
+    // distrik perumahan: tiap blok dikemas acak; bangunan khusus (penginapan, bengkel, dll.) jatuh di blok asalnya
+    const spIn = (ra, rb, ca, cb) => Object.keys(SPC).filter(k => { const [r, c] = k.split(',').map(Number); return r >= ra && r <= rb && c >= ca && c <= cb; }).map(k => SPC[k]);
+    for (const [r0, r1, c0, c1] of [[3, 32, 3, 46], [67, 94, 3, 46], [3, 32, 153, 196], [67, 94, 153, 196], [3, 18, 53, 97], [3, 18, 102, 146], [81, 95, 53, 97], [81, 95, 102, 146]])
+      packBlock(g, r0, r1, c0, c1, { base: 'dirt', grass: true, res: 0.4, emptyP: 0.15, specials: spIn(r0, r1 === 95 ? 99 : r1 + 2, c0, c1) });
+    for (const B of BLD_CORE) if (B.label) LB.push([OX + (B.c1 + B.c2 + 1) / 2, OY + B.r1 - 0.35, B.label, '#ffd966']);
     LB.push([4, 46, 'GERBANG BARAT', '#ffd966'], [100, 25, 'KOTA DALAM: ISTANA, GUILD & KUIL', '#ffd966'], [100, 5, 'JALAN RAYA UTARA', '#b8afa6'], [100, 94, 'JALAN RAYA SELATAN', '#b8afa6']);
+    for (const [c, r] of [[3, 48], [3, 51], [98, 19], [101, 19], [98, 80], [101, 80]]) addN(c, r, 'Penjaga Kota', 'Manusia — Pengawal Gerbang', 'durgan', 'Semua pendatang disambut, asal tak membawa masalah.');
+    // variasi tanah di sisa lahan: bercak rumput bersalju dan paving retak
+    const nz = (r, c) => Math.sin(r * 0.21 + 2.1) * Math.cos(c * 0.17 + 0.7) + 0.6 * Math.sin((r - c) * 0.09);
+    for (let r = 2; r < CR - 2; r++) for (let c = 2; c < CC - 2; c++) if (g[r][c] === 8) {
+      const inCore = r >= OY && r < OY + 56 && c >= OX && c < OX + 100;
+      if (!inCore && nz(r, c) > 0.55) g[r][c] = gGrass(rnd() < 0.6 ? 0 : ri(1, 2));
+      else if (rnd() < 0.1) g[r][c] = gCob(ri(0, 2));
+    }
+    // NPC kota inti digeser acak beberapa petak agar tidak selalu di titik yang sama (tidak menembus dinding)
+    const taken = new Set(CAP.map(a => a[4] + ',' + a[5])), walk = (c, r) => g[r] && g[r][c] !== undefined && !SOLID_TILES.has(g[r][c]) && g[r][c] !== 9;
+    for (let i = 0; i < n0; i++) {
+      const a = CAP[i];
+      if (a[0] === 'board' || a[0] === 'guard1' || a[0] === 'guard2') continue;
+      for (let t = 0; t < 14; t++) {
+        const dx = ri(-2, 2), dy = ri(-2, 2), nc = a[4] + dx, nr = a[5] + dy;
+        if ((!dx && !dy) || taken.has(nc + ',' + nr) || !walk(nc, nr)) continue;
+        let ok = true;
+        for (let k = 1; k <= Math.abs(dx); k++) if (!walk(a[4] + k * Math.sign(dx), a[5])) ok = false;
+        for (let k = 1; k <= Math.abs(dy); k++) if (!walk(nc, a[5] + k * Math.sign(dy))) ok = false;
+        if (!ok) continue;
+        taken.delete(a[4] + ',' + a[5]); taken.add(nc + ',' + nr);
+        a[4] = nc; a[5] = nr; CAPD['cap_' + a[0]].x = nc; CAPD['cap_' + a[0]].y = nr;
+        break;
+      }
+    }
     for (const a of CAP) OCC.add(a[4] + ',' + a[5]);
-    for (let r = 2; r < CR - 2; r++) for (let c = 2; c < CC - 2; c++)   // warga jalanan yang berkeliaran
-      if (g[r][c] === 1 && !OCC.has(c + ',' + r) && rnd() < 0.008) addN(c, r, pk(FN), 'Manusia — Warga Aurelion', pk(HS), pk(LN), null, 1);
+    // warga jalanan: kepadatan berbeda-beda (ramai di pasar, jarang di pinggiran), ras campuran
+    const dens = (r, c) => Math.sin(r * 0.13 + 1.3) * Math.cos(c * 0.11) + Math.sin((r - c) * 0.07);
+    const RS = [['Manusia', ['henrik', 'caelen', 'mira', 'senna', 'kael', 'garruk', 'bramwell', 'orin']], ['Kaum Karst', ['brokk', 'hilde', 'durgan', 'bramwell']], ['Kaum Aethel', ['thalorien', 'lyraelle', 'elincia', 'elandor']]];
+    for (let r = 2; r < CR - 2; r++) for (let c = 2; c < CC - 2; c++) {
+      const t = g[r][c];
+      if (!(t === 1 || t === 8 || GRND.has(t)) || OCC.has(c + ',' + r)) continue;
+      const mk_ = r >= 36 && r <= 61 && ((c >= 3 && c <= 46) || (c >= 153 && c <= 196));
+      if (rnd() < (mk_ ? 0.028 : 0.004 + 0.008 * Math.max(0, dens(r, c)))) {
+        const q = rnd(), rs = q < 0.72 ? RS[0] : q < 0.87 ? RS[1] : RS[2];
+        addN(c, r, pick(FN), rs[0] + ' — Warga Aurelion', pick(rs[1]), pick(LN), null, 1);
+      }
+    }
     for (const a of CAP) if (SOLID_TILES.has(g[a[5]][a[4]])) g[a[5]][a[4]] = 8;
     return g;
   }
@@ -5359,6 +5750,10 @@
     const gt = titles.find(e => e.textContent.includes('Panduan Kontrol'));
     if (gt) gt.nextElementSibling.insertAdjacentHTML('beforeend', '<div><strong>Peta 5-6 (Ibu Kota):</strong> Dari Hutan Elf ambil gerbang <strong>Timur</strong> → Jalan Setapak Hutan Kuno → Ibu Kota Aurelion.</div>');
   } catch (e) {}
+  try {
+    const gt2 = [...document.querySelectorAll('.panel-title')].find(e => e.textContent.includes('Panduan Kontrol'));
+    if (gt2) gt2.nextElementSibling.insertAdjacentHTML('beforeend', '<div><strong>Musik:</strong> tekan <strong>M</strong> atau tombol 🎵 untuk menyalakan/mematikan musik latar.</div>');
+  } catch (e) {}
   window.FV6 = { MAPS, CAP, CAPD, buildRoadMap, buildCapitalMap, pathRow, needState };
   updateUI();
 })();
@@ -5405,6 +5800,199 @@
       wasDlg = d;
     });
     [dlg, cmb].forEach(el => mo.observe(el, { attributes: true, attributeFilter: ['class'] }));
+  })();
+  </script>
+  <!-- ===== V8: MUSIK LATAR MEDIEVAL FANTASY (disintesis lewat Web Audio, tanpa file eksternal; lagu dipilih & disusun acak) ===== -->
+  <style>
+    #music-now { position: fixed; left: 12px; bottom: 12px; z-index: 40; max-width: 70vw; padding: 6px 12px; border-radius: 6px; background: rgba(20,16,12,0.88); border: 1px solid #d4af37;
+      color: #ffd966; font: bold 11px "Courier New", monospace; opacity: 0; transform: translateY(8px); transition: opacity .8s, transform .8s; pointer-events: none; }
+    #music-now.show { opacity: 1; transform: translateY(0); }
+  </style>
+  <div id="music-now"></div>
+  <script>
+  (function () {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const btn = document.getElementById('btnMusic'), now = document.getElementById('music-now');
+    let muted = false; try { muted = localStorage.getItem('fv_music_muted') === '1'; } catch (e) {}
+    const label = () => { if (btn) btn.textContent = muted ? '🔇 Musik: OFF' : '🎵 Musik: ON'; };
+    label();
+    if (!AC) { if (btn) btn.style.display = 'none'; return; }
+
+    let ctx, master, convolver, noiseBuf, started = false, state = 'idle', gapEnd = 0, last = -1, cur = null, timer = null, hideT = null;
+    const rand = Math.random, pick = a => a[Math.floor(rand() * a.length)], mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+
+    const MODES = { dorian: [0, 2, 3, 5, 7, 9, 10], aeolian: [0, 2, 3, 5, 7, 8, 10], phrygian: [0, 1, 3, 5, 7, 8, 10], mixolydian: [0, 2, 4, 5, 7, 9, 10],
+      lydian: [0, 2, 4, 6, 7, 9, 11], ionian: [0, 2, 4, 5, 7, 9, 11], harmonic: [0, 2, 3, 5, 7, 8, 11] };
+    // lead: flute | lute | both ; comp: arp | strum | harp ; drums: none | folk | march | slow | waltz
+    const TRACKS = [
+      { name: 'Perapian Rusa Emas', root: 62, mode: 'dorian', bpm: 108, beats: 4, prog: [0, 3, 0, 4, 0, 3, 6, 0], lead: 'lute', comp: 'strum', drums: 'folk', pad: false, drone: false, bells: false, bars: 16 },
+      { name: 'Bisikan Hutan Kuno', root: 57, mode: 'lydian', bpm: 64, beats: 4, prog: [0, 4, 5, 3, 0, 4, 1, 4], lead: 'flute', comp: 'harp', drums: 'none', pad: true, drone: true, bells: true, bars: 16 },
+      { name: 'Aula Singgasana', root: 60, mode: 'ionian', bpm: 84, beats: 4, prog: [0, 4, 5, 3, 0, 3, 4, 0], lead: 'flute', comp: 'arp', drums: 'march', pad: true, drone: false, bells: false, bars: 16 },
+      { name: 'Gema Tambang Karst', root: 52, mode: 'aeolian', bpm: 96, beats: 3, prog: [0, 0, 5, 6, 0, 3, 4, 0], lead: 'lute', comp: 'strum', drums: 'waltz', pad: true, drone: true, bells: false, bars: 20 },
+      { name: 'Jalan Bulan Pucat', root: 55, mode: 'aeolian', bpm: 70, beats: 4, prog: [0, 5, 3, 4, 0, 5, 6, 0], lead: 'both', comp: 'arp', drums: 'none', pad: true, drone: true, bells: true, bars: 16 },
+      { name: 'Pengawal Musim Dingin', root: 57, mode: 'harmonic', bpm: 78, beats: 3, prog: [0, 3, 4, 0, 5, 3, 4, 0], lead: 'flute', comp: 'strum', drums: 'slow', pad: true, drone: true, bells: false, bars: 20 },
+      { name: 'Pasar Tiga Bangsa', root: 64, mode: 'mixolydian', bpm: 128, beats: 4, prog: [0, 6, 0, 3, 0, 6, 4, 0], lead: 'both', comp: 'arp', drums: 'folk', pad: false, drone: false, bells: false, bars: 16 },
+      { name: 'Nyanyian Menara Aether', root: 59, mode: 'lydian', bpm: 58, beats: 4, prog: [0, 1, 4, 5, 0, 1, 3, 4], lead: 'flute', comp: 'harp', drums: 'none', pad: true, drone: true, bells: true, bars: 16 }
+    ];
+
+    function init() {
+      ctx = new AC();
+      const comp = ctx.createDynamicsCompressor(); comp.connect(ctx.destination);
+      master = ctx.createGain(); master.gain.value = 0.42; master.connect(comp);
+      convolver = ctx.createConvolver();
+      const len = Math.floor(ctx.sampleRate * 2.8), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+      for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (rand() * 2 - 1) * Math.pow(1 - i / len, 2.4); }
+      convolver.buffer = ir;
+      const wet = ctx.createGain(); wet.gain.value = 0.5; convolver.connect(wet); wet.connect(master);
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const nd = noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = rand() * 2 - 1;
+    }
+
+    // ---------- suara instrumen ----------
+    function route(bus, node, send) { node.connect(bus); if (send) { const s = ctx.createGain(); s.gain.value = send; node.connect(s); s.connect(convolver); } }
+    function pluck(bus, t, m, dur, v) {
+      const f = mtof(m), o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), g2 = ctx.createGain(), lp = ctx.createBiquadFilter();
+      o1.type = 'triangle'; o2.type = 'sawtooth'; o1.frequency.value = f; o2.frequency.value = f * 1.004; g2.gain.value = 0.3;
+      lp.type = 'lowpass'; lp.frequency.setValueAtTime(3200, t); lp.frequency.exponentialRampToValueAtTime(500, t + dur);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o1.connect(g); o2.connect(g2); g2.connect(g); g.connect(lp); route(bus, lp, 0.35);
+      o1.start(t); o2.start(t); o1.stop(t + dur + 0.1); o2.stop(t + dur + 0.1);
+    }
+    function flute(bus, t, m, dur, v) {
+      const f = mtof(m), o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain(), n = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), ng = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f; o2.type = 'triangle'; o2.frequency.value = f * 2;
+      const og2 = ctx.createGain(); og2.gain.value = 0.12; o2.connect(og2);
+      lfo.frequency.value = 5 + rand() * 0.8; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * 0.006, t + Math.min(0.4, dur)); lfo.connect(lg); lg.connect(o.frequency);
+      const a = Math.min(0.09, dur * 0.3), r = Math.min(0.18, dur * 0.4);
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + a); g.gain.setValueAtTime(v * 0.85, t + Math.max(a, dur - r)); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+      n.buffer = noiseBuf; n.loop = true; bp.type = 'bandpass'; bp.frequency.value = f * 2; bp.Q.value = 3;
+      ng.gain.setValueAtTime(0.0001, t); ng.gain.linearRampToValueAtTime(v * 0.18, t + a); ng.gain.linearRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); og2.connect(g); n.connect(bp); bp.connect(ng); ng.connect(g); route(bus, g, 0.55);
+      o.start(t); o2.start(t); lfo.start(t); n.start(t); [o, o2, lfo, n].forEach(s => s.stop(t + dur + 0.1));
+    }
+    function pad(bus, t, ms, dur, v) {
+      ms.forEach(m => {
+        [-7, 7].forEach(det => {
+          const o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
+          o.type = 'sawtooth'; o.frequency.value = mtof(m); o.detune.value = det; lp.type = 'lowpass'; lp.frequency.value = 650;
+          g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + Math.min(1.4, dur * 0.4)); g.gain.setValueAtTime(v, t + dur * 0.6); g.gain.linearRampToValueAtTime(0.0001, t + dur + 1.2);
+          o.connect(lp); lp.connect(g); route(bus, g, 0.5); o.start(t); o.stop(t + dur + 1.3);
+        });
+      });
+    }
+    function drone(bus, t, m, dur, v) {
+      [m, m + 7].forEach((mm, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
+        o.type = 'sawtooth'; o.frequency.value = mtof(mm); lp.type = 'lowpass'; lp.frequency.value = 260;
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * (i ? 0.6 : 1), t + 2); g.gain.setValueAtTime(v * (i ? 0.6 : 1), t + dur - 1.5); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+        o.connect(lp); lp.connect(g); route(bus, g, 0.2); o.start(t); o.stop(t + dur + 0.1);
+      });
+    }
+    function bell(bus, t, m, v) {
+      [[1, 1], [2.76, 0.4], [5.4, 0.15]].forEach(([k, a]) => {
+        const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = mtof(m) * k;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v * a, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
+        o.connect(g); route(bus, g, 0.8); o.start(t); o.stop(t + 2.5);
+      });
+    }
+    function drum(bus, t, type, v) {
+      if (type === 'low') {
+        const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.18);
+        g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3); o.connect(g); route(bus, g, 0.25); o.start(t); o.stop(t + 0.35);
+      } else {
+        const n = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain(); n.buffer = noiseBuf; bp.type = 'bandpass'; bp.frequency.value = type === 'rim' ? 1800 : 4200; bp.Q.value = 1.2;
+        g.gain.setValueAtTime(v * 0.5, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07); n.connect(bp); bp.connect(g); route(bus, g, 0.15); n.start(t); n.stop(t + 0.1);
+      }
+    }
+
+    // ---------- komposisi acak per lagu ----------
+    function compose(def) {
+      const root = def.root + Math.floor(rand() * 7) - 3, sc = MODES[def.mode], bpb = def.beats, spb = 60 / def.bpm, bar = bpb * spb, bars = def.bars, ev = [];
+      const deg2m = d => { const o = Math.floor(d / 7), i = ((d % 7) + 7) % 7; return root + 12 * o + sc[i]; };
+      const add = (at, fn) => ev.push({ at, fn });
+      const cd = b => def.prog[b % def.prog.length];
+      const pats = bpb === 4 ? [[1, 1, 1, 1], [2, 1, 1], [1.5, .5, 1, 1], [1, 1, 2], [.5, .5, 1, 2], [2, 2], [1, .5, .5, 1, 1], [.5, .5, .5, .5, 1, 1]] : [[1, 1, 1], [2, 1], [1, 2], [.5, .5, 1, 1], [1.5, .5, 1]];
+      let deg = 9;
+      const phrase = endDeg => {
+        const notes = [];
+        for (let b = 0; b < 4; b++) {
+          const c = cd(b), tones = [c, c + 2, c + 4]; let pos = 0; const pat = pick(pats);
+          pat.forEach((d, k) => {
+            if (k > 0 && rand() < 0.12) { pos += d; return; }
+            deg = Math.max(5, Math.min(15, deg + pick([-2, -1, -1, 0, 1, 1, 2])));
+            if (k === 0 && rand() < 0.6) { let best = deg, bd = 99; for (let o = -14; o <= 14; o += 7) for (const t of tones) { const cand = t + o; if (cand >= 5 && cand <= 15 && Math.abs(cand - deg) < bd) { bd = Math.abs(cand - deg); best = cand; } } deg = best; }
+            if (b === 3 && k === pat.length - 1) deg = endDeg;
+            notes.push({ b, pos, deg, dur: d }); pos += d;
+          });
+        }
+        return notes;
+      };
+      const A = phrase(11), B = phrase(9), seq = [[A, 0], [A, 1], [B, 0], [A, 2]];
+      const leadNote = (at, m, dur) => {
+        const useFlute = def.lead === 'flute' || (def.lead === 'both' && rand() < 0.65);
+        add(at, (bus, w) => useFlute ? flute(bus, w, m, dur, 0.17) : pluck(bus, w, m, Math.max(1.1, dur * 1.6), 0.2));
+      };
+      seq.forEach(([ph, varKind], si) => ph.forEach(n => {
+        let d = n.deg; if (varKind && rand() < 0.22) d += pick([-1, 1]); if (varKind === 2 && n.b === 3 && n === ph[ph.length - 1]) d = 7;
+        leadNote((si * 4 + n.b) * bar + n.pos * spb, deg2m(d), n.dur * spb * 0.95);
+      }));
+      for (let b = 0; b < bars; b++) {
+        const c = cd(b), t0 = b * bar;
+        if (def.comp === 'arp' || def.comp === 'harp') {
+          const hi = def.comp === 'harp' ? 7 : 0, shape = pick([[0, 2, 4, 2], [0, 4, 2, 4], [0, 2, 4, 7]]);
+          for (let i = 0; i < bpb * 2; i++) add(t0 + i * spb * 0.5, (bus, w) => pluck(bus, w, deg2m(c + shape[i % 4] + hi), def.comp === 'harp' ? 1.8 : 0.9, def.comp === 'harp' ? 0.1 : 0.12));
+        } else {
+          [0, 2, 4].forEach((o, i) => add(t0 + i * 0.03, (bus, w) => pluck(bus, w, deg2m(c + o), 1.4, 0.13)));
+          if (bpb === 4) [0, 2, 4].forEach((o, i) => add(t0 + 2 * spb + i * 0.03, (bus, w) => pluck(bus, w, deg2m(c + o), 1.0, 0.1)));
+          else [0, 2, 4].forEach((o, i) => add(t0 + spb + i * 0.03, (bus, w) => pluck(bus, w, deg2m(c + o), 0.8, 0.08)));
+        }
+        add(t0, (bus, w) => pluck(bus, w, deg2m(c - 7), 1.6, 0.16));
+        if (def.pad) add(t0, (bus, w) => pad(bus, w, [deg2m(c - 7), deg2m(c - 5), deg2m(c - 3)], bar, 0.028));
+        if (def.drone && b % 4 === 0) add(t0, (bus, w) => drone(bus, w, deg2m(-14), bar * 4, 0.05));
+        if (def.bells && rand() < 0.45) add(t0 + Math.floor(rand() * bpb) * spb, (bus, w) => bell(bus, w, deg2m(pick([14, 16, 18, 11]) + 7), 0.05));
+        const D = { folk: [[0, 'low'], [1, 'rim'], [2, 'low'], [2.5, 'low'], [3, 'rim']], march: [[0, 'low'], [1, 'rim'], [2, 'low'], [3, 'rim']], slow: [[0, 'low'], [2, 'rim']], waltz: [[0, 'low'], [1, 'rim'], [2, 'rim']] }[def.drums];
+        if (D) D.forEach(([p, ty]) => add(t0 + p * spb, (bus, w) => drum(bus, w, ty, ty === 'low' ? 0.32 : 0.16)));
+      }
+      return { ev: ev.sort((a, b) => a.at - b.at), total: bars * bar + 3, name: def.name };
+    }
+
+    function startTrack() {
+      let i; do { i = Math.floor(rand() * TRACKS.length); } while (i === last && TRACKS.length > 1);
+      last = i;
+      const tr = compose(TRACKS[i]), bus = ctx.createGain(), t0 = ctx.currentTime + 0.4;
+      bus.gain.setValueAtTime(0.0001, t0); bus.gain.linearRampToValueAtTime(1, t0 + 1.5);
+      bus.gain.setValueAtTime(1, t0 + tr.total - 4); bus.gain.linearRampToValueAtTime(0.0001, t0 + tr.total);
+      bus.connect(master);
+      cur = { tr, bus, t0, idx: 0 }; state = 'playing';
+      if (now) { now.textContent = '♪ ' + tr.name; now.classList.add('show'); clearTimeout(hideT); hideT = setTimeout(() => now.classList.remove('show'), 6000); }
+    }
+    function tick() {
+      if (!ctx || ctx.state !== 'running') return;
+      const t = ctx.currentTime;
+      if (state === 'gap') { if (t >= gapEnd) startTrack(); return; }
+      if (state !== 'playing') return;
+      const c = cur;
+      while (c.idx < c.tr.ev.length && c.t0 + c.tr.ev[c.idx].at < t + 0.5) {
+        const e = c.tr.ev[c.idx++], when = Math.max(t, c.t0 + e.at);
+        try { e.fn(c.bus, when); } catch (err) {}
+      }
+      if (t >= c.t0 + c.tr.total) { state = 'gap'; gapEnd = t + 6 + rand() * 16; cur = null; }
+    }
+    window.toggleMusic = function () {
+      muted = !muted; try { localStorage.setItem('fv_music_muted', muted ? '1' : '0'); } catch (e) {}
+      label();
+      if (muted) { if (ctx) ctx.suspend(); }
+      else { unlock(); }
+    };
+    function unlock() {
+      if (muted) return;
+      if (!ctx) init();
+      ctx.resume();
+      if (!started) { started = true; state = 'gap'; gapEnd = ctx.currentTime + 1.2; timer = setInterval(tick, 100); }
+    }
+    ['pointerdown', 'keydown', 'touchend'].forEach(ev => window.addEventListener(ev, function once() { unlock(); if (started) window.removeEventListener(ev, once, true); }, true));
+    window.addEventListener('keydown', e => { if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey && !e.altKey) window.toggleMusic(); });
+    document.addEventListener('visibilitychange', () => { if (!ctx || muted) return; if (document.hidden) ctx.suspend(); else ctx.resume(); });
   })();
   </script>
 </body>
