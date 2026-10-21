@@ -1241,6 +1241,8 @@
           <div class="panel-title">⚙ Panduan Kontrol & Peta</div>
           <div style="font-size: 11px; line-height: 1.55; color: var(--text-muted);">
             <div><strong>Peta 4 (Hutan Berburu):</strong> Lewati jalur <strong>Barat (Kiri)</strong> dari Desa Oakhaven.</div>
+            <div><strong>Altar Teleportasi:</strong> ada di Hutan Elf (dekat Suaka) dan di tengah Pasar Rakyat Barat, Aurelion. Berinteraksi dengan altar untuk berpindah langsung antar keduanya (dua arah, gratis).</div>
+            <div><strong>Jalan Setapak (Hutan→Ibu Kota):</strong> hutan lebih terang, banyak monster respawn ±2 menit. Pengepul loot Roan ada di Pos Api Unggun tengah jalan.</div>
             <div><strong>Save/Load:</strong> Klik tombol <strong>💾 Simpan</strong> & <strong>📂 Muat</strong> di kanan atas kapan saja.</div>
             <div><strong>Gerak (HP):</strong> geser <strong>Joystick Analog</strong> di kiri-bawah; makin jauh digeser, makin cepat.</div>
             <div><strong>Minimap 🗺 (atau tombol M):</strong> tekan sekali = minimap kecil, tekan lagi = peta besar, tekan lagi = tutup. Ketuk minimap kecil untuk memperbesar.</div>
@@ -1501,22 +1503,37 @@
     const MAPS = {
       oakhaven: {
         name: 'Desa Perbatasan Oakhaven',
-        subtitle: 'Lokasi: Desa Oakhaven (20x14) | Barat (Kiri): Hutan Belantara | Selatan (Bawah): Hutan Elf',
+        subtitle: 'Lokasi: Desa Oakhaven (40x28) | Barat (Kiri): Hutan Belantara | Selatan (Bawah): Hutan Elf',
+        // Desa diperbesar 2x lipat (20x14 -> 40x28): setiap petak lama menjadi blok 2x2
         grid: [
-          [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,5,5,2,2,2],
-          [2,0,0,0,2,3,3,3,3,3,0,0,0,0,0,5,5,0,2,2],
-          [2,0,7,0,0,3,8,8,8,3,0,0,4,4,0,5,5,0,0,2],
-          [2,0,0,0,0,3,8,8,8,3,0,0,4,4,0,5,5,0,0,2],
-          [2,2,0,0,0,3,3,1,3,3,0,0,0,1,0,5,5,0,2,2],
-          [9,1,1,1,1,1,1,1,1,1,1,1,1,1,0,5,5,0,0,2], // Kolom 0 Baris 5-6: Akses ke Peta 4 (Hutan Belantara)
-          [9,1,0,1,0,0,0,1,0,0,0,7,0,1,6,6,6,1,0,2],
-          [2,0,4,4,0,0,0,1,0,0,0,0,0,1,0,5,5,1,0,2],
-          [2,0,4,4,0,0,0,1,1,1,1,1,1,1,0,5,5,1,0,2],
-          [2,0,0,0,0,0,0,1,0,0,0,0,0,0,0,5,5,0,0,2],
-          [2,2,0,0,2,0,0,1,0,0,3,3,0,0,5,5,0,0,2,2],
-          [2,2,2,0,0,0,1,1,0,0,3,8,0,0,5,5,0,2,2,2],
-          [2,2,2,0,7,0,1,1,0,0,0,0,0,0,5,5,2,2,2,2],
-          [2,2,2,2,2,2,9,9,2,2,2,2,2,2,5,5,2,2,2,2]
+          [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,5,5,5,5,2,2,2,2,2,2],
+          [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,5,5,5,5,2,2,2,2,2,2],
+          [2,2,0,0,0,0,0,0,2,2,3,3,3,3,3,3,3,3,3,3,0,0,0,0,0,0,0,0,0,0,5,5,5,5,0,0,2,2,2,2],
+          [2,2,0,0,0,0,0,0,2,2,3,3,3,3,3,3,3,3,3,3,0,0,0,0,0,0,0,0,0,0,5,5,5,5,0,0,2,2,2,2],
+          [2,2,0,0,7,7,0,0,0,0,3,3,8,8,8,8,8,8,3,3,0,0,0,0,4,4,4,4,0,0,5,5,5,5,0,0,0,0,2,2],
+          [2,2,0,0,7,7,0,0,0,0,3,3,8,8,8,8,8,8,3,3,0,0,0,0,4,4,4,4,0,0,5,5,5,5,0,0,0,0,2,2],
+          [2,2,0,0,0,0,0,0,0,0,3,3,8,8,8,8,8,8,3,3,0,0,0,0,4,4,4,4,0,0,5,5,5,5,0,0,0,0,2,2],
+          [2,2,0,0,0,0,0,0,0,0,3,3,8,8,8,8,8,8,3,3,0,0,0,0,4,4,4,4,0,0,5,5,5,5,0,0,0,0,2,2],
+          [2,2,2,2,0,0,0,0,0,0,3,3,3,3,1,1,3,3,3,3,0,0,0,0,0,0,1,1,0,0,5,5,5,5,0,0,2,2,2,2],
+          [2,2,2,2,0,0,0,0,0,0,3,3,3,3,1,1,3,3,3,3,0,0,0,0,0,0,1,1,0,0,5,5,5,5,0,0,2,2,2,2],
+          [9,9,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,5,5,5,5,0,0,0,0,2,2], // Kolom 0-1 Baris 10-13: Gerbang Barat -> Peta 4 (Hutan Belantara)
+          [9,9,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,5,5,5,5,0,0,0,0,2,2],
+          [9,9,1,1,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,7,7,0,0,1,1,6,6,6,6,6,6,1,1,0,0,2,2],
+          [9,9,1,1,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,7,7,0,0,1,1,6,6,6,6,6,6,1,1,0,0,2,2],
+          [2,2,0,0,4,4,4,4,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,0,5,5,5,5,1,1,0,0,2,2],
+          [2,2,0,0,4,4,4,4,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,0,5,5,5,5,1,1,0,0,2,2],
+          [2,2,0,0,4,4,4,4,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,5,5,5,5,1,1,0,0,2,2],
+          [2,2,0,0,4,4,4,4,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,5,5,5,5,1,1,0,0,2,2],
+          [2,2,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,5,5,5,0,0,0,0,2,2],
+          [2,2,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,5,5,5,0,0,0,0,2,2],
+          [2,2,2,2,0,0,0,0,2,2,0,0,0,0,1,1,0,0,0,0,3,3,3,3,0,0,0,0,5,5,5,5,0,0,0,0,2,2,2,2],
+          [2,2,2,2,0,0,0,0,2,2,0,0,0,0,1,1,0,0,0,0,3,3,3,3,0,0,0,0,5,5,5,5,0,0,0,0,2,2,2,2],
+          [2,2,2,2,2,2,0,0,0,0,0,0,1,1,1,1,0,0,0,0,3,3,8,8,0,0,0,0,5,5,5,5,0,0,2,2,2,2,2,2],
+          [2,2,2,2,2,2,0,0,0,0,0,0,1,1,1,1,0,0,0,0,3,3,8,8,0,0,0,0,5,5,5,5,0,0,2,2,2,2,2,2],
+          [2,2,2,2,2,2,0,0,7,7,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,5,5,5,5,2,2,2,2,2,2,2,2],
+          [2,2,2,2,2,2,0,0,7,7,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,5,5,5,5,2,2,2,2,2,2,2,2],
+          [2,2,2,2,2,2,2,2,2,2,2,2,9,9,9,9,2,2,2,2,2,2,2,2,2,2,2,2,5,5,5,5,2,2,2,2,2,2,2,2], // Kolom 12-15 Baris 26-27: Gerbang Selatan -> Hutan Elf
+          [2,2,2,2,2,2,2,2,2,2,2,2,9,9,9,9,2,2,2,2,2,2,2,2,2,2,2,2,5,5,5,5,2,2,2,2,2,2,2,2]
         ]
       },
       forest: {
@@ -2063,8 +2080,8 @@
     // ENTITAS PEMAIN, NPC, & MONSTER DI 4 PETA
     // ==========================================================================
     const player = {
-      x: 7 * TILE_SIZE,
-      y: 6 * TILE_SIZE,
+      x: 14 * TILE_SIZE,
+      y: 12 * TILE_SIZE,
       speed: 2.55,
       stepFrame: 0
     };
@@ -2076,8 +2093,8 @@
           name: 'Vogt Henrik',
           race: 'Manusia — Kepala Desa Oakhaven',
           color: '#e06c75',
-          x: 7 * TILE_SIZE,
-          y: 3 * TILE_SIZE,
+          x: 14 * TILE_SIZE,
+          y: 6 * TILE_SIZE,
           spriteKey: 'henrik'
         },
         {
@@ -2085,8 +2102,8 @@
           name: 'Brokk',
           race: 'Kaum Karst — Penempa Terbuang',
           color: '#e5c07b',
-          x: 11 * TILE_SIZE,
-          y: 5 * TILE_SIZE,
+          x: 22 * TILE_SIZE,
+          y: 10 * TILE_SIZE,
           spriteKey: 'brokk'
         },
         {
@@ -2094,8 +2111,8 @@
           name: 'Senna',
           race: 'Kaum Aethel — Apoteker Liar',
           color: '#98c379',
-          x: 5 * TILE_SIZE,
-          y: 11 * TILE_SIZE,
+          x: 10 * TILE_SIZE,
+          y: 22 * TILE_SIZE,
           spriteKey: 'senna'
         },
         {
@@ -2103,8 +2120,8 @@
           name: 'Mira (Quest Damai)',
           race: 'Warga Suku Vaelir — Penenun',
           color: '#82cfff',
-          x: 4 * TILE_SIZE,
-          y: 8 * TILE_SIZE,
+          x: 8 * TILE_SIZE,
+          y: 16 * TILE_SIZE,
           spriteKey: 'mira'
         },
         {
@@ -2112,8 +2129,8 @@
           name: 'Gerobak Pasokan & Korin',
           race: 'Titik Konflik Perbatasan',
           color: '#d19a66',
-          x: 17 * TILE_SIZE,
-          y: 7 * TILE_SIZE,
+          x: 34 * TILE_SIZE,
+          y: 14 * TILE_SIZE,
           spriteKey: 'cart'
         }
       ],
@@ -2458,6 +2475,7 @@
       try {
         const payload = {
           version: 2,
+          villageV2: true,
           timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
           currentMapId,
           playerX: player.x,
@@ -2506,8 +2524,10 @@
 
           currentMapId = saved.currentMapId || 'oakhaven';
           WORLD_MAP = MAPS[currentMapId].grid;
-          player.x = typeof saved.playerX === 'number' ? saved.playerX : 7 * TILE_SIZE;
-          player.y = typeof saved.playerY === 'number' ? saved.playerY : 6 * TILE_SIZE;
+          player.x = typeof saved.playerX === 'number' ? saved.playerX : 14 * TILE_SIZE;
+          player.y = typeof saved.playerY === 'number' ? saved.playerY : 12 * TILE_SIZE;
+          // Save lama (sebelum desa 2x lipat): skala posisi pemain di Oakhaven agar tidak terjebak di bangunan
+          if (currentMapId === 'oakhaven' && !saved.villageV2) { player.x *= 2; player.y *= 2; }
 
           endCombatOverlay();
           clearAllMovementKeys();
@@ -2573,7 +2593,7 @@
       } else {
         startDialogue(
           'Kembali ke Desa Oakhaven',
-          'Perbatasan Feodal (20x14)',
+          'Perbatasan Feodal (40x28)',
           '#d4af37',
           'Kau kembali ke Desa Oakhaven. Jalur Barat menuju Hutan Belantara Berburu, sedangkan Jalur Selatan menuju Hutan Elf.',
           [{ label: 'Lanjutkan', action: closeDialogue }]
@@ -2586,20 +2606,20 @@
       const centerRow = Math.floor((player.y + 20) / TILE_SIZE);
 
       // 1. Oakhaven (Barat / Kiri: Kolom 0, Baris 5-6) -> Hutan Belantara Vaelen (Map 4)
-      if (currentMapId === 'oakhaven' && centerCol <= 0 && (centerRow === 5 || centerRow === 6)) {
+      if (currentMapId === 'oakhaven' && centerCol <= 1 && centerRow >= 10 && centerRow <= 13) {
         switchMap('wild_forest', 37.2, 13.5);
       }
       // 2. Hutan Belantara Vaelen (Timur / Kanan: Kolom 39, Baris 13-14) -> Oakhaven
       else if (currentMapId === 'wild_forest' && centerCol >= 39 && (centerRow === 13 || centerRow === 14)) {
-        switchMap('oakhaven', 1.5, 5.5);
+        switchMap('oakhaven', 3, 11);
       }
       // 3. Oakhaven (Selatan: Kolom 6-7, Baris 13) -> Hutan Elf
-      else if (currentMapId === 'oakhaven' && centerRow >= 13 && (centerCol === 6 || centerCol === 7)) {
+      else if (currentMapId === 'oakhaven' && centerRow >= 26 && centerCol >= 12 && centerCol <= 15) {
         switchMap('forest', 6.5, 1.2);
       }
       // 4. Hutan Elf (Utara: Kolom 6-7, Baris 0) -> Oakhaven
       else if (currentMapId === 'forest' && centerRow <= 0 && (centerCol === 6 || centerCol === 7)) {
-        switchMap('oakhaven', 6.5, 11.8);
+        switchMap('oakhaven', 13, 23.2);
       }
       // 5. Hutan Elf (Barat Daya: Kolom 3-4, Baris 13) -> Benteng Dwarf
       else if (currentMapId === 'forest' && centerRow >= 13 && (centerCol === 3 || centerCol === 4)) {
@@ -4364,7 +4384,7 @@
         { map: 'dwarf_hold', done: f.tradeTreatySigned, title: '[Damai] Mediasi Pasar Gretta & Elincia', hint: 'Tengahi dagang Dwarf-Elf di Pasar (12,16).' },
         { map: 'dwarf_hold', done: f.kaelQuestDone, title: '[Damai] Liontin Penambang Kael', hint: 'Cari di Gerobak Timur (35,15) untuk Kael (5,14).' },
         { map: 'dwarf_hold', done: f.dwarfQuestRewarded, title: '[Tempur] Jalur Tambang Thane Durgan', hint: 'Kalahkan Kumbang Lava & Automaton Besi.' },
-        { map: 'oakhaven', done: f.miraHelped, title: '[Damai] Kehangatan Pondok Mira', hint: 'Beri Batu Bara Abadi / Herbal pada Mira (4,8).' },
+        { map: 'oakhaven', done: f.miraHelped, title: '[Damai] Kehangatan Pondok Mira', hint: 'Beri Batu Bara Abadi / Herbal pada Mira (8,16).' },
         { map: 'oakhaven', done: !!f.supplyOutcome, title: '[Utama] Gerobak Pasokan Oakhaven', hint: 'Temui Korin di Jembatan Timur (Diplomasi/Tempur).' },
         { map: 'forest', done: f.caelenQuestDone, title: '[Damai] Botani Bunga Embun Perak', hint: 'Panen lembut bunga (8,10) untuk Caelen (8,4).' },
         { map: 'forest', done: f.elfQuestRewarded, title: '[Tempur] Penjaga Suaka Thalorien', hint: 'Basmi Serigala & Golem Akar untuk Thalorien.' }
@@ -4799,15 +4819,15 @@
       if (currentMapId === 'oakhaven') {
         // Selatan ke Hutan Elf
         ctx.fillStyle = 'rgba(15, 22, 18, 0.85)';
-        ctx.fillRect(7 * TILE_SIZE - 78, 13 * TILE_SIZE + 14, 156, 14);
+        ctx.fillRect(14 * TILE_SIZE - 78, 27 * TILE_SIZE + 14, 156, 14);
         ctx.fillStyle = '#78e0b8';
-        ctx.fillText('▼ JALUR KE JANTUNG HUTAN ▼', 7 * TILE_SIZE, 13 * TILE_SIZE + 24);
+        ctx.fillText('▼ JALUR KE JANTUNG HUTAN ▼', 14 * TILE_SIZE, 27 * TILE_SIZE + 24);
 
         // Barat ke Hutan Belantara (Map 4)
         ctx.fillStyle = 'rgba(18, 25, 30, 0.9)';
-        ctx.fillRect(4, 4.3 * TILE_SIZE, 168, 15);
+        ctx.fillRect(4, 9.3 * TILE_SIZE, 168, 15);
         ctx.fillStyle = '#80ffdb';
-        ctx.fillText('◀ KE HUTAN BELANTARA (BERBURU)', 88, 4.3 * TILE_SIZE + 11);
+        ctx.fillText('◀ KE HUTAN BELANTARA (BERBURU)', 88, 9.3 * TILE_SIZE + 11);
       } else if (currentMapId === 'wild_forest') {
         // Timur kembali ke Desa Oakhaven
         ctx.fillStyle = 'rgba(20, 16, 12, 0.9)';
@@ -4952,6 +4972,8 @@
   <script>
   (function(){
     const RS = 180000, RB = 360000; // respawn monster biasa 3 menit, bos Wendigo 6 menit
+    // Monster Jalan Setapak (elf_road) punya n.rs sendiri (lebih cepat, area farming)
+    const rsOf = id => { const n = npcsByMap.wild_forest.concat(npcsByMap.elf_road || []).find(m => m.id === id); return (n && n.rs) || (id === 'wf_wendigo' ? RB : RS); };
     const fresh = () => ({ dead: {}, act: [], sp: {}, dl: { d: '', l: [], taken: false, cl: [] } });
     const S = () => gameData.fvx || (gameData.fvx = fresh());
     let pv = {}, TS = [];
@@ -5087,13 +5109,13 @@
     // Respawn monster hutan + deteksi kalah (tanpa mengubah kode pertarungan lama)
     function tk() {
       const s = S(), f = gameData.flags, now = Date.now();
-      for (const n of npcsByMap.wild_forest) {
+      for (const n of npcsByMap.wild_forest.concat(npcsByMap.elf_road || [])) {
         if (!n.isMonster) continue;
         const id = n.id, was = pv[id]; pv[id] = !!f[id];
         if (f[id]) {
           if (!s.dead[id]) { s.dead[id] = now; if (was === false) { ev('kill', n.enemyType); ev('kill', '*'); } }
-          else if (now - s.dead[id] >= (id === 'wf_wendigo' ? RB : RS)) {
-            const near = currentMapId === 'wild_forest' && Math.hypot(player.x - n.x, player.y - n.y) < 160;
+          else if (now - s.dead[id] >= rsOf(id)) {
+            const near = currentMapId === (n.map || 'wild_forest') && Math.hypot(player.x - n.x, player.y - n.y) < 160;
             if (currentState === STATE.EXPLORE && !near) { f[id] = false; pv[id] = false; delete s.dead[id]; toast('⚠ ' + n.name + ' muncul kembali di hutan'); }
           }
         } else if (s.dead[id]) delete s.dead[id];
@@ -5106,8 +5128,8 @@
       ctx.font = 'bold 10px "Courier New", monospace';
       if (currentMapId === 'oakhaven') {
         ctx.save(); ctx.translate(-Math.round(camera.x), -Math.round(camera.y)); ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(15,22,30,0.88)'; ctx.fillRect(13 * TILE_SIZE - 62, 9 * TILE_SIZE - 16, 124, 13);
-        ctx.fillStyle = '#7ec8ff'; ctx.fillText('[GUILD ADVENTURER]', 13 * TILE_SIZE, 9 * TILE_SIZE - 6); ctx.restore();
+        ctx.fillStyle = 'rgba(15,22,30,0.88)'; ctx.fillRect(26 * TILE_SIZE - 62, 18 * TILE_SIZE - 16, 124, 13);
+        ctx.fillStyle = '#7ec8ff'; ctx.fillText('[GUILD ADVENTURER]', 26 * TILE_SIZE, 18 * TILE_SIZE - 6); ctx.restore();
       }
       const L = [];
       s.act.forEach(q => { L.push((done(q) ? '✔ ' : '◈ ') + q.title); q.obj.forEach(o => { if (prog(o) < o.n) L.push('  ☐ ' + o.txt + ' ' + prog(o) + '/' + o.n); }); if (done(q)) L.push('  ➜ Lapor ke Guild'); });
@@ -5117,8 +5139,9 @@
         ctx.fillStyle = 'rgba(13,15,18,0.72)'; ctx.fillRect(6, 6, w, V.length * 13 + 6);
         ctx.fillStyle = '#e0d8cc'; V.forEach((l, i) => ctx.fillText(l, 12, 19 + i * 13));
       }
-      if (currentMapId === 'wild_forest') {
-        const d = Object.entries(s.dead).map(([id, t]) => t + (id === 'wf_wendigo' ? RB : RS) - now);
+      if (currentMapId === 'wild_forest' || currentMapId === 'elf_road') {
+        const here = new Set(npcsByMap[currentMapId].map(n => n.id));
+        const d = Object.entries(s.dead).filter(([id]) => here.has(id)).map(([id, t]) => t + rsOf(id) - now);
         if (d.length) {
           const m = Math.max(0, Math.min(...d)), txt = 'Respawn monster berikutnya: ' + Math.floor(m / 60000) + ':' + String(Math.floor(m / 1000) % 60).padStart(2, '0');
           ctx.fillStyle = 'rgba(15,12,10,0.84)'; ctx.fillRect(6, canvas.height - 22, ctx.measureText(txt).width + 12, 16);
@@ -5136,8 +5159,8 @@
 
     // Pasang: gedung guild (Oakhaven, lahan kosong tenggara), NPC, panel, dan pembungkus fungsi lama
     const g = MAPS.oakhaven.grid;
-    g[9][12] = g[9][13] = g[10][12] = g[10][13] = 4;
-    npcsByMap.oakhaven.push({ id: 'guild_clerk', name: 'Resepsionis Guild', race: 'Guild Adventurer Oakhaven', color: '#7ec8ff', x: 12 * TILE_SIZE, y: 11 * TILE_SIZE, spriteKey: 'garruk' });
+    for (let r = 18; r <= 21; r++) for (let c = 24; c <= 27; c++) g[r][c] = 4; // gedung guild 4x4 (desa 2x lipat)
+    npcsByMap.oakhaven.push({ id: 'guild_clerk', name: 'Resepsionis Guild', race: 'Guild Adventurer Oakhaven', color: '#7ec8ff', x: 24 * TILE_SIZE, y: 22 * TILE_SIZE, spriteKey: 'garruk' });
     const sec = document.getElementById('quest-status').closest('.panel-section'), p = document.createElement('div');
     p.className = 'panel-section';
     p.innerHTML = '<div class="panel-title"><span>📋 Tugas Aktif</span></div><div class="quest-box" id="fvx-box"></div>';
@@ -6458,6 +6481,210 @@
     }
     requestAnimationFrame(loop);
   })();
+  </script>
+  <!-- ==========================================================================
+       5. UPDATE V9 - ALTAR TELEPORTASI (HUTAN ELF <-> PASAR IBU KOTA), JALAN SETAPAK LEBIH TERANG
+       & AREA FARMING MONSTER. Lapisan terpisah; kode lama tidak dibongkar.
+       ========================================================================== -->
+  <script>
+(function () {
+  const T = TILE_SIZE;
+  let sd = 20261021;
+  const hr = () => ((sd = (sd * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const pr = c => Math.round(12 + Math.sin(c * 0.07) * 6 + Math.sin(c * 0.19) * 2); // rumus sama dengan jalur Peta 5
+
+  // ===== A. JALAN SETAPAK: hutan dijarangkan (tidak terlalu lebat) =====
+  const road = MAPS.elf_road.grid, RR = road.length, RC = road[0].length;
+  const isTree = t => t === 2 || t === 10;
+  for (let r = 2; r < RR - 2; r++) for (let c = 1; c < RC - 1; c++) {
+    if (!isTree(road[r][c])) continue;
+    const d = Math.abs(r - (pr(c) + 0.5));
+    let keep = d < 3.4 ? 0 : d < 6 ? 0.07 : 0.16;               // jalur bersih, pinggir jarang, pedalaman agak rimbun
+    if ((r <= 3 || r >= RR - 4) && d >= 2.5) keep = Math.max(keep, 0.42); // pagar hutan di tepi atas/bawah
+    if (c <= 4 || c >= RC - 5) keep = Math.min(keep, 0.05);        // sambungan peta tetap lapang
+    if (hr() >= keep) road[r][c] = 0;
+  }
+  MAPS.elf_road.subtitle = 'Lokasi: Jalan Setapak Hutan Kuno (120x26 — hutan jarang, area farming monster) | Barat: Hutan Elf | Timur: Ibu Kota Aurelion';
+
+  // ===== B. MONSTER FARMING di Jalan Setapak =====
+  const MT = {
+    wf_wolf:   ['wolf',   'Serigala Embun'],
+    wf_spider: ['spider', 'Laba-laba Kabut'],
+    wf_stag:   ['stag',   'Rusa Kristal'],
+    wf_bear:   ['bear',   'Beruang Es'],
+    wf_tiger:  ['tiger',  'Harimau Abu']
+  };
+  // [kolom pusat zona, jenis monster]; makin ke timur (mendekati ibu kota) makin kuat
+  const ZONES = [
+    [12,  ['wf_wolf', 'wf_spider']],
+    [27,  ['wf_wolf', 'wf_spider', 'wf_stag']],
+    [47,  ['wf_spider', 'wf_stag', 'wf_wolf', 'wf_bear']],
+    [69,  ['wf_stag', 'wf_bear', 'wf_spider']],
+    [92,  ['wf_bear', 'wf_tiger', 'wf_stag']],
+    [107, ['wf_tiger', 'wf_bear', 'wf_wolf']]
+  ];
+  const PER_ZONE = 9, mons = [];
+  ZONES.forEach(([zc, types], zi) => {
+    const zr = Math.max(7, Math.min(RR - 8, pr(zc) + (zi % 2 ? 6 : -6)));
+    for (let r = zr - 5; r <= zr + 5; r++) for (let c = zc - 7; c <= zc + 7; c++) { // padang terbuka tempat berburu
+      if (r < 2 || r >= RR - 2 || c < 1 || c >= RC - 1 || !isTree(road[r][c])) continue;
+      if (((c - zc) / 6.5) ** 2 + ((r - zr) / 4.8) ** 2 <= 1) road[r][c] = 0;
+    }
+    let placed = 0, tries = 0;
+    while (placed < PER_ZONE && tries++ < 600) {
+      const c = Math.round(zc + (hr() * 2 - 1) * 5.5), r = Math.round(zr + (hr() * 2 - 1) * 4);
+      if (c < 7 || c > RC - 8 || r < 3 || r > RR - 4) continue;
+      const t = road[r][c]; if (t !== 0 && t !== 1) continue;
+      if (Math.abs(r - (pr(c) + 0.5)) < 2.2) continue;               // jangan menutup jalur utama
+      if (mons.some(m => Math.hypot(m.c - c, m.r - r) < 2.3)) continue;
+      mons.push({ c, r, et: types[placed % types.length] }); placed++;
+    }
+  });
+  npcsByMap.elf_road.length = 0;
+  mons.forEach((m, i) => {
+    const E = ENEMY_TYPES[m.et], P = LOOT_PRICES[E.lootId];
+    npcsByMap.elf_road.push({
+      id: 'wf_r' + String(i + 1).padStart(2, '0'), name: MT[m.et][1], race: 'Loot: ' + E.lootName + ' (' + P.price + ' Perak)',
+      color: '#ff6b6b', x: m.c * T, y: m.r * T, spriteKey: MT[m.et][0], isMonster: true, enemyType: m.et, map: 'elf_road', rs: 120000 // respawn 2 menit
+    });
+  });
+
+  // Pengepul loot di Pos Api Unggun (dekat api unggun tengah jalan, kolom 58)
+  (function () {
+    const base = [60, pr(60) - 3];
+    let best = null;
+    for (let dr = -4; dr <= 4 && !best; dr++) for (let dc = -3; dc <= 3 && !best; dc++) {
+      const c = base[0] + dc, r = base[1] + dr, t = road[r] && road[r][c];
+      if ((t === 0 || t === 1) && !mons.some(m => Math.hypot(m.c - c, m.r - r) < 5)) best = [c, r];
+    }
+    npcsByMap.elf_road.push({ id: 'road_trader', name: 'Roan (Pengepul Loot)', race: 'Serikat Pemburu — Pos Api Unggun', color: '#ffd166', x: best[0] * T, y: best[1] * T, spriteKey: 'garruk' });
+  })();
+
+  // ===== C. ALTAR TELEPORTASI =====
+  const AF = { c: 15, r: 10 }, AC = { c: 25, r: 48 };   // altar Hutan Elf & altar tengah Pasar Rakyat Barat (Aurelion)
+  const altarCv = document.createElement('canvas'); altarCv.width = altarCv.height = 32;
+  sprites.altar = altarCv;
+  function paintAltar(t) {
+    const x = altarCv.getContext('2d'), p = 0.5 + 0.5 * Math.sin(t * 0.08);
+    x.clearRect(0, 0, 32, 32);
+    const g = x.createRadialGradient(16, 22, 2, 16, 22, 16);
+    g.addColorStop(0, 'rgba(120,255,230,' + (0.30 + 0.25 * p).toFixed(2) + ')'); g.addColorStop(1, 'rgba(120,255,230,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 32, 32);
+    x.fillStyle = '#22262c'; x.fillRect(3, 26, 26, 4);
+    x.fillStyle = '#3a3f47'; x.fillRect(3, 22, 26, 5);
+    x.fillStyle = '#5b6370'; x.fillRect(3, 22, 26, 2);
+    x.fillStyle = '#4a515c'; x.fillRect(5, 11, 4, 12); x.fillRect(23, 11, 4, 12);
+    x.fillStyle = '#9aa3af'; x.fillRect(5, 11, 4, 2); x.fillRect(23, 11, 4, 2);
+    x.fillStyle = 'rgba(128,255,219,' + (0.55 + 0.45 * p).toFixed(2) + ')';
+    x.fillRect(8, 24, 16, 1); x.fillRect(11, 22, 1, 2); x.fillRect(20, 22, 1, 2); x.fillRect(15, 25, 2, 2);
+    x.fillRect(6, 15, 2, 1); x.fillRect(24, 15, 2, 1);
+    const fy = 8 + Math.sin(t * 0.07) * 2;
+    x.fillStyle = '#9ef0ff'; x.beginPath(); x.moveTo(16, fy - 6); x.lineTo(21, fy); x.lineTo(16, fy + 6); x.lineTo(11, fy); x.closePath(); x.fill();
+    x.fillStyle = '#e8fffb'; x.beginPath(); x.moveTo(16, fy - 6); x.lineTo(18, fy - 1); x.lineTo(16, fy + 2); x.lineTo(14, fy - 1); x.closePath(); x.fill();
+  }
+  paintAltar(0);
+
+  npcsByMap.forest.push({ id: 'altar_forest', name: 'Altar Teleportasi Aethel', race: 'Altar Kuno — Gerbang ke Pasar Aurelion', color: '#9ef0ff', x: AF.c * T, y: AF.r * T, spriteKey: 'altar' });
+
+  // Area altar di pasar: bersihkan lapak/warga di sekitarnya, lalu pasang altar tepat di tengah pasar barat
+  const cg = MAPS.capital.grid;
+  for (let r = AC.r - 2; r <= AC.r + 2; r++) for (let c = AC.c - 2; c <= AC.c + 2; c++) if (SOLID_TILES.has(cg[r][c]) || cg[r][c] === 9) cg[r][c] = 1;
+  npcsByMap.capital = npcsByMap.capital.filter(n => !(n.id.indexOf('cap_z') === 0 && Math.abs(n.x / T - AC.c) <= 3 && Math.abs(n.y / T - AC.r) <= 3));
+  npcsByMap.capital.push({ id: 'altar_capital', name: 'Altar Teleportasi Pasar', race: 'Altar Kuno — Gerbang ke Hutan Elf', color: '#9ef0ff', x: AC.c * T, y: AC.r * T, spriteKey: 'altar' });
+
+  let fx = { t: 0, m: '' };
+  function teleport(map, c, r, msg) {
+    clearAllMovementKeys();
+    switchMap(map, c, r);
+    closeDialogue();            // buang dialog pengantar peta agar perpindahan terasa instan
+    fx = { t: 55, m: msg };
+  }
+  function altarMenu(where) {
+    if (where === 'forest') {
+      startDialogue('Altar Teleportasi Aethel', 'Hutan Elf — Altar Kuno Penghubung', '#9ef0ff',
+        'Lingkaran rune di altar ini berdenyut lembut. Para Elf Aethel membangunnya sebagai pintu kembar dengan altar di tengah Pasar Rakyat Barat, Aurelion. Melangkah lewatnya, perjalanan panjang di Jalan Setapak terlewati seketika.',
+        [{ label: '✨ Teleportasi ke Pasar Rakyat Barat, Aurelion', action: () => teleport('capital', AC.c, AC.r + 2, '✦ Tiba di tengah Pasar Rakyat Barat, Aurelion ✦') },
+         { label: 'Tetap di sini', action: closeDialogue }]);
+    } else {
+      startDialogue('Altar Teleportasi Pasar', 'Pasar Rakyat Barat, Aurelion — Altar Kuno Penghubung', '#9ef0ff',
+        'Di antara riuh lapak pedagang, sebuah altar rune berpendar tenang. Ia terhubung dengan altar kembar di Hutan Elf, dekat Suaka Aethel. Gunakan untuk pulang tanpa menyusuri Jalan Setapak.',
+        [{ label: '✨ Teleportasi ke Altar Hutan Elf', action: () => teleport('forest', AF.c, AF.r + 1, '✦ Tiba di Altar Hutan Elf ✦') },
+         { label: 'Tetap di sini', action: closeDialogue }]);
+    }
+  }
+
+  // ===== D. Pengepul loot & monster Jalan Setapak =====
+  function roadTrader() {
+    const L = getSellableLootSummary();
+    const sell = () => {
+      const L2 = getSellableLootSummary();
+      for (const it of gameData.inventory) if (LOOT_PRICES[it.id] && it.qty > 0) it.qty = 0;
+      gameData.coins += L2.totalValue; updateUI();
+      startDialogue('Roan — Transaksi Selesai', '+' + L2.totalValue + ' Koin Perak Diterima', '#80ed99',
+        '"Dagang yang bagus! Ini ' + L2.totalValue + ' Perak tunai untuk ' + L2.details.join(', ') + '. Monster di padang sekitar sini selalu kembali, jadi stok tak akan habis."',
+        [{ label: 'Terima kasih, Roan!', action: closeDialogue }]);
+    };
+    startDialogue('Roan — Pengepul Loot Pos Api Unggun', 'Serikat Pemburu — Jalan Setapak Hutan Kuno', '#ffd166',
+      L.totalItems > 0
+        ? '"Hasil buruan segar! ' + L.details.join(', ') + '. Total ' + L.totalValue + ' Perak tunai."'
+        : '"Padang di sepanjang jalan ini penuh serigala, laba-laba, rusa, beruang, dan harimau yang muncul lagi tiap beberapa menit. Bawa loot-nya padaku, kubayar tunai tanpa perlu jauh ke Garruk."',
+      [L.totalItems > 0 ? { label: '💰 Jual Semua Loot (+' + L.totalValue + ' Perak)', action: sell } : { label: 'Siap berburu!', action: closeDialogue },
+       { label: 'Sampai nanti', action: closeDialogue }]);
+  }
+  function roadMonster(n) {
+    startDialogue(n.name, 'Target Buruan — ' + n.race, n.color,
+      'Kau menemukan ' + n.name + ' di padang terbuka Jalan Setapak Hutan Kuno. Kalahkan untuk mengambil loot-nya. Monster di sini muncul kembali sekitar 2 menit setelah dikalahkan, cocok untuk farming.',
+      [{ label: '⚔ Buru & Lawan ' + n.name + '!', action: () => { closeDialogue(); startCombat(n.enemyType, n.id); } },
+       { label: 'Jaga jarak dulu', action: closeDialogue }]);
+  }
+
+  const _ia9 = interactWithNPC;
+  interactWithNPC = function (n) {
+    if (n.id === 'altar_forest') return altarMenu('forest');
+    if (n.id === 'altar_capital') return altarMenu('capital');
+    if (n.id === 'road_trader') return roadTrader();
+    if (n.map === 'elf_road' && n.isMonster) return roadMonster(n);
+    return _ia9(n);
+  };
+  // Dialog kemenangan di Jalan Setapak menyebut lokasi yang tepat
+  const _sd9 = startDialogue;
+  startDialogue = function (sp, fa, co, tx, ch) {
+    if (currentMapId === 'elf_road' && typeof sp === 'string' && sp.indexOf('Loot Buruan Diperoleh') === 0) {
+      fa = 'Jalan Setapak Hutan Kuno';
+      tx = String(tx).replace('kepada Garruk di Pos Perkemahan Timur', 'kepada Roan di Pos Api Unggun (tengah jalan setapak) atau Garruk di Hutan Belantara');
+    }
+    return _sd9(sp, fa, co, tx, ch);
+  };
+
+  // ===== E. Render: animasi altar, cahaya, efek teleportasi =====
+  const _rd9 = render;
+  render = function () {
+    paintAltar(tick);
+    _rd9();
+    if (currentState === STATE.COMBAT) return;
+    const al = npcsByMap[currentMapId] && npcsByMap[currentMapId].find(n => n.id === 'altar_forest' || n.id === 'altar_capital');
+    if (al) {
+      const gx = Math.round(al.x + 16 - camera.x), gy = Math.round(al.y + 22 - camera.y);
+      if (gx > -80 && gx < canvas.width + 80 && gy > -80 && gy < canvas.height + 80) {
+        const p = 0.5 + 0.5 * Math.sin(tick * 0.08);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        const g = ctx.createRadialGradient(gx, gy, 4, gx, gy, 58);
+        g.addColorStop(0, 'rgba(110,255,225,' + (0.16 + 0.12 * p).toFixed(2) + ')'); g.addColorStop(1, 'rgba(110,255,225,0)');
+        ctx.fillStyle = g; ctx.fillRect(gx - 60, gy - 60, 120, 120); ctx.restore();
+      }
+    }
+    if (fx.t > 0) {
+      const a = Math.min(1, fx.t / 30);
+      ctx.save();
+      ctx.fillStyle = 'rgba(170,255,240,' + (0.55 * a).toFixed(2) + ')'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.font = 'bold 13px "Courier New", monospace'; ctx.textAlign = 'center';
+      const w = ctx.measureText(fx.m).width + 24;
+      ctx.fillStyle = 'rgba(12,22,26,' + (0.85 * a).toFixed(2) + ')'; ctx.fillRect(canvas.width / 2 - w / 2, canvas.height / 2 - 14, w, 26);
+      ctx.fillStyle = 'rgba(158,240,255,' + a.toFixed(2) + ')'; ctx.fillText(fx.m, canvas.width / 2, canvas.height / 2 + 4);
+      ctx.restore(); fx.t--;
+    }
+  };
+})();
   </script>
 </body>
 </html>
