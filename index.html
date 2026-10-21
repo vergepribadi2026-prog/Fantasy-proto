@@ -2,7 +2,9 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Ash & Rime: Chronicles of the Vaelen Vale (4 Maps, Hunting & Save/Load Edition)</title>
   <style>
     /* ==========================================================================
@@ -883,6 +885,100 @@
       .dialogue-panel { left: 1.5%; right: 1.5%; }
       .canvas-container.in-dialog .shortcut-dock { display: none; }
     }
+  </style>
+
+  <style id="mobile-landscape-css">
+    /* ======================================================================
+       MODE HP LANDSCAPE (aktif hanya jika class html.m-land dipasang oleh JS:
+       layar sentuh + ukuran HP). PC tidak terpengaruh sama sekali.
+       ====================================================================== */
+    html.m-land, html.m-land body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+    html.m-land body { padding: 0; display: block; min-height: 0; background: #000; }
+    html.m-land .game-wrapper {
+      position: fixed; left: 0; top: 0; margin: 0; padding: 0; gap: 0;
+      width: var(--sw); height: var(--sh); max-width: none;
+      border: 0; box-shadow: none; background: #000; overflow: hidden;
+    }
+    html.m-rot .game-wrapper { transform-origin: 0 0; transform: translateX(var(--iw)) rotate(90deg); }
+    html.m-land .header-bar { display: none; }
+    html.m-land .main-stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 0; }
+    html.m-land .play-column { display: contents; }
+    html.m-land .canvas-container {
+      position: relative; margin: 0; border-width: 0; box-shadow: none;
+      width: min(var(--sw), calc(var(--sh) * 640 / 448)); max-width: none;
+      height: auto; aspect-ratio: 640 / 448; min-height: 0;
+    }
+    html.m-land .canvas-container.combat-mode-mobile { aspect-ratio: 640 / 448; min-height: 0; }
+
+    /* Kontrol sentuh melayang di dalam layar */
+    html.m-land .touch-controls {
+      display: none; position: absolute; inset: 0; z-index: 30;
+      background: none; border: 0; box-shadow: none; padding: 0;
+      pointer-events: none;
+    }
+    html.m-land .touch-controls.show-pad { display: block; }
+    html.m-land .dpad-grid {
+      position: absolute; left: calc(14px + env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+      grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(3, 46px); gap: 4px;
+      pointer-events: auto; opacity: .62;
+    }
+    html.m-land .dpad-btn { background: rgba(44, 35, 27, .72); box-shadow: 0 2px 0 rgba(14, 11, 9, .6); font-size: 18px; }
+    html.m-land .dpad-btn.pressed { background: rgba(212, 175, 55, .75); color: #1a1208; }
+    html.m-land .dpad-center { background: rgba(20, 17, 14, .35); }
+    html.m-land .action-pad {
+      position: absolute; right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+      width: 118px; max-width: none; pointer-events: auto; opacity: .72; flex: none;
+    }
+    html.m-land .btn-action-main {
+      width: 100%; height: 84px; border-radius: 50%; padding: 6px; font-size: 12px; line-height: 1.25;
+      background: radial-gradient(circle at 35% 30%, rgba(115, 75, 38, .9), rgba(56, 35, 16, .9));
+    }
+    html.m-land .quick-num-row { display: none; }
+    /* Saat pertarungan: sembunyikan kontrol. Saat dialog: sembunyikan D-pad saja */
+    html.m-land .canvas-container.in-combat ~ .touch-controls { display: none; }
+    html.m-land .canvas-container.in-dialog ~ .touch-controls .dpad-grid { display: none; }
+
+    /* Ukuran HUD, dock, popup, dialog dibuat ringkas */
+    html.m-land { --dock-right: 4px; --dock-top: 46px; --dock-top-l: 6px; --dock-btn-w: 38px; --dock-btn-h: 34px; --dock-gap: 3px; --dock-zone: calc(4px + 38px + 6px); }
+    html.m-land .hud-topleft { top: 4px; right: 4px; left: auto; width: min(190px, 40%); padding: 4px 6px; }
+    html.m-land .hud-topleft .bar-wrap { height: 14px; }
+    html.m-land .hud-topleft .bar-label { font-size: 9px; line-height: 12px; }
+    html.m-land .hud-tag { width: 26px; font-size: 9px; }
+    html.m-land .popup-hint, html.m-land .dock-btn .lbl { display: none; }
+    html.m-land .dock-btn .ico { font-size: 17px; }
+    html.m-land .info-popup.pop-l, html.m-land .info-popup.pop-r, html.m-land #popMenu {
+      top: 4px; left: var(--dock-zone); right: var(--dock-zone); width: auto; max-height: calc(100% - 8px);
+    }
+    html.m-land .canvas-container.popup-open .hud-topleft { visibility: hidden; }
+    html.m-land .canvas-container.in-dialog .shortcut-dock { display: none; }
+    html.m-land .dialogue-panel { left: 1.5%; right: 138px; bottom: 2%; max-height: 94%; padding: 6px 8px; gap: 4px; border-width: 2px; }
+    html.m-land .dialogue-panel .speaker-name { font-size: 11px; }
+    html.m-land .dialogue-panel .dialogue-body { font-size: 11.5px; line-height: 1.4; }
+    html.m-land .dialogue-panel .choice-btn { padding: 5px 8px; font-size: 11px; }
+    html.m-land #dlg-hint { display: none; }
+    html.m-land #music-now { display: none; }
+
+    /* Pertarungan: ringkas agar muat di layar landscape yang pendek */
+    html.m-land .combat-overlay { padding: 6px 10px; }
+    html.m-land .combat-header p { display: none; }
+    html.m-land .combat-header h2 { font-size: 12px; }
+    html.m-land .combat-arena { margin: 4px 0; gap: 6px; }
+    html.m-land .fighter-card { padding: 5px; }
+    html.m-land .fighter-sub { margin-bottom: 4px; font-size: 9.5px; }
+    html.m-land .combat-log-box { min-height: 0; font-size: 10.5px; padding: 4px 8px; margin-bottom: 4px; max-height: 38px; overflow-y: auto; }
+    html.m-land .combat-actions { grid-template-columns: 1fr 1fr; gap: 4px; }
+    html.m-land .btn-medieval { padding: 4px 8px; font-size: 10.5px; }
+    html.m-land .btn-medieval span { font-size: 9px !important; }
+
+    /* Popup menu sistem (Simpan / Muat / Musik / Layar Penuh) */
+    #popMenu { position: absolute; z-index: 9; display: none; flex-direction: column; background: rgba(22,18,14,.97); border: 3px solid var(--parchment-border); box-shadow: 0 0 0 2px #000, inset 0 0 14px rgba(0,0,0,.85); }
+    #popMenu.open { display: flex; }
+    #popMenu .popup-body { display: flex; flex-direction: column; gap: 8px; }
+    #popMenu .status-badges { width: 100%; gap: 5px; }
+    #popMenu .btn-sys { padding: 8px 10px; font-size: 12px; }
+    .canvas-container.in-combat #shortcutDockM { display: none; }
+    #menuFsBtn { display: none; }
+    html.m-land #menuFsBtn { display: inline-block; }
   </style>
 </head>
 <body>
@@ -4391,11 +4487,10 @@
 
       canvas.addEventListener('pointerdown', (e) => {
         if (currentState !== STATE.EXPLORE) return;
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        const worldTapX = (e.clientX - rect.left) * scaleX + camera.x;
-        const worldTapY = (e.clientY - rect.top) * scaleY + camera.y;
+        const scaleX = canvas.width / canvas.clientWidth;
+        const scaleY = canvas.height / canvas.clientHeight;
+        const worldTapX = e.offsetX * scaleX + camera.x;
+        const worldTapY = e.offsetY * scaleY + camera.y;
 
         for (const npc of getActiveNPCs()) {
           const clickedOnNpc =
@@ -5993,6 +6088,109 @@
     ['pointerdown', 'keydown', 'touchend'].forEach(ev => window.addEventListener(ev, function once() { unlock(); if (started) window.removeEventListener(ev, once, true); }, true));
     window.addEventListener('keydown', e => { if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey && !e.altKey) window.toggleMusic(); });
     document.addEventListener('visibilitychange', () => { if (!ctx || muted) return; if (document.hidden) ctx.suspend(); else ctx.resume(); });
+  })();
+  </script>
+
+  <script id="mobile-landscape-js">
+  (function () {
+    var root = document.documentElement;
+    var params = new URLSearchParams(location.search);
+    var forced = params.get('m');   // ?m=1 paksa mode HP, ?m=0 matikan (untuk uji coba)
+    function isPhone() {
+      if (forced === '1') return true;
+      if (forced === '0') return false;
+      var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      var shortSide = Math.min(screen.width || 9999, screen.height || 9999);
+      return !!coarse && shortSide <= 820;
+    }
+
+    var box = document.getElementById('canvasContainer');
+    var badges = document.querySelector('.header-bar .status-badges');
+    var badgesHome = badges ? badges.parentNode : null;
+
+    // ---- Menu sistem di dalam layar (menampung Simpan/Muat/Musik/Gamepad + info Perak & reputasi)
+    var dock = document.createElement('nav');
+    dock.className = 'shortcut-dock dock-r';
+    dock.id = 'shortcutDockM';
+    dock.style.top = 'auto'; dock.style.bottom = 'auto';
+    dock.innerHTML = '<button type="button" class="dock-btn" id="btnMenuM" title="Menu" aria-label="Menu"><span class="ico">☰</span><span class="lbl">Menu</span></button>';
+    var pop = document.createElement('div');
+    pop.id = 'popMenu'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Menu');
+    pop.innerHTML = '<div class="popup-bar"><span class="popup-hint">Menu</span><button type="button" class="popup-close">✕ Tutup</button></div><div class="popup-body" id="popMenuBody"></div>';
+    var fsBtn = document.createElement('button');
+    fsBtn.type = 'button'; fsBtn.className = 'btn-sys'; fsBtn.id = 'menuFsBtn'; fsBtn.textContent = '⛶ Layar Penuh';
+    var menuOpen = false;
+
+    function setMenu(on) {
+      menuOpen = on;
+      pop.classList.toggle('open', on);
+      document.getElementById('btnMenuM').classList.toggle('active', on);
+      if (on) { // tutup popup lain yang sedang terbuka
+        box.querySelectorAll('.info-popup.open .popup-close').forEach(function (b) { b.click(); });
+      }
+    }
+    dock.querySelector('button').addEventListener('click', function () { setMenu(!menuOpen); });
+    pop.querySelector('.popup-close').addEventListener('click', function () { setMenu(false); });
+    // Tombol shortcut lain dibuka -> menu menutup
+    box.addEventListener('click', function (e) { if (e.target.closest('.shortcut-dock .dock-btn') && !e.target.closest('#shortcutDockM')) setMenu(false); }, true);
+    box.addEventListener('pointerdown', function (e) { if (menuOpen && !e.target.closest('#popMenu, #shortcutDockM')) setMenu(false); });
+    window.addEventListener('keydown', function (e) { if (e.key === 'Escape' && menuOpen) setMenu(false); }, true);
+
+    fsBtn.addEventListener('click', function () {
+      var el = document.documentElement;
+      var req = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        (document.exitFullscreen || document.webkitExitFullscreen).call(document); return;
+      }
+      if (!req) return;
+      var r = req.call(el);
+      Promise.resolve(r).then(function () {
+        if (screen.orientation && screen.orientation.lock) return screen.orientation.lock('landscape');
+      }).catch(function () {});
+    });
+
+    var attached = false;
+    function attach() {
+      if (attached) return; attached = true;
+      box.appendChild(dock); box.appendChild(pop);
+      document.getElementById('popMenuBody').appendChild(badges);
+      badges.appendChild(fsBtn);
+      // posisi tombol menu: kiri, di bawah tombol shortcut kiri
+      dock.className = 'shortcut-dock dock-l';
+      dock.style.top = 'calc(var(--dock-top-l) + 3 * (var(--dock-btn-h) + var(--dock-gap)))';
+    }
+    function detach() {
+      if (!attached) return; attached = false;
+      setMenu(false);
+      if (badgesHome && badges) { badgesHome.appendChild(badges); }
+      if (fsBtn.parentNode) fsBtn.parentNode.removeChild(fsBtn);
+      if (dock.parentNode) dock.parentNode.removeChild(dock);
+      if (pop.parentNode) pop.parentNode.removeChild(pop);
+    }
+
+    function apply() {
+      var on = isPhone();
+      var iw = window.innerWidth, ih = window.innerHeight;
+      var portrait = ih > iw;
+      root.classList.toggle('m-land', on);
+      root.classList.toggle('m-rot', on && portrait);
+      if (on) {
+        root.style.setProperty('--iw', iw + 'px');
+        root.style.setProperty('--sw', (portrait ? ih : iw) + 'px');
+        root.style.setProperty('--sh', (portrait ? iw : ih) + 'px');
+        attach();
+        var pad = document.getElementById('touchControls');
+        if (pad) pad.classList.add('show-pad');
+      } else {
+        ['--iw', '--sw', '--sh'].forEach(function (v) { root.style.removeProperty(v); });
+        detach();
+      }
+    }
+    apply();
+    window.addEventListener('resize', apply);
+    window.addEventListener('orientationchange', function () { setTimeout(apply, 120); });
+    // Cegah gestur scroll/zoom di layar permainan
+    document.addEventListener('touchmove', function (e) { if (root.classList.contains('m-land') && !e.target.closest('.popup-body, .dialogue-panel, .combat-overlay')) e.preventDefault(); }, { passive: false });
   })();
   </script>
 </body>
