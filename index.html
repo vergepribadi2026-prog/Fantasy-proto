@@ -7622,6 +7622,234 @@
   };
 })();
   </script>
+  <!-- ===== MAIN MENU (Mulai / Muat / Pengaturan / Informasi) ===== -->
+  <style>
+    #mainMenu { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; overflow: hidden;
+      background: radial-gradient(ellipse at 30% 40%, #1d2630 0%, #0b0e12 62%, #040506 100%); font-family: "Courier New", Courier, monospace; color: #e0d8cc;
+      transition: opacity .5s; }
+    /* HP portrait: putar 90° seperti layar permainan agar tampil horizontal */
+    html.m-rot #mainMenu { inset: auto; left: 0; top: 0; width: var(--sw); height: var(--sh); transform-origin: 0 0; transform: translateX(var(--iw)) rotate(90deg); }
+    html.m-land #mainMenu { padding: 0; }
+    #mainMenu.hide { opacity: 0; pointer-events: none; }
+    #mainMenu.gone { display: none; }
+    #mmFx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .mm-panel { position: relative; width: min(900px, 96%); }
+    #mmHome { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 28px; }
+    .mm-head { flex: 1 1 50%; text-align: left; }
+    .mm-title { font-size: clamp(30px, 5.2vw, 52px); color: #d4af37; letter-spacing: 3px; text-transform: uppercase; text-shadow: 3px 3px 0 #000, 0 0 24px rgba(212,175,55,.35); line-height: 1.05; }
+    .mm-title span { color: #5ca4b8; }
+    .mm-sub { margin: 10px 0 0; font-size: 12px; color: #968b7c; letter-spacing: 2px; text-transform: uppercase; }
+    .mm-foot { margin-top: 18px; font-size: 10.5px; color: #5d554b; }
+    .mm-btns { flex: 0 0 min(300px, 44%); display: flex; flex-direction: column; gap: 10px; }
+    .mm-btn { padding: 13px 10px; background: linear-gradient(#332a22, #251f19); color: #e0d8cc; border: 2px solid #735d46; box-shadow: 0 0 0 2px #000, inset 0 0 12px rgba(0,0,0,.7);
+      font: bold 15px "Courier New", monospace; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all .15s; }
+    .mm-btn:hover, .mm-btn:focus-visible { border-color: #d4af37; color: #ffd966; transform: translateX(3px); outline: none; }
+    .mm-btn:active { background: #d4af37; color: #000; }
+    .mm-btn.primary { border-color: #d4af37; color: #d4af37; font-size: 17px; }
+    .mm-card { background: #1b1611; border: 2px solid #d4af37; padding: 14px 16px; text-align: left; box-shadow: 0 0 0 2px #000, 0 10px 40px rgba(0,0,0,.8); }
+    .mm-card h3 { font-size: 15px; color: #ffd966; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+    .mm-card h4 { font-size: 12px; color: #d4af37; margin: 0 0 6px; }
+    .mm-card p, .mm-card li { font-size: 12px; line-height: 1.55; color: #b8afa6; }
+    .mm-card ul { padding-left: 16px; }
+    .mm-card b { color: #e0d8cc; }
+    .mm-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+    .mm-tab { flex: 1; padding: 7px 4px; background: #2b231c; color: #968b7c; border: 1px solid #4a4036; font: bold 11px "Courier New", monospace; cursor: pointer; text-transform: uppercase; }
+    .mm-tab.on { color: #ffd966; border-color: #d4af37; background: #3a2f23; }
+    .mm-page { display: none; min-height: 150px; max-height: 56vh; overflow-y: auto; padding-right: 4px; }
+    .mm-page.on { display: block; }
+    html.m-land .mm-page { max-height: calc(var(--sh) - 190px); }
+    .mm-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px dashed #4a4036; font-size: 12px; }
+    .mm-row small { display: block; color: #968b7c; font-size: 10.5px; margin-top: 2px; }
+    .mm-tg { min-width: 74px; padding: 7px 10px; background: #2b231c; color: #80ed99; border: 1px solid #80ed99; font: bold 12px "Courier New", monospace; cursor: pointer; }
+    .mm-tg.off { color: #e06c75; border-color: #e06c75; }
+    .mm-back { display: block; width: 100%; margin-top: 10px; padding: 9px; background: #2b231c; color: #d4af37; border: 1px solid #d4af37; font: bold 12px "Courier New", monospace; cursor: pointer; text-transform: uppercase; }
+    .mm-back:active { background: #d4af37; color: #000; }
+    #mmMsg { min-height: 14px; font-size: 11px; color: #80ed99; margin-top: 8px; font-weight: bold; }
+    @media (max-height: 520px) {
+      .mm-title { font-size: 34px; } .mm-sub { margin-top: 6px; font-size: 10px; }
+      #mmHome { gap: 18px; } .mm-btns { gap: 7px; } .mm-btn { padding: 9px 6px; font-size: 13px; } .mm-btn.primary { font-size: 14px; }
+      .mm-foot { margin-top: 10px; } .mm-card { padding: 10px 12px; } .mm-page { min-height: 0; }
+    }
+  </style>
+  <div id="mainMenu" role="dialog" aria-label="Menu Utama">
+    <canvas id="mmFx"></canvas>
+    <div class="mm-panel">
+      <div id="mmHome">
+        <div class="mm-head">
+          <div class="mm-title">Ash <span>&amp;</span> Rime</div>
+          <div class="mm-sub">Chronicles of the Vaelen Vale</div>
+          <div class="mm-foot">PC &amp; Android &bull; Tekan M untuk musik</div>
+        </div>
+        <div class="mm-btns">
+          <button class="mm-btn primary" id="mmStart">⚔ Mulai</button>
+          <button class="mm-btn" id="mmLoad">📂 Muat</button>
+          <button class="mm-btn" id="mmSet">⚙ Pengaturan</button>
+          <button class="mm-btn" id="mmInfo">📖 Informasi</button>
+        </div>
+      </div>
+
+      <div id="mmSettings" class="mm-card" style="display:none">
+        <h3>⚙ Pengaturan</h3>
+        <div class="mm-row"><div>Musik Latar<small>Musik medieval fantasy (tombol M)</small></div><button class="mm-tg" id="mmMusic">ON</button></div>
+        <div class="mm-row"><div>Layar Penuh<small>Tampilan lebih luas, cocok untuk HP</small></div><button class="mm-tg off" id="mmFull">OFF</button></div>
+        <div class="mm-row" id="mmLegacyRow" style="display:none"><div>Simpanan Lama<small>Hapus data simpanan versi lama di peramban ini</small></div><button class="mm-tg off" id="mmDelLegacy">Hapus</button></div>
+        <div id="mmMsg"></div>
+        <button class="mm-back" data-back>← Kembali</button>
+      </div>
+
+      <div id="mmInfoBox" class="mm-card" style="display:none">
+        <h3>📖 Informasi Game</h3>
+        <div class="mm-tabs">
+          <button class="mm-tab on" data-tab="0">Cerita</button>
+          <button class="mm-tab" data-tab="1">Dunia</button>
+          <button class="mm-tab" data-tab="2">Kontrol</button>
+          <button class="mm-tab" data-tab="3">Fitur</button>
+          <button class="mm-tab" data-tab="4">Tips</button>
+        </div>
+        <div class="mm-page on" data-page="0">
+          <h4>Cerita</h4>
+          <p>Kamu adalah <b>Aldric Vane</b>, petualang yang memulai perjalanan di Desa Perbatasan <b>Oakhaven</b>. Tentukan nasibmu di antara berbagai faksi, misi bercabang, dan monster yang mengintai di Lembah Vaelen.</p>
+        </div>
+        <div class="mm-page" data-page="1">
+          <h4>Dunia: 4 Peta</h4>
+          <ul>
+            <li><b>Oakhaven</b> &ndash; desa awal perbatasan.</li>
+            <li><b>Hutan Belantara Vaelen</b> &ndash; lewat jalur Barat; tempat berburu monster, loot, dan potion.</li>
+            <li><b>Suaka Elf</b> &ndash; toko senjata &amp; perisai Elf (Elandor).</li>
+            <li><b>Aurelion</b> &ndash; ibu kota dengan Pasar Rakyat Barat.</li>
+          </ul>
+        </div>
+        <div class="mm-page" data-page="2">
+          <h4>Kontrol</h4>
+          <ul>
+            <li><b>PC:</b> gerak dengan keyboard, interaksi dengan tombol aksi, <b>M</b> = minimap/musik, <b>Esc</b> = tutup panel.</li>
+            <li><b>HP:</b> joystick analog di kiri-bawah; tombol pintasan di kiri &amp; kanan layar.</li>
+            <li><b>Simpan &amp; Muat:</b> tombol <b>💾 Simpan</b> membuat file cadangan atau kode simpanan; muat lewat menu ini atau tombol <b>📂 Muat</b>.</li>
+          </ul>
+        </div>
+        <div class="mm-page" data-page="3">
+          <h4>Fitur</h4>
+          <ul>
+            <li>Pertarungan turn-based dengan serangan, bertahan, dan ramuan.</li>
+            <li>Berburu monster, jual loot, beli potion &amp; perlengkapan.</li>
+            <li>Misi bercabang, tugas aktif, dan Guild Adventurer.</li>
+            <li>Altar teleportasi antara Hutan Elf dan Aurelion (gratis).</li>
+          </ul>
+        </div>
+        <div class="mm-page" data-page="4">
+          <h4>Tips</h4>
+          <ul>
+            <li>Simpan progres sebelum melawan monster kuat.</li>
+            <li>Bawa cukup potion sebelum masuk hutan.</li>
+            <li>Gunakan minimap untuk menemukan jalan.</li>
+          </ul>
+        </div>
+        <button class="mm-back" data-back>← Kembali</button>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var menu = document.getElementById('mainMenu'), open = true;
+    var $ = function (id) { return document.getElementById(id); };
+    var views = { home: $('mmHome'), set: $('mmSettings'), info: $('mmInfoBox') };
+    function show(v) { for (var k in views) views[k].style.display = (k === v) ? '' : 'none'; if (v === 'set') refresh(); }
+    function closeMenu() {
+      if (!open) return; open = false; menu.classList.add('hide');
+      setTimeout(function () { menu.classList.add('gone'); stopFx(); }, 500);
+    }
+    function openMenu() { open = true; menu.classList.remove('gone'); void menu.offsetWidth; menu.classList.remove('hide'); show('home'); startFx(); }
+    window.openMainMenu = openMenu;
+
+    $('mmStart').onclick = closeMenu;
+    $('mmLoad').onclick = function () { if (typeof window.openLoadMenu === 'function') window.openLoadMenu(); };
+    $('mmSet').onclick = function () { show('set'); };
+    $('mmInfo').onclick = function () { show('info'); };
+    Array.prototype.forEach.call(menu.querySelectorAll('[data-back]'), function (b) { b.onclick = function () { show('home'); }; });
+
+    // Tutup menu otomatis setelah progres berhasil dimuat
+    var _lg = window.loadGame;
+    window.loadGame = function () { var r = _lg.apply(this, arguments); if (arguments[0]) closeMenu(); return r; };
+
+    // Blokir input game selama menu terbuka
+    window.addEventListener('keydown', function (e) {
+      if (!open) return;
+      if (e.key === 'm' || e.key === 'M') return;
+      if (e.target && e.target.closest && e.target.closest('#sv-ov')) return;
+      e.stopImmediatePropagation();
+    }, true);
+
+    // Tab informasi
+    var tabs = menu.querySelectorAll('.mm-tab'), pages = menu.querySelectorAll('.mm-page');
+    Array.prototype.forEach.call(tabs, function (t) { t.onclick = function () {
+      var n = t.getAttribute('data-tab');
+      Array.prototype.forEach.call(tabs, function (x) { x.classList.toggle('on', x === t); });
+      Array.prototype.forEach.call(pages, function (p) { p.classList.toggle('on', p.getAttribute('data-page') === n); });
+    }; });
+    // Izinkan gestur sentuh di menu (skrip mode HP memblokir touchmove di luar panel game)
+    menu.addEventListener('touchmove', function (e) { e.stopPropagation(); }, { passive: true });
+
+    // Pengaturan
+    function isMuted() { try { return localStorage.getItem('fv_music_muted') === '1'; } catch (e) { return false; } }
+    function refresh() {
+      var m = $('mmMusic'), off = isMuted(); m.textContent = off ? 'OFF' : 'ON'; m.classList.toggle('off', off);
+      var fs = !!document.fullscreenElement; $('mmFull').textContent = fs ? 'ON' : 'OFF'; $('mmFull').classList.toggle('off', !fs);
+      var leg = false; try { leg = !!localStorage.getItem(SAVE_KEY); } catch (e) {}
+      $('mmLegacyRow').style.display = leg ? '' : 'none';
+    }
+    $('mmMusic').onclick = function () { if (typeof window.toggleMusic === 'function') window.toggleMusic(); refresh(); };
+    window.addEventListener('keydown', function (e) { if (open && (e.key === 'm' || e.key === 'M')) setTimeout(refresh, 0); });
+    $('mmFull').onclick = function () {
+      var el = document.documentElement;
+      try {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else if (el.requestFullscreen) el.requestFullscreen();
+        else $('mmMsg').textContent = 'Layar penuh tidak didukung perangkat ini.';
+      } catch (e) { $('mmMsg').textContent = 'Layar penuh tidak didukung perangkat ini.'; }
+    };
+    document.addEventListener('fullscreenchange', refresh);
+    $('mmDelLegacy').onclick = function () {
+      try { localStorage.removeItem(SAVE_KEY); $('mmMsg').textContent = 'Simpanan lama dihapus.'; } catch (e) {}
+      refresh();
+    };
+
+    // Efek latar: salju & bara api
+    var cv = $('mmFx'), cx = cv.getContext('2d'), parts = [], raf = 0;
+    function resize() { cv.width = cv.clientWidth; cv.height = cv.clientHeight; }
+    function startFx() {
+      resize(); parts = [];
+      for (var i = 0; i < 70; i++) parts.push(mk(true));
+      cancelAnimationFrame(raf); raf = requestAnimationFrame(tick);
+    }
+    function stopFx() { cancelAnimationFrame(raf); }
+    function mk(init) {
+      var ember = Math.random() < 0.3;
+      return { x: Math.random() * cv.width, y: init ? Math.random() * cv.height : (ember ? cv.height + 5 : -5),
+        r: ember ? 1 + Math.random() * 1.6 : 1 + Math.random() * 2, vy: ember ? -(0.3 + Math.random() * 0.7) : 0.3 + Math.random() * 0.9,
+        vx: (Math.random() - 0.5) * 0.5, ember: ember, ph: Math.random() * 6.28 };
+    }
+    function tick(t) {
+      cx.clearRect(0, 0, cv.width, cv.height);
+      for (var i = 0; i < parts.length; i++) {
+        var p = parts[i]; p.x += p.vx + Math.sin(t / 1200 + p.ph) * 0.3; p.y += p.vy;
+        cx.fillStyle = p.ember ? 'rgba(255,150,60,.75)' : 'rgba(200,225,240,.6)';
+        cx.fillRect(Math.round(p.x), Math.round(p.y), p.r, p.r);
+        if (p.y < -10 || p.y > cv.height + 10) parts[i] = mk(false);
+      }
+      raf = requestAnimationFrame(tick);
+    }
+    window.addEventListener('resize', function () { if (open) setTimeout(resize, 150); });
+    startFx();
+
+    // Tombol kembali ke menu dari header game
+    var hdr = $('btnMusic');
+    if (hdr && hdr.parentNode) {
+      var b = document.createElement('button');
+      b.className = 'btn-sys'; b.textContent = '☰ Menu'; b.title = 'Kembali ke Menu Utama';
+      b.onclick = openMenu; hdr.parentNode.insertBefore(b, hdr);
+    }
+  })();
+  </script>
   <script>
   (function () {
     var raw = null;
