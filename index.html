@@ -8831,13 +8831,6 @@
     window.addEventListener('resize', function () { if (open) setTimeout(resize, 150); });
     startFx();
 
-    // Tombol kembali ke menu dari header game
-    var hdr = $('btnMusic');
-    if (hdr && hdr.parentNode) {
-      var b = document.createElement('button');
-      b.className = 'btn-sys'; b.textContent = '☰ Menu'; b.title = 'Kembali ke Menu Utama';
-      b.onclick = openMenu; hdr.parentNode.insertBefore(b, hdr);
-    }
   })();
   </script>
   <script>
