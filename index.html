@@ -880,7 +880,7 @@
        UPDATE V8: latar HUD & shortcut lebih transparan + shortcut dibagi kiri/kanan
        (ubah angka alpha rgba(...) di bawah untuk mengatur transparansi)
        ========================================================================== */
-    :root { --dock-zone: calc(var(--dock-right) + var(--dock-btn-w) + 10px); --dock-top-l: 22%; }
+    :root { --dock-zone: calc(var(--dock-right) + var(--dock-btn-w) + 10px); --dock-top-l: 8px; }
     @media (max-width: 600px) { :root { --dock-zone: calc(var(--dock-right) + var(--dock-btn-w) + 6px); } }
 
     /* Latar HP & Suhu: transparan agar map terlihat */
@@ -1084,6 +1084,7 @@
         <div class="badge">Elf: <span class="val" id="rep-aethel">Curiga (0)</span></div>
         <button class="btn-sys save-btn" onclick="saveGame()" title="Simpan / Cadangkan Progres (file atau kode)">💾 Simpan</button>
         <button class="btn-sys load-btn" onclick="openLoadMenu()" title="Muat dari File / Kode Cadangan">📂 Muat</button>
+        <button class="btn-sys del-btn" onclick="openDeleteMenu()" title="Hapus data permainan yang sedang dimainkan" style="border-color:#e06c75;color:#e06c75;">🗑 Hapus Data</button>
         <button class="btn-sys" onclick="toggleTouchPad()" title="Tampilkan/Sembunyikan Kontrol Sentuh Android">📱 Gamepad</button>
         <button class="btn-sys" id="btnMusic" onclick="toggleMusic()" title="Musik latar (tekan M)">🎵 Musik: ON</button>
       </div>
@@ -1189,8 +1190,8 @@
           </div>
           <!-- SHORTCUT: tombol info di dalam layar permainan (pengganti panel samping kanan) -->
           <nav class="shortcut-dock dock-l" id="shortcutDockL" aria-label="Pintasan jurnal (kiri)">
-            <button type="button" class="dock-btn" data-panel="popQuest" title="Jurnal Misi & Wilayah" aria-label="Jurnal Misi & Wilayah" aria-expanded="false" aria-controls="popQuest"><span class="ico">📜</span><span class="lbl">Misi</span></button>
             <button type="button" class="dock-btn" data-panel="popTask" title="Tugas Aktif" aria-label="Tugas Aktif" aria-expanded="false" aria-controls="popTask"><span class="ico">📋</span><span class="lbl">Tugas</span></button>
+            <button type="button" class="dock-btn" data-panel="popQuest" title="Jurnal Misi & Wilayah" aria-label="Jurnal Misi & Wilayah" aria-expanded="false" aria-controls="popQuest"><span class="ico">📜</span><span class="lbl">Misi</span></button>
             <button type="button" class="dock-btn" data-panel="popGuide" title="Setelan" aria-label="Setelan" aria-expanded="false" aria-controls="popGuide"><span class="ico">⚙</span><span class="lbl">Setelan</span></button>
           </nav>
           <nav class="shortcut-dock dock-r" id="shortcutDock" aria-label="Pintasan karakter (kanan)">
@@ -3272,6 +3273,21 @@
       document.getElementById('sv-close').onclick = closeSaveModal;
     };
 
+    window.openDeleteMenu = function() {
+      openSaveModal(`
+        <h3 style="color:#e06c75;">🗑 Hapus Data Permainan</h3>
+        <p class="sv-warn">Seluruh progres yang sedang dimainkan (misi, inventori, perlengkapan, Perak, reputasi, dan posisi) akan dihapus dan permainan dimulai dari awal. Tindakan ini tidak bisa dibatalkan.</p>
+        <p>Tips: tekan <b>💾 Simpan</b> lebih dulu jika ingin menyimpan cadangan.</p>
+        <button class="sv-btn" id="sv-del-yes" style="color:#e06c75;border-color:#e06c75;">🗑 Ya, Hapus Semua Data</button>
+        <button class="sv-btn x" id="sv-del-no">Batal</button>
+      `);
+      document.getElementById('sv-del-no').onclick = closeSaveModal;
+      document.getElementById('sv-del-yes').onclick = () => {
+        try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem('fv_pending_import'); } catch (e) {}
+        location.reload();
+      };
+    };
+
     // ==========================================================================
     // TRANSISI ANTAR 4 PETA
     // ==========================================================================
@@ -4051,6 +4067,11 @@
     }
 
     function openKaelDialogue() {
+      if (!gameData.flags.kaelQuestDone && !gameData.flags.kaelAccepted && !gameData.inventory.some(i => i.id === 'locket' && i.qty > 0)) {
+        return offerQuest('Penambang Muda Kael', 'Kaum Dwarf — Pekerja Rel Barat', '#a9def9',
+          '"Saat gempa kemarin, Liontin Perak peninggalan ibuku jatuh ke dalam Gerobak Tambang Terbalik di timur (koordinat 35, 15). Maukah kau mencarikannya? Aku akan memberi 18 Perak dan Batu Asah Karst."',
+          'kaelAccepted', 'Liontin Penambang Kael', '"Terima kasih banyak! Gerobaknya ada di seberang jembatan lava timur."');
+      }
       if (gameData.flags.kaelQuestDone) {
         startDialogue('Penambang Muda Kael', 'Kaum Dwarf — Pekerja Rel Barat', '#a9def9',
           '"Terima kasih banyak telah mengembalikan liontin mendiang ibuku, Aldric!"',
@@ -4080,12 +4101,31 @@
       }
 
       startDialogue('Penambang Muda Kael', 'Kaum Dwarf — Pekerja Rel Barat', '#a9def9',
-        '"Saat gempa tambang kemarin, Liontin Perak peninggalan ibuku terjatuh di dalam [Gerobak Tambang Terbalik] di seberang jembatan lava timur (Koordinat 35, 15). Maukah kau mencarikannya?"',
-        [{ label: '"Jangan khawatir, akan kucari di gerobak rel timur."', action: closeDialogue }]
+        '"Liontinku ada di Gerobak Tambang Terbalik, koordinat 35, 15. Tolong bawakan kembali."',
+        [{ label: 'Baik, akan kucari.', action: closeDialogue }]
       );
     }
 
+
+    // Tawaran misi: pemain memilih menerima atau belum bersedia
+    function offerQuest(who, fac, col, text, flag, key, acceptMsg) {
+      startDialogue(who, fac, col, text, [
+        { label: '✔ Terima misi', action: () => {
+            gameData.flags[flag] = true;
+            if (window.__wqStart) window.__wqStart(key);
+            updateUI();
+            startDialogue(who, fac, col, acceptMsg + ' (Misi diterima, lihat di tab 📋 Tugas.)', [{ label: 'Baik.', action: closeDialogue }]);
+        } },
+        { label: '✖ Belum bersedia', action: () => startDialogue(who, fac, col, '"Baiklah, tidak apa-apa. Kembalilah kapan pun kau siap."', [{ label: 'Sampai nanti.', action: closeDialogue }]) }
+      ]);
+    }
+
     function openMiraDialogue() {
+      if (!gameData.flags.miraHelped && !gameData.flags.miraAccepted) {
+        return offerQuest('Mira', 'Warga Suku Vaelir — Penenun Oakhaven', '#82cfff',
+          '"Tuan Aldric, kayu bakar di pondok kami habis dan anak bungsuku demam menggigil. Maukah Tuan membantu? Cukup sumbangkan 1 Salep Herbal dan 10 Perak untuk membeli kayu bakar."',
+          'miraAccepted', 'Pondok Mira', '"Terima kasih, Tuan! Bawa 1 Salep Herbal dan 10 Perak kepadaku."');
+      }
       if (gameData.flags.miraHelped) {
         startDialogue('Mira', 'Warga Suku Vaelir — Penenun Oakhaven', '#82cfff',
           '"Pondok kami kini hangat dan demam anakku sudah turun berkat bantuanmu, Aldric."',
@@ -4102,13 +4142,13 @@
         [
           {
             label: everCoal
-              ? '🔥 Berikan [Batu Bara Abadi] dari Benteng Dwarf (Solusi Terbaik!)'
-              : '🔥 (Butuh [Batu Bara Abadi] dari Insinyur Tilda di Benteng Dwarf)',
+              ? '🔥 Berikan [Batu Bara Abadi] (+25 Reputasi Manusia)'
+              : '🔥 (Opsi ini butuh [Batu Bara Abadi], kamu belum punya)',
             action: () => {
               if (!everCoal) {
                 startDialogue('Mira', 'Warga Suku Vaelir — Penenun Oakhaven', '#82cfff',
-                  '"Kudengar para insinyur Dwarf di Benteng Khaz-Karst memiliki Batu Bara Abadi yang tidak pernah padam..."',
-                  [{ label: 'Aku akan mencarinya atau membantu dengan cara lain.', action: closeDialogue }]
+                  '"Kau belum punya Batu Bara Abadi. Tidak apa-apa, pilih saja opsi menyumbang Salep Herbal dan 10 Perak."',
+                  [{ label: 'Mengerti.', action: closeDialogue }]
                 );
                 return;
               }
@@ -4127,8 +4167,8 @@
           },
           {
             label: (herb && gameData.coins >= 10)
-              ? '🌿 Sumbangkan 1 Salep Herbal + 10 Perak untuk kayu bakar'
-              : '🌿 Sumbangkan 1 Salep Herbal + 10 Perak (Periksa Inventori/Koin)',
+              ? '🌿 Sumbangkan 1 Salep Herbal + 10 Perak (+20 Reputasi Manusia)'
+              : '🌿 Sumbangkan 1 Salep Herbal + 10 Perak (bahanmu belum cukup)',
             action: () => {
               if (!herb || gameData.coins < 10) {
                 startDialogue('Mira', 'Warga Suku Vaelir — Penenun Oakhaven', '#82cfff',
@@ -4186,6 +4226,11 @@
     }
 
     function openCaelenDialogue() {
+      if (!gameData.flags.caelenQuestDone && !gameData.flags.caelenAccepted && !gameData.inventory.some(i => i.id === 'silver_petal' && i.qty > 0)) {
+        return offerQuest('Cendekiawan Caelen', 'Kaum Elf Aethel — Ahli Botani', '#80ed99',
+          '"Salam damai, pengelana. Maukah kau memetik satu Bunga Embun Perak di selatan jalan ini (sekitar koordinat 16, 20)? Petik dengan lembut tanpa mencabut akarnya, lalu bawa kembali padaku. Imbalannya 20 Perak dan 2 Salep Herbal."',
+          'caelenAccepted', 'Embun Perak', '"Terima kasih! Bunganya ada di selatan. Ingat, pangkas tangkainya dengan lembut."');
+      }
       if (gameData.flags.caelenQuestDone) {
         startDialogue('Cendekiawan Caelen', 'Kaum Elf Aethel — Ahli Botani', '#80ed99',
           '"Ekstrak Kelopak Embun Perak yang kau panen telah menyelamatkan banyak bibit pohon kuno di suaka ini."',
@@ -4215,8 +4260,8 @@
       }
 
       startDialogue('Cendekiawan Caelen', 'Kaum Elf Aethel — Ahli Botani', '#80ed99',
-        '"Salam damai, pengelana. Bisakah kau memetik [Bunga Embun Perak] yang tumbuh di selatan jalan ini (Koordinat 8, 10) dengan metode pemangkasan yang lembut?"',
-        [{ label: '"Dengan senang hati. Aku akan memanennya di selatan."', action: closeDialogue }]
+        '"Bunga Embun Perak ada di selatan (sekitar koordinat 16, 20). Petik dengan lembut, lalu bawa kembali padaku."',
+        [{ label: 'Baik, aku akan mencarinya.', action: closeDialogue }]
       );
     }
 
@@ -4242,8 +4287,13 @@
       }
 
       startDialogue('Thane Durgan Ironmantle', 'Raja Dwarf — Penguasa Khaz-Karst', '#ffd966',
-        '"Selamat datang di Aula Agung Khaz-Karst, manusia permukaan. Selain membantu 5 warga kotaku dengan misi damai, kau juga bisa membersihkan jalur tambang selatan dari Kumbang Lava dan Automaton Besi."',
-        [{ label: 'Mundur dari hadapan Tahta', action: closeDialogue }]
+        '"Selamat datang di Aula Agung Khaz-Karst, manusia permukaan. Jalur tambang kami diblokir Kumbang Terak Lava dan Automaton Besi. Maukah kau membersihkannya? Imbalannya 45 Perak dan Piagam Sekutu."',
+        gameData.flags.durganAccepted
+          ? [{ label: 'Aku sedang mengerjakannya.', action: closeDialogue }]
+          : [
+              { label: '✔ Terima misi: bersihkan jalur tambang', action: () => { gameData.flags.durganAccepted = true; if (window.__wqStart) window.__wqStart('Thane Durgan'); updateUI(); startDialogue('Thane Durgan Ironmantle', 'Misi diterima', '#ffd966', '"Bagus! Kalahkan Kumbang Terak Lava (barat daya) dan Automaton Besi (tenggara), lalu kembali padaku." (Lihat tab 📋 Tugas.)', [{ label: 'Baik.', action: closeDialogue }]); } },
+              { label: '✖ Belum bersedia', action: closeDialogue }
+            ]
       );
     }
 
@@ -4466,10 +4516,13 @@
       }
 
       startDialogue('Vogt Henrik', 'Manusia — Kepala Desa', '#e06c75',
-        '"Aldric! Gerobak batu bara Karst dan herbal kami dirampas di jembatan timur. Rebut kembali semuanya, dan kubayar kau 35 perak. Selain itu, jalur Barat menuju Hutan Belantara kini juga terbuka bagi para pemburu."',
-        [
-          { label: '"Mengerti, aku akan memeriksa jembatan timur atau berburu di barat."', action: closeDialogue }
-        ]
+        '"Aldric! Gerobak batu bara dan herbal desa dirampas di jembatan timur. Rebut kembali pasokan itu, dan kubayar kau 35 perak. Maukah kau menerimanya?"',
+        gameData.flags.supplyAccepted
+          ? [{ label: 'Aku sedang mengurusnya.', action: closeDialogue }]
+          : [
+              { label: '✔ Terima misi: rebut gerobak pasokan', action: () => { gameData.flags.supplyAccepted = true; if (window.__wqStart) window.__wqStart('Gerobak Pasokan'); updateUI(); startDialogue('Vogt Henrik', 'Misi diterima', '#e06c75', '"Bagus. Temui Korin di Jembatan Timur desa. Setelah selesai, lapor padaku." (Lihat tab 📋 Tugas.)', [{ label: 'Baik.', action: closeDialogue }]); } },
+              { label: '✖ Belum bersedia', action: closeDialogue }
+            ]
       );
     }
 
@@ -4477,7 +4530,7 @@
       gameData.flags.talkedBrokk = true;
 
       startDialogue('Brokk', 'Kaum Karst — Penempa Terbuang', '#e5c07b',
-        '"Hmph. Kalau kau ingin mengumpulkan banyak perak dengan cepat, pergilah ke Barat menuju Hutan Belantara Vaelen dan jual hasil buruanmu pada Garruk, atau kunjungi kota bawah tanah kaumku di Khaz-Karst!"',
+        '"Hmph. Mau cari perak? Buru monster di Hutan Belantara (jalur Barat desa) lalu jual hasilnya ke Garruk. Kalau kau punya Batu Asah Karst, aku bisa mengasah senjatamu."',
         [
           {
             label: '"Bisakah kau mengasah senjataku dengan Batu Asah Karst?"',
@@ -4508,7 +4561,7 @@
       gameData.flags.talkedSenna = true;
 
       startDialogue('Senna', 'Kaum Aethel — Apoteker Liar', '#98c379',
-        '"Jika kau berjalan melewati jalur selatan di belakangku, kau akan tiba di Suaka Elf kaumku—di sana Elandor menjual senjata dan perisai Sylvan. Sedangkan jika kau ke jalur barat desa, kau akan masuk ke Hutan Belantara Raya."',
+        '"Jalur selatan desa menuju Suaka Elf, tempat Elandor menjual senjata dan perisai. Jalur barat menuju Hutan Belantara untuk berburu monster."',
         [
           {
             label: '"Berikan aku restu herbal untuk perjalanan ini"',
@@ -5874,8 +5927,9 @@
     const wqStart = key => { if (!key) return; const base = window.__qBase || []; let ch = false;
       base.forEach(q => { if (q.title.indexOf(key) >= 0 && !wqSet()[q.title]) { wqSet()[q.title] = 1; ch = true; } });
       if (ch) { window.__trkL = null; panel(); } };
+    window.__wqStart = wqStart;
     const wqOn = q => q.map === 'capital' ? !!q.started : !!wqSet()[q.title];
-    const worldOpen = () => (window.__qBase || []).concat(window.__qCap || []).filter(q => !q.done && wqOn(q)).sort((x, y) => (x.map === currentMapId ? 0 : 1) - (y.map === currentMapId ? 0 : 1));
+    const worldOpen = () => (window.__qBase || []).concat(window.__qCap || []).filter(q => !q.done && !q.isHunt && !/Arsenal Elf/.test(q.title) && wqOn(q)).sort((x, y) => (x.map === currentMapId ? 0 : 1) - (y.map === currentMapId ? 0 : 1));
     // Daftar baris untuk HUD (semua misi: guild + dunia), dipotong agar muat
     function trackLines() {
       const out = [], MAXL = 9, A = S().act, W = worldOpen(); let hidden = 0;
@@ -6052,8 +6106,8 @@
         ctx.fillStyle = 'rgba(15,22,30,0.88)'; ctx.fillRect(26 * TILE_SIZE - 62, 18 * TILE_SIZE - 16, 124, 13);
         ctx.fillStyle = '#7ec8ff'; ctx.fillText('[GUILD ADVENTURER]', 26 * TILE_SIZE, 18 * TILE_SIZE - 6); ctx.restore();
       }
-      if (!(window.__trkF = (window.__trkF || 0) + 1) || window.__trkF % 8 === 1 || !window.__trkL) window.__trkL = trackLines();
-      const L = window.__trkL;
+      /* HUD tugas di layar dihapus: info tugas ada di tab Tugas */
+      const L = [];
       ctx.textAlign = 'left';
       let trkBottom = 0;
       if (L.length) {
@@ -6093,7 +6147,7 @@
     p.innerHTML = '<div class="panel-title"><span>📋 Tugas Aktif (Semua Misi)</span></div><div class="quest-box" id="fvx-box"></div>';
     sec.insertAdjacentElement('afterend', p);
 
-    const _ia = interactWithNPC; interactWithNPC = function (n) { ev('talk', n.id); wqStart(WQ_NPC[n.id]); if (n.id === 'guild_clerk') return guildMenu(); return _ia(n); };
+    const _ia = interactWithNPC; interactWithNPC = function (n) { ev('talk', n.id); if (n.id === 'guild_clerk') return guildMenu(); return _ia(n); };
     const _ai = addItem; addItem = function (id, name, qty, desc, usable) { _ai(id, name, qty, desc, usable); if (LOOT_PRICES[id]) { ev('loot', id, qty); ev('loot', '*', qty); } };
     const _sm = switchMap; switchMap = function (m, c, r) { _sm(m, c, r); ev('visit', m); };
     const _ui = updateUI; updateUI = function () { _ui(); panel(); };
@@ -6991,7 +7045,7 @@
 
     // Simpan, Muat, Gamepad, Musik dipindah ke panel Setelan
     { const sb = document.getElementById('settingsBtns');
-      if (sb) ['.save-btn', '.load-btn', '[onclick^="toggleTouchPad"]', '#btnMusic'].forEach(q => { const el = document.querySelector(q); if (el) sb.appendChild(el); }); }
+      if (sb) ['.save-btn', '.load-btn', '.del-btn', '[onclick^="toggleTouchPad"]', '#btnMusic'].forEach(q => { const el = document.querySelector(q); if (el) sb.appendChild(el); }); }
     // Tombol Panduan (⚙) dipindah ke dock kanan
     { const gb = box.querySelector('[data-panel="popGuide"]'), dr = document.getElementById('shortcutDock'); if (gb && dr) dr.appendChild(gb); }
 
@@ -7950,7 +8004,7 @@
   window.__mainQuest = function () {
     const st = gameData.story; if (!st || st.step === 'done') return null;
     const fv = gameData.fvx, f = gameData.flags;
-    const taken = st.step !== 'supply' || !!f.supplyOutcome || !!f.talkedHenrik || !!(fv && fv.wq && fv.wq['[Utama] Gerobak Pasokan Oakhaven']);
+    const taken = st.step !== 'supply' || !!f.supplyOutcome || !!f.supplyAccepted || !!f.combatWon;
     if (!taken) return null;
     const o = getStoryObjective();
     return { title: o.title, text: o.text };
