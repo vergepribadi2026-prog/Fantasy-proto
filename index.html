@@ -1061,6 +1061,11 @@
     html.m-land #mmLarge { top: 4px; bottom: 4px; }
     html.m-land #mmLarge .popup-bar { padding: 3px 6px 3px 10px; }
     html.m-land #mmLarge .mm-legend { display: none; }
+    /* Perbaikan gulir: semua area yang bisa digulir boleh digeser jari & tidak 'bocor' ke layar permainan */
+    .popup-body, .dialogue-panel, #sv-box, .mm-page, #trialOverlay, .se-box, .combat-log-box, #mainMenu .mm-card { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+    .dialogue-panel, #sv-box, .mm-page, #trialOverlay { touch-action: pan-y; }
+    /* Tombol aksi/joystick tidak menutupi panel yang sedang dibuka (sebelumnya menghalangi gestur gulir di sudut kanan-bawah) */
+    html.m-land .canvas-container:has(.info-popup.open, #popMenu.open, #mmLarge.show) ~ .touch-controls .action-pad { visibility: hidden; pointer-events: none; }
     html.m-land .canvas-container.popup-open #mmMini { visibility: hidden; }
     @media (max-width: 600px) { #mmMini { top: var(--dock-top); } }
   </style>
@@ -6172,6 +6177,7 @@
     function panel() {
       const box = document.getElementById('fvx-box');
       if (!box) return;
+      if (window.__renderTask) { try { window.__renderTask(box); return; } catch (e) {} }
       const a = S().act, esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
       const world = (window.__qBase || []).concat(window.__qCap || []);
       const open = worldOpen();
@@ -6337,7 +6343,7 @@
       if (saved.gameData && !saved.gameData.fvx) gameData.fvx = fresh();
       pv = {}; day(); updateUI();
     };
-    window.FVX = { tk, S, day };
+    window.FVX = { tk, S, day, QD, TP, prog, done, steps, worldOpen, rt };
     day(); panel();
   })();
   </script>
@@ -7533,7 +7539,18 @@
     window.addEventListener('resize', apply);
     window.addEventListener('orientationchange', function () { setTimeout(apply, 120); });
     // Cegah gestur scroll/zoom di layar permainan
-    document.addEventListener('touchmove', function (e) { if (root.classList.contains('m-land') && !e.target.closest('.popup-body, .dialogue-panel, .combat-overlay')) e.preventDefault(); }, { passive: false });
+    document.addEventListener('touchmove', function (e) {
+      if (!root.classList.contains('m-land')) return;
+      var t = e.target; if (t && t.nodeType !== 1) t = t.parentElement;
+      if (!t) return;
+      if (t.closest('.popup-body, .dialogue-panel, .combat-overlay')) return;
+      // Izinkan geser/gulir pada elemen APA PUN yang memang bisa digulir (panel, menu, simpan/muat, ujian, epilog, dll.)
+      for (var el = t; el && el !== document.body && el !== document.documentElement; el = el.parentElement) {
+        var cs = getComputedStyle(el), oy = cs.overflowY, ox = cs.overflowX;
+        if (((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 1) || ((ox === 'auto' || ox === 'scroll') && el.scrollWidth > el.clientWidth + 1)) return;
+      }
+      e.preventDefault();
+    }, { passive: false });
   })();
   </script>
   <script id="minimap-js">
@@ -7560,7 +7577,7 @@
       '<button type="button" class="popup-close" data-act="close">✕ Tutup</button></span></div>' +
       '<div class="mm-body"><canvas></canvas></div>' +
       '<div class="mm-legend"><span><i style="background:#fff"></i>Kamu</span><span><i style="background:#ffd966"></i>NPC</span>' +
-      '<span><i style="background:#ff5a4d"></i>Monster</span><span><i style="background:#7ec8ff"></i>Kotak = area layar</span></div>';
+      '<span><i style="background:#ff5a4d"></i>Monster</span><span><i style="background:#7ec8ff"></i>Kotak = area layar</span><span style="color:#8c8275">Peta besar menampilkan semua NPC &amp; monster di wilayah ini</span></div>';
     box.appendChild(mini); box.appendChild(large);
 
     var mc = mini.querySelector('canvas'), mx = mc.getContext('2d');
@@ -7682,7 +7699,7 @@
       lx.strokeRect(camera.x / TILE_SIZE * k, camera.y / TILE_SIZE * k, canvas.width / TILE_SIZE * k, canvas.height / TILE_SIZE * k);
       var npcs = getActiveNPCs(), rr = Math.max(2, k * 0.55);
       for (var i = 0; i < npcs.length; i++) {
-        var n = npcs[i]; if (!window.__npcOnScreen(n) || (window.__isStoryNpc && window.__isStoryNpc(n))) continue;
+        var n = npcs[i]; if (window.__isStoryNpc && window.__isStoryNpc(n)) continue;   // peta besar: tampilkan SEMUA entitas di wilayah ini
         var ex = (n.x + 16) / TILE_SIZE * k, ey = (n.y + 16) / TILE_SIZE * k;
         lx.fillStyle = '#000'; lx.beginPath(); lx.arc(ex, ey, rr + 1, 0, 6.283); lx.fill();
         lx.fillStyle = dotColor(n); lx.beginPath(); lx.arc(ex, ey, rr, 0, 6.283); lx.fill();
@@ -7957,7 +7974,7 @@
   clearArea('dwarf_hold', 24, 12, 2, 8);
   addStoryNpc('dwarf_hold', { id:'varek', name:'Thane Varek sang Radikal', race:'Kaum Dwarf — Pemimpin Faksi Radikal', color:'#e06c75', c:24, r:12, spriteKey:'durgan' });
   const storyPathRow = c => Math.round(12 + Math.sin(c * 0.07) * 6 + Math.sin(c * 0.19) * 2);
-  addStoryNpc('elf_road', { id:'malthus', name:'Roh Malthus', race:'Mentor Aldric yang Tumbang', color:'#9ef0ff', c:60, r:storyPathRow(60), spriteKey:'thalorien' });
+  addStoryNpc('elf_road', { id:'malthus', name:'Malthus', race:'Sosok di Tengah Badai', color:'#9ef0ff', c:60, r:storyPathRow(60), spriteKey:'thalorien' });
   clearArea('capital', 128, 58, 2, 8);
   addStoryNpc('capital', { id:'engine_entrance', name:'Tangga ke Inti Mesin', race:'Rahasia Istana — Bawah Tanah', color:'#ff875c', c:128, r:58, spriteKey:'rune_stone' });
   addStoryNpc('sun_engine', { id:'veyra_boss', name:'Arch-Mage Veyra', race:'Penyihir Istana Aurelion — Arsitek Salju', color:'#c792ea', c:15, r:6, spriteKey:'lyraelle' });
@@ -8009,7 +8026,7 @@
       wendigo:['Darah di Atas Salju — Bab 1','Buru Wendigo Lembah Beku di barat Hutan Belantara.'],
       kaelen_return:['Darah di Atas Salju — Bab 1','Kembali ke Kaelen dengan Pecahan Aether Hitam.'],
       keys:['Menyatukan Tiga Api — Bab 2','Dapatkan Setengah Kunci Zamrud (Elara) dan Setengah Kunci Baja (Varek/Durgan).'],
-      road:['Jalan Penebusan — Bab 3','Masuki Jalan Setapak dan temui Roh Malthus.'],
+      road:['Jalan Penebusan — Bab 3','Masuki Jalan Setapak. Sesosok bayangan menunggu di tengah badai.'],
       capital:['Jejak Dosa Masa Lalu — Bab 4','Selidiki Aurelion: temui Roderic, Tobias, dan Pip.'],
       veyra:['Sang Arsitek Salju — Bab 4','Hadapi Penyihir Istana Veyra.'],
       engine:['Bara yang Tersisa — Bab 5','Masuk ke Inti Mesin melalui tangga rahasia.'],
@@ -8187,7 +8204,7 @@
     if (document.getElementById('trial-css')) return;
     const s = document.createElement('style'); s.id = 'trial-css';
     s.textContent = `
-#trialOverlay{position:absolute;inset:0;z-index:40;display:none;flex-direction:column;align-items:center;gap:6px;padding:10px 12px;background:radial-gradient(ellipse at 50% 15%,rgba(30,80,100,.55),rgba(6,10,14,.98) 70%),#070a0e;border:2px solid #5ca4b8;overflow-y:auto;font-family:"Courier New",monospace;color:#d8f4ff;touch-action:manipulation}
+#trialOverlay{position:absolute;inset:0;z-index:25;display:none;flex-direction:column;align-items:center;gap:6px;padding:10px 12px;background:radial-gradient(ellipse at 50% 15%,rgba(30,80,100,.55),rgba(6,10,14,.98) 70%),#070a0e;border:2px solid #5ca4b8;overflow-y:auto;font-family:"Courier New",monospace;color:#d8f4ff;touch-action:manipulation}
 #trialOverlay.on{display:flex}
 #trialOverlay.hit{animation:trShake .4s}
 @keyframes trShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
@@ -8211,6 +8228,10 @@
 #trialOverlay .tr-rune small{font-size:11px}
 #trialOverlay .tr-rune.lit{background:#2c6f87;border-color:#ffd966;transform:scale(1.04);box-shadow:0 0 14px rgba(255,217,102,.6)}
 #trialOverlay .tr-dots{font-size:18px;letter-spacing:4px;color:#ffd966;min-height:22px}
+#canvasContainer.trial-on .shortcut-dock,#canvasContainer.trial-on .info-popup,#canvasContainer.trial-on #shortcutDockM,#canvasContainer.trial-on #mmMini,#canvasContainer.trial-on #mmLarge{display:none !important}
+html.m-land #canvasContainer.trial-on:not(.trial-dodge) ~ .touch-controls .joy-zone{display:none !important}
+html.m-land #canvasContainer.trial-on ~ .touch-controls.show-pad{display:block !important;z-index:60}
+html.m-land #canvasContainer.trial-on ~ .touch-controls .action-pad{opacity:.9}
 #trialFlash{position:absolute;inset:0;z-index:60;pointer-events:none;background:radial-gradient(circle at 50% 55%,rgba(200,250,255,.95),rgba(120,220,255,.55) 40%,rgba(0,0,0,0) 75%);opacity:0;animation:trFlash 1.8s ease-in-out forwards}
 @keyframes trFlash{0%{opacity:0}30%{opacity:1}55%{opacity:1}100%{opacity:0}}`;
     document.head.appendChild(s);
@@ -8251,12 +8272,24 @@
     }
   }, true);
   window.addEventListener('keyup', e => { const k = e.key.toLowerCase(); if (k === ' ' || k === 'e') TR.held = false; }, true);
+  window.addEventListener('blur', () => { TR.held = false; });
+  // Tombol AKSI di layar sentuh: tekan = aksi / tahan (suhu naik), lepas = suhu turun
+  let trActPid = null;
+  document.addEventListener('pointerdown', e => {
+    if (!TR.active || !e.target.closest || !e.target.closest('#btnTouchAction')) return;
+    e.preventDefault(); e.stopPropagation();
+    trActPid = e.pointerId; TR.held = true; if (TR.onAct) TR.onAct();
+  }, true);
+  ['pointerup', 'pointercancel'].forEach(ev => document.addEventListener(ev, e => { if (trActPid !== null && e.pointerId === trActPid) { trActPid = null; TR.held = false; } }, true));
+  // Tombol "Pilihan 1/2/3" di HP juga diarahkan ke ujian (bukan ke pertarungan)
+  const _tncTrial = window.triggerNumberChoice;
+  window.triggerNumberChoice = function (num) { if (TR.active) { if (TR.onNum) TR.onNum(num); return; } return _tncTrial.apply(this, arguments); };
 
   // ---------------------------------------------------------------- SESI I: MENGHINDAR
   function stageDodge(A) {
     const st = trId('trStage');
     st.innerHTML = '<canvas id="trCv" width="320" height="200"></canvas><div class="tr-hint">Joystick / WASD / seret jari untuk bergerak. Jangan melawan — hindari bayangan sampai fajar: <b id="trTime">24</b> detik.</div>';
-    TR.onAct = null; TR.onNum = null;
+    TR.onAct = null; TR.onNum = null; trBox().classList.add('trial-dodge');
     const cv = trId('trCv'), g = cv.getContext('2d'), W = 320, H = 200, DUR = 24;
     const p = { x: W / 2, y: H / 2, r: 4.5, inv: 0 };
     let orbs = [], warns = [], t = 0, spawn = 1.0, wave = 4.5, dead = false, raf = 0, last = performance.now(), ptr = null;
@@ -8317,7 +8350,7 @@
     }
     function frame(now) { if (dead) return; const dt = Math.min(0.05, (now - last) / 1000); last = now; update(dt); if (dead) return; draw(); raf = requestAnimationFrame(frame); }
     raf = requestAnimationFrame(frame);
-    return () => { dead = true; cancelAnimationFrame(raf); };
+    return () => { dead = true; cancelAnimationFrame(raf); trBox().classList.remove('trial-dodge'); };
   }
 
   // ---------------------------------------------------------------- SESI II: MENGINGAT
@@ -8367,18 +8400,19 @@
   // ---------------------------------------------------------------- SESI III: MENYEIMBANGKAN
   function stageHeat(A) {
     const st = trId('trStage');
-    st.innerHTML = '<canvas id="trCv" width="320" height="200"></canvas><button class="tr-btn big" id="trHold">TAHAN — nyalakan Hearthstone (atau tahan E / Spasi)</button><div class="tr-hint">Lepas = api mendingin. Jaga penanda api di dalam pita emas. Terlalu lama di luar pita = Hearthstone padam.</div>';
+    st.innerHTML = '<canvas id="trCv" width="320" height="200"></canvas><div class="tr-hint"><b>TAHAN tombol AKSI [E] / Spasi</b> (atau tahan layar ini) untuk menaikkan suhu. <b>Lepas</b> untuk menurunkan. Jaga penanda api di dalam pita emas; terlalu lama di luar pita = Hearthstone padam.</div>';
     const cv = trId('trCv'), g = cv.getContext('2d'), W = 320, H = 200, NEED = 16;
     let v = 50, vel = 0, t = 0, prog = 0, outT = 0, gust = 2.5, gustFx = 0, dead = false, raf = 0, last = performance.now(), btnDown = false;
-    const hb = trId('trHold');
-    hb.onpointerdown = e => { btnDown = true; try { hb.setPointerCapture(e.pointerId); } catch (x) {} };
-    hb.onpointerup = hb.onpointercancel = hb.onpointerleave = () => { btnDown = false; };
+    cv.onpointerdown = e => { btnDown = true; try { cv.setPointerCapture(e.pointerId); } catch (x) {} };
+    cv.onpointerup = cv.onpointercancel = () => { btnDown = false; };
     TR.onAct = null; TR.onNum = null;
+    let armed = false;   // tombol yang dipakai menekan "Mulai" harus dilepas dulu
     const GY = 12, GH = 176, yOf = val => GY + GH * (1 - val / 100);
     const center = tt => trClamp(50 + 24 * Math.sin(tt * 0.55) + 10 * Math.sin(tt * 1.3 + 1), 22, 78);
     function update(dt) {
       t += dt;
-      const hold = btnDown || TR.held;
+      if (!TR.held && !btnDown) armed = true;
+      const hold = armed && (btnDown || TR.held);
       vel += (hold ? 60 : -45) * dt; vel *= Math.pow(0.2, dt);
       gust -= dt; if (gust <= 0) { gust = trRand(2.2, 3.8); const s = Math.random() < 0.5 ? -1 : 1; vel += s * 14; gustFx = 0.8 * s; }
       gustFx *= Math.pow(0.1, dt);
@@ -8408,6 +8442,7 @@
       g.fillStyle = '#9bbcc7'; g.font = '10px monospace'; g.fillText('hangat', 222, GY + 10); g.fillText(Math.floor(prog / NEED * 100) + '%', 222, GY + 24);
       g.fillStyle = '#12303b'; g.fillRect(84, GY, 10, GH); g.fillStyle = outT > 1.3 ? '#ff5c5c' : '#c66'; const oh = GH * Math.min(1, outT / 2.2); g.fillRect(84, GY + GH - oh, 10, oh);
       g.fillStyle = '#9bbcc7'; g.fillText('bahaya', 40, GY + 10);
+      const hh = armed && (btnDown || TR.held); g.font = 'bold 11px monospace'; g.fillStyle = hh ? '#ffd966' : '#7fb4c8'; g.fillText(hh ? '▲ MENAIKKAN' : '▼ MENDINGIN', 222, GY + GH - 6);
     }
     function frame(now) { if (dead) return; const dt = Math.min(0.05, (now - last) / 1000); last = now; update(dt); if (dead) return; draw(); raf = requestAnimationFrame(frame); }
     raf = requestAnimationFrame(frame);
@@ -8437,12 +8472,13 @@
   function trFail() {
     trStopStage();
     trCard('Hearthstone Padam',
-      'Tekadmu habis. Cahaya di tanganmu meredup, dan wajah-wajah itu menghilang ke dalam kabut. Roh Malthus menatapmu tanpa marah. Ujian harus diulang dari Sesi I.',
+      'Tekadmu habis. Cahaya di tanganmu meredup, dan wajah-wajah itu menghilang ke dalam kabut. Malthus menatapmu tanpa marah. Ujian harus diulang dari Sesi I.',
       [{ label: 'Ulangi dari awal.', fn: () => { TR.tekad = 3; TR.stage = 0; trHearts(); trRunStage(); } },
        { label: 'Mundur dulu.', fn: trQuit }],
       '"Penyesalan yang dihindari akan kembali dengan wajah yang lebih keras."');
   }
-  function trQuit() { trStopStage(); TR.active = false; TR.onAct = TR.onNum = null; trId('trialOverlay').classList.remove('on'); currentState = STATE.EXPLORE; updateUI(); }
+  function trBox() { return trId('combatOverlay').parentElement; }
+  function trQuit() { trStopStage(); trBox().classList.remove('trial-on', 'trial-dodge'); TR.active = false; TR.onAct = TR.onNum = null; trId('trialOverlay').classList.remove('on'); currentState = STATE.EXPLORE; updateUI(); }
   function trRunStage() {
     const s = TR_STAGES[TR.stage];
     trId('trTitle').textContent = s.title;
@@ -8457,6 +8493,7 @@
     trCard('Sesi Selesai', done, [{ label: 'Lanjut ke sesi berikutnya.', fn: trRunStage }], '');
   }
   function trClear() {
+    trBox().classList.remove('trial-on', 'trial-dodge');
     TR.active = false; TR.onAct = TR.onNum = null;
     trId('trialOverlay').classList.remove('on');
     currentState = STATE.EXPLORE;
@@ -8464,31 +8501,35 @@
   }
   function trialStart() {
     trRoot(); TR.active = true; TR.tekad = 3; TR.stage = 0; TR.held = false;
-    clearAllMovementKeys(); currentState = STATE.COMBAT;
+    clearAllMovementKeys(); currentState = STATE.COMBAT; trBox().classList.add('trial-on');
     trId('trialOverlay').classList.add('on'); trHearts(); trRunStage();
   }
 
   function shadowTrial() {
-    startDialogue('Roh Malthus', 'Gerbang Rahasia — Ujian Penebusan', '#9ef0ff',
-      '"Aldric Vane. Gerbang ini tidak dibuka oleh pedang. Ada tiga ujian, tiga wajah penyesalanmu. Pertama, bayangan orang-orang yang kau usir: kau hanya boleh menghindar sampai fajar. Kedua, rumah-rumah yang kau sita: ingat urutannya tanpa salah. Ketiga, api Hearthstone: jaga ia tetap menyala di antara terlalu panas dan terlalu dingin. Kau punya tiga Tekad. Jika habis, Hearthstone padam dan kau mengulang dari awal."',
-      [{ label: 'Aku siap menghadapi ketiganya.', action: () => { closeDialogue(); trialStart(); } },
-       { label: 'Beri aku waktu.', action: closeDialogue }]);
+    startDialogue('Malthus', 'Sosok di Tengah Badai', '#9ef0ff',
+      'Pandanganmu berkunang-kunang. Dingin menusuk sampai ke tulang, dan sosok di hadapanmu berdiri tanpa meninggalkan jejak di salju. Ia mengenal namamu.',
+      [{ label: 'Siapa kau?', action: () => {
+        startDialogue('Malthus', 'Sosok di Tengah Badai', '#9ef0ff',
+          '\"Namaku Malthus. Itu saja yang perlu kau tahu. Aku tidak datang untuk menolongmu, dan aku tidak datang untuk menghukummu. Aku hanya berdiri di jalanmu, Aldric Vane. Gerbang ke timur tidak dibuka oleh pedang. Ada tiga ujian, tiga wajah penyesalanmu. Pertama, bayangan orang-orang yang kau usir: kau hanya boleh menghindar sampai fajar. Kedua, rumah-rumah yang kau sita: ingat urutannya tanpa salah. Ketiga, api Hearthstone: jaga ia tetap menyala di antara terlalu panas dan terlalu dingin. Kau punya tiga Tekad. Jika habis, Hearthstone padam dan kau mengulang dari awal.\"',
+          [{ label: 'Aku siap menghadapi ketiganya.', action: () => { closeDialogue(); trialStart(); } },
+           { label: 'Beri aku waktu.', action: closeDialogue }]);
+      } }]);
   }
 
   // ---------------------------------------------------------------- KATA TERAKHIR & MENGHILANGNYA MALTHUS
   function malthusFarewell() {
     gameData.flags.shadowDefeated = true; ST.step = 'capital'; farewellLast = false; updateUI();
-    const who = ['Roh Malthus', 'Mentor Aldric yang Tumbang', '#9ef0ff'];
-    startDialogue(who[0], who[1], who[2],
-      '"Tiga wajah telah kau hadapi, Aldric: mereka yang kau usir, rumah yang kau segel, dan api yang nyaris padam di tanganmu. Kau tidak menang atas mereka. Kau hanya berhenti lari. Bayangan itu menyerap Hearthstone-mu dan tidak menghancurkannya. Rime-rot bukan penyakit; itu rasa bersalahmu yang membeku di pembuluh darah."',
-      [{ label: '...', action: () => {
-        startDialogue(who[0], who[1], who[2],
-          '"Dulu aku mengajarimu menegakkan hukum tanpa bertanya siapa yang dirugikannya. Itu kegagalanku sebelum menjadi kegagalanmu. Di Aurelion ada orang yang jauh lebih pandai bersembunyi di balik alasan yang baik. Dengarkan dulu sebelum kau menghakimi, dan jangan ulangi kesalahan kita."',
-          [{ label: '...', action: () => {
+    const W = ['Malthus', 'Sosok di Tengah Badai', '#9ef0ff'];
+    startDialogue(W[0], W[1], W[2],
+      '\"Tiga wajah telah kau hadapi, Aldric: mereka yang kau usir, rumah yang kau segel, dan api yang nyaris padam di tanganmu. Kau tidak menang atas mereka. Kau hanya berhenti lari.\"',
+      [{ label: 'Siapa sebenarnya kau?', action: () => {
+        startDialogue(W[0], W[1], W[2],
+          '\"Aku Malthus. Nama yang diambil pikiranmu dari ketiadaan, supaya rasa bersalahmu punya wajah untuk menghakimimu. Aku tidak pernah ada, Aldric. Tidak ada gerbang rahasia, tidak ada ujian. Badai itu, dinginnya, semua ini terjadi ketika tubuhmu tumbang di salju, dan pikiranmu membangun pengadilan untuk dirimu sendiri.\"',
+          [{ label: 'Jadi ini semua... hanya mimpi?', action: () => {
             farewellLast = true;
-            startDialogue(who[0], who[1], who[2],
-              '"Jalan ke timur terbuka. Bawalah rasa bersalah itu sebagai kompas, bukan beban. Waktuku di sini sudah habis. Selamat tinggal, muridku."',
-              [{ label: 'Selamat jalan, Guru.', action: closeDialogue }]);
+            startDialogue(W[0], W[1], W[2],
+              '\"Kau selalu berkata tidak merasa bersalah pada siapa pun. Kalau itu benar, siapa yang menyeretmu sejauh ini? Rime-rot bukan kutukan. Tidak pernah ada kutukan. Hanya rasa bersalah yang kau pendam terlalu rapat, sampai membeku di pembuluh darahmu. Aku hanya hidup selama kau menolak mendengarkannya. Sekarang kau sudah mendengar. Bangunlah, Aldric.\"',
+              [{ label: '...Aku mendengarmu.', action: closeDialogue }]);
           } }]);
       } }]);
   }
@@ -8497,6 +8538,7 @@
     const host = trId('combatOverlay').parentElement, fl = document.createElement('div'); fl.id = 'trialFlash'; host.appendChild(fl);
     setTimeout(() => { const arr = npcsByMap.elf_road, i = arr.findIndex(n => n.id === 'malthus'); if (i >= 0) arr.splice(i, 1); updateUI(); }, 650);
     setTimeout(() => fl.remove(), 1900);
+    setTimeout(() => { cinePlay({ theme: 'wake', scenes: WAKE_SCENES, final: null, onEnd: () => { currentState = STATE.EXPLORE; updateUI(); } }); }, 1100);
   }
   const _closeDlgM = closeDialogue;
   closeDialogue = function () {
@@ -8507,7 +8549,7 @@
   function malthusStory() {
     if (gameData.flags.malthusGone) return;
     if (gameData.flags.shadowDefeated) return malthusFarewell();
-    if (ST.step !== 'road') return startDialogue('Roh Malthus', 'Mentor Aldric', '#9ef0ff', '"Badai es belum reda."', [{ label: 'Aku akan kembali.', action: closeDialogue }]);
+    if (ST.step !== 'road') return startDialogue('Malthus', 'Sosok di Tengah Badai', '#9ef0ff', '"Belum waktunya. Badai di kepalamu belum reda."', [{ label: 'Aku akan kembali.', action: closeDialogue }]);
     shadowTrial();
   }
 
@@ -8612,7 +8654,7 @@
     }
     if (enemy && enemy.id === 'veyra' && enemy.hp <= 0 && !gameData.flags.finalBattleDone) {
       gameData.flags.finalBattleDone = true; ST.step = 'final'; updateUI();
-      setTimeout(()=>{ currentState = STATE.EXPLORE; showEndingChoice(); }, 1700);
+      setTimeout(()=>{ try { endCombatOverlay(); } catch (e) {} currentState = STATE.EXPLORE; updateUI(); showEndingChoice(); }, 1700);
     }
   };
 
@@ -8646,7 +8688,7 @@
       if (now - (ST.gateMsgAt || 0) > 1800) {
         ST.gateMsgAt = now;
         startDialogue('Gerbang Rahasia','Jalan Setapak','#9ef0ff',
-          'Ilusi orang-orang yang pernah kau usir menutup jalan. Roh Malthus menjaga gerbang ini — hadapi ujiannya lebih dulu.',
+          'Ilusi orang-orang yang pernah kau usir menutup jalan. Sesosok bayangan bernama Malthus menjaga gerbang ini — hadapi ujiannya lebih dulu.',
           [{label:'Kembali.',action:closeDialogue}]);
       }
       return;
@@ -8713,7 +8755,7 @@
         li += `<br><span style="color:${f.dwarfKey ? '#98c379' : '#e0d8cc'};">${f.dwarfKey ? '☑' : '☐'} Terima kunci dari Raja Durgan</span>`;
       }
       if (ST.step === 'road') {
-        li += `<br><span style="color:#b8afa6;">Ujian Penebusan (Roh Malthus):</span>`;
+        li += `<br><span style="color:#b8afa6;">Ujian Penebusan (Malthus):</span>`;
         li += `<br><span style="color:${f.shadowDefeated ? '#98c379' : '#e0d8cc'};">${f.shadowDefeated ? '☑' : '☐'} Lulus 3 Ujian Penebusan (Menghindar, Mengingat, Menyeimbangkan)</span>`;
       }
       li += `</div>`;
@@ -8722,6 +8764,250 @@
 
     const cnt = document.getElementById('quest-counter');
     if (cnt) { const items = box.querySelectorAll('.quest-item'); let done = 0, total = 0; items.forEach(it => { if (it.querySelector('.q-done')) done++; if (it.querySelector('.q-active,.q-done')) total++; }); cnt.textContent = done + '/' + total + ' Selesai'; }
+  };
+
+  // ===== JURNAL MISI & TUGAS AKTIF (V2): misi utama di atas, misi sampingan di bawah =====
+  (function qjCss() {
+    if (document.getElementById('qj-css')) return;
+    const st = document.createElement('style'); st.id = 'qj-css';
+    st.textContent = `
+.qj-head{margin:8px 0 5px;padding:4px 8px;font:bold 11px "Courier New",monospace;letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.qj-head:first-child{margin-top:0}
+.qj-head.main{background:linear-gradient(90deg,rgba(212,175,55,.28),rgba(212,175,55,.06));border-left:3px solid #d4af37;color:#ffd966}
+.qj-head.side{background:linear-gradient(90deg,rgba(126,200,255,.20),rgba(126,200,255,.04));border-left:3px solid #7ec8ff;color:#a9dcff}
+.qj-head small{font-size:10px;font-weight:normal;letter-spacing:0;color:#98c379}
+.qj-sub{margin:7px 0 4px;padding:2px 6px;font:bold 10px "Courier New",monospace;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #3a3025;display:flex;justify-content:space-between}
+.qj-sub small{font-weight:normal;letter-spacing:0;color:#8c8275}
+.qj-main{border-left:3px solid #d4af37;background:rgba(212,175,55,.08);padding-left:8px}
+.qj-ch{display:block;margin:1px 0;color:#8c8275}
+.qj-ch.on{color:#ffd966;font-weight:bold}
+.qj-ch.ok{color:#98c379}
+.qj-it{border-left:3px solid var(--qjc,#555);padding-left:7px}
+.qj-idle{color:#bfb5a5}
+.qj-st{color:#8c8275;font-size:10px}
+.qj-here{color:#80ed99;font-size:10px;margin-left:4px}
+.qj-map{color:#8c8275;font-size:10px;margin-left:4px}
+.qj-stp{display:block;color:#b8afa6}
+.qj-stp.ok{color:#98c379}
+.qj-stp.now{color:#ffe08a;font-weight:bold}
+.qj-grp{display:block;margin-top:3px;color:#9fb3c0;font-size:10px;letter-spacing:.5px}
+.qj-rew{color:#d4af37;font-size:10px}
+`;
+    document.head.appendChild(st);
+  })();
+
+  const QJ_ORD = ['supply', 'henrik', 'kaelen', 'kaelen_trials', 'wendigo', 'kaelen_return', 'keys', 'road', 'capital', 'veyra', 'engine', 'final', 'done'];
+  const QJ_CH = [
+    { n: 'Bab 1 — Darah di Atas Salju', s: ['supply', 'henrik', 'kaelen', 'kaelen_trials', 'wendigo', 'kaelen_return'] },
+    { n: 'Bab 2 — Menyatukan Tiga Api', s: ['keys'] },
+    { n: 'Bab 3 — Jalan Penebusan', s: ['road'] },
+    { n: 'Bab 4 — Jejak Dosa Masa Lalu', s: ['capital', 'veyra'] },
+    { n: 'Bab 5 — Rime & Ash', s: ['engine', 'final'] }
+  ];
+  const QJ_LBL = { supply: 'Krisis Pasokan Jembatan Timur', henrik: 'Laporan kepada Vogt Henrik', kaelen: 'Bertemu Kaelen', kaelen_trials: 'Ujian Pemburu', wendigo: 'Perburuan Wendigo', kaelen_return: 'Kembali kepada Kaelen',
+    keys: 'Dua Setengah Kunci Hearthstone', road: 'Ujian Penebusan', capital: 'Menyelidiki Aurelion', veyra: 'Menghadapi Veyra', engine: 'Turun ke Inti Mesin', final: 'Pertarungan Terakhir' };
+  const qjEsc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const qjMapName = id => (typeof MAPS !== 'undefined' && MAPS[id]) ? (MAPS[id].short || MAPS[id].name || '') : '';
+
+  // Langkah-langkah rinci misi utama untuk tahap saat ini ({h:'judul grup'} atau {t, ok})
+  function qjMainSteps() {
+    const f = gameData.flags, L = [];
+    const S_ = (t, ok) => L.push({ t, ok: !!ok }), H_ = h => L.push({ h });
+    switch (ST.step) {
+      case 'supply':
+        S_('Pergi ke Jembatan Timur Oakhaven', f.supplyAccepted || f.combatWon || f.supplyOutcome);
+        S_('Bicara dengan Korin di gerobak pasokan', f.supplyAccepted || f.combatWon || f.supplyOutcome);
+        S_('Selesaikan krisis lewat Diplomasi atau Tempur', f.supplyOutcome); break;
+      case 'henrik':
+        S_('Kembali ke Vogt Henrik di Oakhaven', f.ch1_henrikBriefed);
+        S_('Dengarkan laporan lengkapnya', f.ch1_henrikBriefed); break;
+      case 'kaelen':
+        S_('Pergi ke Hutan Belantara Vaelen (peta barat)', f.ch1_trialsAccepted);
+        S_('Temui Kaelen sang Pemburu Buta', f.ch1_trialsAccepted);
+        S_('Terima Ujian Pemburu darinya', f.ch1_trialsAccepted); break;
+      case 'kaelen_trials':
+        S_('Bunuh 1 Serigala Embun', f.ch1_killWolf);
+        S_('Bunuh 1 Beruang Gua', f.ch1_killBear);
+        S_('Bunuh 1 Laba-Laba Kabut', f.ch1_killSpider); break;
+      case 'wendigo':
+        S_('Menuju reruntuhan batu tua di barat Hutan Belantara', f.wf_wendigo);
+        S_('Kalahkan Wendigo Lembah Beku', f.wf_wendigo);
+        S_('Ambil Pecahan Aether Hitam', hasItem('black_aether')); break;
+      case 'kaelen_return':
+        S_('Kembali ke Kaelen', f.ch1_kaelenDone);
+        S_('Serahkan Pecahan Aether Hitam', f.ch1_kaelenDone); break;
+      case 'keys':
+        H_('Setengah Kunci Zamrud (Suaka Elf)');
+        S_('Bantu Caelen memanen Bunga Embun Perak', f.elf_botanical || f.caelenQuestDone);
+        S_('Ambil pecahan memori di danau tua', f.elf_memoryShard);
+        S_('Terima Kunci Zamrud dari Elara', f.elfKey);
+        H_('Setengah Kunci Baja (Khaz-Karst)');
+        S_('Hancurkan Automaton Besi', f.varekProof || f.golemDefeated);
+        S_('Terima kunci dari Raja Durgan', f.dwarfKey);
+        H_('Penyatuan');
+        S_('Satukan kedua kunci menjadi Hearthstone', f.hearthstone); break;
+      case 'road':
+        S_('Masuki Jalan Setapak Hutan Kuno lewat gerbang Timur Hutan Elf', currentMapId === 'elf_road' || f.shadowDefeated);
+        S_('Temui sosok di tengah badai (Malthus)', f.shadowDefeated);
+        S_('Lulus 3 Ujian Penebusan: Menghindar, Mengingat, Menyeimbangkan', f.shadowDefeated); break;
+      case 'capital':
+        S_('Temui Kapten Gerbang Roderic', ST.clues && ST.clues.roderic);
+        S_('Temui Juru Tulis Tobias', ST.clues && ST.clues.tobias);
+        S_('Temui Pip Anak Jalanan', ST.clues && ST.clues.pip); break;
+      case 'veyra':
+        S_('Temui Penyihir Istana Veyra di Aurelion', f.ch4_truth);
+        S_('Dengarkan kebenaran tentang Sun-Engine', f.ch4_truth); break;
+      case 'engine':
+        S_('Pergi ke tangga rahasia di sisi istana Aurelion', currentMapId === 'sun_engine');
+        S_('Turun ke Inti Mesin', currentMapId === 'sun_engine'); break;
+      case 'final':
+        S_('Kalahkan Arch-Mage Veyra', f.finalBattleDone);
+        S_('Tentukan nasib Sun-Engine (pilih akhir)', ST.ending); break;
+    }
+    // langkah yang lebih akhir sudah selesai => langkah sebelumnya (dalam grup yang sama) juga selesai
+    let last = -1; L.forEach((x, i) => { if (!x.h && x.ok) last = i; });
+    for (let i = 0; i < last; i++) if (!L[i].h) L[i].ok = true;
+    return L;
+  }
+  function qjStepsHtml(L, plain) {
+    let first = !plain, h = '';
+    L.forEach(x => {
+      if (x.h) { h += `<span class="qj-grp">▸ ${qjEsc(x.h)}</span>`; return; }
+      const now = !x.ok && first; if (!x.ok) first = false;
+      h += `<span class="qj-stp ${x.ok ? 'ok' : (now ? 'now' : '')}">${x.ok ? '☑' : (now ? '➜' : '☐')} ${qjEsc(x.t)}</span>`;
+    });
+    return h;
+  }
+  function qjChapterState(i) {
+    const idx = QJ_ORD.indexOf(ST.step), c = QJ_CH[i], a = QJ_ORD.indexOf(c.s[0]), b = QJ_ORD.indexOf(c.s[c.s.length - 1]);
+    return idx > b ? 'done' : (idx >= a ? 'active' : 'locked');
+  }
+
+  // Kumpulkan semua misi sampingan ke dalam kelompok-kelompok jenis
+  function qjSide() {
+    const FV = window.FVX; let fs = null; try { if (FV) { FV.day(); fs = FV.S(); } } catch (e) {}
+    const G = [
+      { k: 'harian', icon: '📅', name: 'Guild — Misi Harian', c: '#7ec8ff', items: [] },
+      { k: 'khusus', icon: '⚔', name: 'Guild — Misi Khusus', c: '#c792ea', items: [] },
+      { k: 'damai', icon: '🕊', name: 'Misi Damai', c: '#98c379', items: [] },
+      { k: 'tempur', icon: '🗡', name: 'Misi Tempur', c: '#e06c75', items: [] },
+      { k: 'kota', icon: '🏰', name: 'Misi Ibu Kota', c: '#ffd966', items: [] },
+      { k: 'buru', icon: '🐺', name: 'Berburu & Perlengkapan', c: '#e5a05b', items: [] }
+    ], by = k => G.find(g => g.k === k);
+    const objSteps = (q) => (q.obj || []).map(o => ({ t: `${o.txt} (${FV.prog(o)}/${o.n})`, ok: FV.prog(o) >= o.n }));
+    // Guild harian & khusus
+    if (FV && fs) {
+      const rt = FV.rt;
+      fs.dl.l.forEach((ti, j) => {
+        const T = FV.TP[ti], id = 'dl' + j, act = fs.act.find(a => a.id === id);
+        const st = fs.dl.cl.includes(id) ? 'done' : (act ? 'active' : 'avail');
+        by('harian').items.push({ title: T.t, state: st, map: 'oakhaven', rew: rt(T.r),
+          hint: 'Ambil di Papan Misi, Guild Adventurer Oakhaven (24,22).',
+          steps: st === 'active' ? objSteps(act).concat(FV.done(act) ? [{ t: 'Lapor ke Guild di Oakhaven', ok: false }] : []) : T.o.map(o => ({ t: `${o.txt} x${o.n}`, ok: false })) });
+      });
+      Object.keys(FV.QD).forEach(k => {
+        const D = FV.QD[k], v = fs.sp[k], act = fs.act.find(a => a.id === k);
+        const st = v === 'done' ? 'done' : (v === 'act' ? 'active' : 'avail');
+        by('khusus').items.push({ title: D.t, state: st, map: 'oakhaven', rew: D.br ? 'hadiah tergantung pilihanmu' : (D.ch ? 'hadiah tergantung pilihanmu' : ''),
+          hint: st === 'avail' ? 'Ambil di Papan Misi (Misi Khusus), Guild Adventurer Oakhaven (24,22). ' + D.a : D.a,
+          steps: st === 'active' && act ? objSteps(act).concat(FV.done(act) ? [{ t: 'Lapor ke Guild di Oakhaven' + (D.br ? ' dan pilih tujuan bukti' : ''), ok: false }] : []) : [] });
+      });
+    }
+    // Misi dunia
+    const wq = (fs && fs.wq) || {};
+    (window.__qBase || []).forEach(q => {
+      if (/^\[Utama\]/.test(q.title)) return;
+      const title = q.title.replace(/^\[[^\]]+\]\s*/, ''), hint = String(q.hint || '').replace(/Caelen \(\d+,\s*\d+\)/g, 'Caelen (16, 8)').replace(/bunga \(\d+,\s*\d+\)/g, 'bunga (16, 20)');
+      const k = q.isHunt || /^\[Arsenal/.test(q.title) ? 'buru' : (/^\[Tempur\]/.test(q.title) ? 'tempur' : 'damai');
+      const st = q.done ? 'done' : (wq[q.title] ? 'active' : 'avail');
+      by(k).items.push({ title: title, state: st, map: q.map, hint: hint, hunt: !!q.isHunt || k === 'buru', steps: (FV && st === 'active') ? FV.steps(hint).map(t => ({ t, ok: false })) : null });
+    });
+    (window.__qCap || []).forEach(q => {
+      const st = q.done ? 'done' : (q.started ? 'active' : 'avail');
+      by('kota').items.push({ title: q.title.replace(/^\[[^\]]+\]\s*/, ''), state: st, map: 'capital', hint: q.hint, steps: null });
+    });
+    G.forEach(g => { // misi di peta ini dulu, lalu yang belum selesai, lalu yang selesai
+      g.items.forEach((it, i) => { it._i = i; it._r = (it.state === 'done' ? 2 : 0) + (it.map === currentMapId ? 0 : 1); });
+      g.items.sort((a, b) => (a._r - b._r) || (a._i - b._i));
+    });
+    return G.filter(g => g.items.length);
+  }
+
+  function qjItemHtml(g, it) {
+    const done = it.state === 'done', act = it.state === 'active';
+    const lbl = done ? 'Telah diselesaikan.' : (act ? 'Sedang dijalankan' : 'Belum dimulai');
+    const where = it.map === currentMapId ? '<span class="qj-here">📍 di sini</span>' : (qjMapName(it.map) ? `<span class="qj-map">(${qjEsc(qjMapName(it.map))})</span>` : '');
+    let h = `<div class="quest-item qj-it" style="--qjc:${g.c}"><strong class="${done ? 'q-done' : (act ? 'q-active' : 'qj-idle')}">${done ? '✔' : (act ? '◈' : '○')} ${qjEsc(it.title)}</strong>${where}<br><span class="qj-st">${lbl}</span>`;
+    if (!done) {
+      if (it.steps && it.steps.length) h += qjStepsHtml(it.steps, !act);
+      else if (it.hint) h += `<br><span style="color:#b8afa6;">${qjEsc(it.hint)}</span>`;
+      if (it.rew) h += `<br><span class="qj-rew">🎁 ${qjEsc(it.rew)}</span>`;
+    }
+    return h + '</div>';
+  }
+
+  // ---- JURNAL MISI (tab 📜): Misi Utama paling atas, Misi Sampingan di bawahnya ----
+  const _rqV1 = renderQuestLog;
+  renderQuestLog = function () {
+    _rqV1();
+    const box = document.getElementById('quest-status'); if (!box) return;
+    let mainDone = 0, h = '';
+    const obj = getStoryObjective();
+    h += '<div class="qj-head main"><span>★ Misi Utama</span><small id="qjMainCnt"></small></div>';
+    QJ_CH.forEach((c, i) => {
+      const s = qjChapterState(i); if (s === 'done') mainDone++;
+      if (s === 'done') h += `<div class="quest-item qj-main"><strong class="q-done">✔ ${qjEsc(c.n)}</strong><br><span class="qj-st">Telah diselesaikan.</span></div>`;
+      else if (s === 'locked') h += `<div class="quest-item qj-main" style="opacity:.55"><strong class="qj-idle">🔒 ${qjEsc(c.n)}</strong><br><span class="qj-st">Belum terbuka. Selesaikan bab sebelumnya.</span></div>`;
+      else {
+        const idx = QJ_ORD.indexOf(ST.step);
+        h += `<div class="quest-item qj-main"><strong class="q-active" style="color:#ffd966;">◈ ${qjEsc(c.n)}</strong><br><span class="qj-st">Sedang dijalankan</span>`;
+        c.s.forEach(sk => { const si = QJ_ORD.indexOf(sk), cls = idx > si ? 'ok' : (idx === si ? 'on' : ''); if (sk === 'kaelen_trials' && idx < si && ST.step !== 'kaelen_trials') return; h += `<span class="qj-ch ${cls}">${idx > si ? '✔' : (idx === si ? '➜' : '○')} ${qjEsc(QJ_LBL[sk])}</span>`; });
+        h += `<br><span style="color:#f0e6c8;">${qjEsc(obj.text)}</span>${qjStepsHtml(qjMainSteps())}</div>`;
+      }
+    });
+    if (ST.step === 'done') h += '<div class="quest-item" style="color:#98c379;">✔ Seluruh kisah utama telah tamat.</div>';
+
+    const G = qjSide(); let sd = 0, st = 0;
+    G.forEach(g => { if (g.k === 'harian' || g.k === 'buru') return; g.items.forEach(it => { st++; if (it.state === 'done') sd++; }); });
+    h += `<div class="qj-head side"><span>◆ Misi Sampingan</span><small>${sd}/${st} selesai</small></div>`;
+    G.forEach(g => {
+      const gd = g.items.filter(i => i.state === 'done').length;
+      h += `<div class="qj-sub" style="color:${g.c}"><span>${g.icon} ${g.name}</span><small>${(g.k === 'buru') ? g.items.length + ' daftar' : gd + '/' + g.items.length}</small></div>`;
+      h += g.items.map(it => qjItemHtml(g, it)).join('');
+    });
+    box.innerHTML = h;
+    const mc = document.getElementById('qjMainCnt'); if (mc) mc.textContent = 'Bab ' + mainDone + '/' + QJ_CH.length + ' selesai';
+    const cnt = document.getElementById('quest-counter'); if (cnt) cnt.textContent = (mainDone + sd) + '/' + (QJ_CH.length + st) + ' Selesai';
+  };
+
+  // ---- TUGAS AKTIF (tab 📋): panduan langkah demi langkah ----
+  window.__renderTask = function (box) {
+    const FV = window.FVX; if (!FV) return;
+    const s = FV.S(), A = s.act, W = FV.worldOpen(), world = (window.__qBase || []).concat(window.__qCap || []);
+    let h = '<div class="qj-head main"><span>★ Misi Utama</span></div>';
+    const MQ = window.__mainQuest && window.__mainQuest();
+    if (ST.step === 'done') h += '<div class="quest-item qj-main"><strong class="q-done">✔ Kisah utama telah tamat</strong></div>';
+    else if (!MQ) h += '<div class="quest-item qj-main"><strong class="q-active" style="color:#ffd966;">◈ Misi utama belum dimulai</strong><br><span style="color:#f0e6c8;">Pergi ke Jembatan Timur Oakhaven dan temui Korin untuk memulai Bab 1.</span></div>';
+    else {
+      const o = getStoryObjective();
+      h += `<div class="quest-item qj-main"><strong class="q-active" style="color:#ffd966;">◈ ${qjEsc(o.title)}</strong><br><span style="color:#f0e6c8;">${qjEsc(o.text)}</span><span class="qj-grp" style="margin-top:5px;">LANGKAH YANG HARUS DILAKUKAN</span>${qjStepsHtml(qjMainSteps())}</div>`;
+    }
+    h += `<div class="qj-head side"><span>◆ Tugas Sampingan Aktif</span><small>${A.length + W.length} berjalan</small></div>`;
+    h += A.map(q => {
+      const fin = FV.done(q);
+      return `<div class="quest-item qj-it" style="--qjc:${q.kind === 'dl' ? '#7ec8ff' : '#c792ea'}"><strong class="${fin ? 'q-done' : 'q-active'}">${fin ? '✔' : '◈'} ${qjEsc(q.title)}</strong>` +
+        qjStepsHtml(q.obj.map(o => ({ t: `${o.txt} (${FV.prog(o)}/${o.n})`, ok: FV.prog(o) >= o.n })).concat(fin ? [{ t: 'Lapor ke Guild Adventurer di Oakhaven (24,22)', ok: false }] : [])) + '</div>';
+    }).join('');
+    h += W.map(q => {
+      const m = qjMapName(q.map), here = q.map === currentMapId ? '<span class="qj-here">📍 di sini</span>' : (m ? `<span class="qj-map">(${qjEsc(m)})</span>` : '');
+      const hint = String(q.hint || '').replace(/Caelen \(\d+,\s*\d+\)/g, 'Caelen (16, 8)').replace(/bunga \(\d+,\s*\d+\)/g, 'bunga (16, 20)');
+      const cat = /Tempur/.test(q.title) ? '#e06c75' : (/Ibu Kota/.test(q.title) ? '#ffd966' : '#98c379');
+      return `<div class="quest-item qj-it" style="--qjc:${cat}"><strong class="q-active">◈ ${qjEsc(q.title)}</strong>${here}` + qjStepsHtml(FV.steps(hint).map(t => ({ t, ok: false }))) + '</div>';
+    }).join('');
+    if (!A.length && !W.length) h += '<div class="quest-item" style="color:#8c8275;">Belum ada tugas sampingan yang berjalan. Ambil misi di Guild Adventurer (Oakhaven) atau bicara dengan penduduk. Daftar semua misi ada di 📜 Jurnal Misi.</div>';
+    const doneN = world.filter(q => q.done).length;
+    if (doneN) h += `<div class="quest-item" style="color:#98c379;">✔ ${doneN} misi sampingan sudah selesai (lihat Jurnal Misi).</div>`;
+    box.innerHTML = h;
   };
 
   // ===== RENDER WRAPPER =====
@@ -8830,7 +9116,7 @@
         const sc = Math.min(W / bw, H / bh);
         const ox = (W - bw * sc) / 2, oy = (H - bh * sc) / 2;
         for (const n of list) {
-          if (!window.__isStoryNpc(n) || !window.__npcOnScreen(n)) continue;
+          if (!window.__isStoryNpc(n)) continue;
           diamond(ctx2, ox + ((n.x + 16) / T) * k * sc, oy + ((n.y + 16) / T) * k * sc, 5, String(n.name || '').replace(/\s*\(.*$/, '').replace(/^(Vogt|Thane|Roh|Arch-Mage|Kapten|Juru Tulis|Master|Penyihir)\s+/, '').split(',')[0].slice(0, 16));
         }
       }
@@ -8847,34 +9133,253 @@
   }
   setupStoryMinimap();
 
-  // ===== ENDING =====
-  let endingEl = null;
-  function ensureEndingUI() {
-    if (endingEl) return;
-    endingEl = document.createElement('div');
-    endingEl.id = 'storyEnding';
-    endingEl.innerHTML = '<div class="se-box"><h2 id="seTitle"></h2><div class="se-sub" id="seSub"></div><div class="se-body" id="seBody"></div><div class="se-btns"><button id="seContinue">Lanjutkan Menjelajah</button><button id="seMenu">Menu Utama</button></div></div>';
-    document.body.appendChild(endingEl);
-    document.getElementById('seContinue').onclick = () => endingEl.classList.remove('open');
-    document.getElementById('seMenu').onclick = () => { endingEl.classList.remove('open'); if (typeof window.openMainMenu === 'function') window.openMainMenu(); };
+  // ===== CINEMATIC ENGINE (dipakai untuk bangun dari halusinasi & ketiga epilog) =====
+  (function cineCss() {
+    if (document.getElementById('cine-css')) return;
+    const st = document.createElement('style'); st.id = 'cine-css';
+    st.textContent = `
+#cineRoot{position:fixed;inset:0;z-index:9700;display:none;background:#000;color:#e8e0d2;font-family:Georgia,"Times New Roman",serif;overflow:hidden;opacity:0;transition:opacity 1.3s ease;user-select:none;-webkit-user-select:none;touch-action:manipulation;cursor:pointer}
+#cineRoot.open{display:block}
+#cineRoot.vis{opacity:1}
+#cineRoot .cn-bg{position:absolute;inset:-8%;animation:cnZoom 45s ease-in-out infinite alternate}
+@keyframes cnZoom{from{transform:scale(1) translate(0,0)}to{transform:scale(1.12) translate(-1.5%,-1%)}}
+#cineRoot.t-good .cn-bg{background:radial-gradient(ellipse at 50% 88%,rgba(255,170,60,.5),rgba(120,50,10,.25) 40%,transparent 72%),radial-gradient(ellipse at 50% 25%,#1c1510,#050403 78%)}
+#cineRoot.t-neutral .cn-bg{background:radial-gradient(ellipse at 50% 90%,rgba(170,220,160,.38),rgba(240,210,120,.12) 40%,transparent 70%),radial-gradient(ellipse at 50% 20%,#141c1c,#040606 78%)}
+#cineRoot.t-dark .cn-bg{background:radial-gradient(ellipse at 50% 75%,rgba(90,160,225,.35),rgba(60,20,70,.3) 45%,transparent 72%),radial-gradient(ellipse at 50% 20%,#0d1118,#020306 78%)}
+#cineRoot.t-wake .cn-bg{background:radial-gradient(ellipse at 50% 50%,rgba(130,160,180,.22),transparent 65%),radial-gradient(ellipse at 50% 30%,#0a1015,#030507 80%)}
+#cineRoot .cn-fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+#cineRoot .cn-vig{position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.75) 100%)}
+#cineRoot .cn-bar{position:absolute;left:0;right:0;height:0;background:#000;z-index:5;transition:height 2s ease}
+#cineRoot .cn-bar.top{top:0}#cineRoot .cn-bar.bot{bottom:0}
+#cineRoot.vis .cn-bar{height:8vh}
+#cineRoot .cn-stage{position:absolute;left:0;right:0;top:8vh;bottom:8vh;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 7vw;text-align:center}
+#cineRoot .cn-line{max-width:780px;font-size:clamp(16px,3vw,26px);line-height:1.75;margin:.35em 0;opacity:0;transform:translateY(12px);filter:blur(5px);transition:opacity 1.7s ease,transform 1.7s ease,filter 1.7s ease;text-shadow:0 2px 14px #000,0 0 3px #000}
+#cineRoot .cn-line.in{opacity:1;transform:none;filter:none}
+#cineRoot .cn-stage.out .cn-line{opacity:0;transition:opacity .9s ease;filter:none}
+#cineRoot .cn-line.m{color:#ffe29a;font-style:italic}
+#cineRoot .cn-line.big{font-size:clamp(24px,5.2vw,46px);color:#fff3cf;letter-spacing:2px;margin-top:.8em}
+#cineRoot .cn-line.t{font-size:clamp(24px,5.2vw,48px);color:#ffd966;letter-spacing:4px;text-transform:uppercase;font-family:"Courier New",monospace;font-weight:bold;line-height:1.25}
+#cineRoot .cn-line.s{font-size:clamp(10px,1.9vw,14px);color:#9a8f80;letter-spacing:4px;text-transform:uppercase;font-family:"Courier New",monospace}
+#cineRoot .cn-hint{position:absolute;left:0;right:0;bottom:calc(8vh + 10px);text-align:center;z-index:6;font:11px "Courier New",monospace;letter-spacing:3px;color:#6f675c;text-transform:uppercase;animation:cnPulse 2.6s ease-in-out infinite;pointer-events:none}
+@keyframes cnPulse{0%,100%{opacity:.25}50%{opacity:.8}}
+#cineRoot .cn-skip{position:absolute;right:14px;top:calc(8vh + 8px);z-index:7;background:rgba(0,0,0,.45);border:1px solid #5b5043;color:#b3a794;font:bold 11px "Courier New",monospace;letter-spacing:2px;text-transform:uppercase;padding:7px 12px;cursor:pointer}
+#cineRoot .cn-skip:hover{border-color:#d4af37;color:#d4af37}
+#cineRoot .cn-final{position:absolute;inset:0;z-index:8;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:8vh 6vw;text-align:center;background:rgba(0,0,0,.55);cursor:default;overflow-y:auto}
+#cineRoot .cn-final.on{display:flex}
+#cineRoot .cn-final>*{opacity:0;transform:translateY(10px);transition:opacity 1.6s ease,transform 1.6s ease}
+#cineRoot .cn-final.go>*{opacity:1;transform:none}
+#cineRoot .cn-final .f-mark{font-size:clamp(14px,2.6vw,20px);color:#d9cfbd;font-style:italic;max-width:640px;line-height:1.7}
+#cineRoot .cn-final .f-end{font:bold clamp(34px,8vw,72px) "Courier New",monospace;letter-spacing:12px;color:#ffd966;text-shadow:3px 3px 0 #000;margin:.2em 0 .1em;padding-left:12px}
+#cineRoot .cn-final .f-sub{font:11px "Courier New",monospace;letter-spacing:4px;color:#8d8374;text-transform:uppercase}
+#cineRoot .cn-final .f-btns{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:18px;transition-delay:1.2s}
+#cineRoot .cn-final .f-btns button{min-width:190px;padding:12px 14px;background:#2b231c;color:#d4af37;border:1px solid #d4af37;font:bold 12px "Courier New",monospace;text-transform:uppercase;letter-spacing:1px;cursor:pointer}
+#cineRoot .cn-final .f-btns button:hover,#cineRoot .cn-final .f-btns button:active{background:#d4af37;color:#000}
+@media (max-width:600px){#cineRoot .cn-stage{padding:0 6vw}#cineRoot.vis .cn-bar{height:6vh}#cineRoot .cn-stage{top:6vh;bottom:6vh}}
+`;
+    document.head.appendChild(st);
+  })();
+
+  const CINE = { el: null, tok: 0, timers: [], open: false, i: 0, sc: null, els: [], phase: '', cfg: null, prev: null, raf: 0, parts: [], theme: '' };
+
+  function cineEnsure() {
+    if (CINE.el) return;
+    const el = document.createElement('div'); el.id = 'cineRoot';
+    el.innerHTML = '<div class="cn-bg"></div><canvas class="cn-fx"></canvas><div class="cn-vig"></div><div class="cn-bar top"></div><div class="cn-bar bot"></div>' +
+      '<div class="cn-stage"></div><div class="cn-hint">ketuk untuk melanjutkan</div><button class="cn-skip" type="button">Lewati ›</button>' +
+      '<div class="cn-final"><div class="f-mark"></div><div class="f-end"></div><div class="f-sub"></div><div class="f-btns"></div></div>';
+    document.body.appendChild(el); CINE.el = el;
+    el.addEventListener('click', cineTap);
+    el.querySelector('.cn-skip').addEventListener('click', e => { e.stopPropagation(); cineSkip(); });
+    ['pointerdown', 'touchstart', 'touchmove', 'mousedown', 'wheel', 'contextmenu'].forEach(ev => el.addEventListener(ev, e => { e.stopPropagation(); }, { passive: true }));
+    window.addEventListener('keydown', e => {
+      if (!CINE.open) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || /^F\d+$/.test(e.key)) return;
+      e.stopImmediatePropagation(); e.preventDefault();
+      if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowRight') cineTap();
+      else if (e.key === 'Escape') cineSkip();
+    }, true);
+    window.addEventListener('keyup', e => { if (CINE.open) e.stopImmediatePropagation(); }, true);
   }
-  function showEnding(type) {
-    ensureEndingUI(); ST.ending = type; ST.step = 'done'; gameData.flags.ending = type; updateUI();
-    const title = document.getElementById('seTitle'), sub = document.getElementById('seSub'), body = document.getElementById('seBody');
-    if (type === 'good') {
-      title.textContent = 'Ash & Rime — Epilog: Kehangatan dari Abu';
-      sub.textContent = 'Good Ending — Pengorbanan Penuh';
-      body.innerHTML = '<p>Aldric memeluk Sun-Engine. Seluruh Rime-rot di darahnya mengalir keluar, menyerap panas yang tak terbatas. Kristal es di pembuluh darahnya retak, menguap, dan menghanguskan tubuhnya dari dalam — tetapi wajahnya tenang. Ia tersenyum, untuk pertama kalinya sejak meninggalkan Oakhaven.</p><p>Ledakan kehangatan menyapu Lembah Vaelen. Oakhaven mencair. Pohon Suci Aethel kembali bersemi. Pipa magma Khaz-Karst berdenyut hangat. Aurelion kehilangan mesinnya, tetapi tidak kehilangan rakyatnya.</p><p><b>Aldric Vane</b> dikenang bukan sebagai Juru Sita yang membekukan desa, melainkan sebagai <em>Pahlawan dari Abu</em> — lelaki yang menebus dosa dengan mengembalikan kehangatan yang pernah ia rampas.</p>';
-    } else if (type === 'neutral') {
-      title.textContent = 'Ash & Rime — Epilog: Musim Semi Tanpa Sihir';
-      sub.textContent = 'Neutral Ending — Penghancuran Paksa';
-      body.innerHTML = '<p>Aldric menghancurkan Sun-Engine dengan pedangnya. Ledakan sihir melontarkannya ke luar istana. Langit Aurelion pecah, dan untuk pertama kalinya dalam puluhan tahun, salju berhenti turun di Lembah Vaelen.</p><p>Dunia kembali hangat. Namun kekuatan sihir lenyap selamanya. Kaum Elf kehilangan keabadian mereka; kaum Dwarf kehilangan mesin uap dan tambang ajaib mereka.</p><p>Ia menatap matahari terbit di atas Oakhaven, dan berharap kehangatan ini cukup untuk menutup semua luka yang pernah ia buat.</p>';
-    } else {
-      title.textContent = 'Ash & Rime — Epilog: Tahta Es';
-      sub.textContent = 'Dark Ending — Pengganti Veyra';
-      body.innerHTML = '<p>Aldric membunuh Veyra dan meletakkan tangannya di atas Sun-Engine yang retak. Ia berjanji akan mendistribusikan kehangatan secara "adil" — tetapi Rime-rot telah merayapi hatinya.</p><p>Ia menjadi penguasa baru Aurelion. Pasar gelap yang dulu ia bela kini menjadi hukum. Mereka yang menentangnya dibekukan di alun-alun istana, menjadi patung es sebagai peringatan.</p><p>Lembah Vaelen tetap hangat — tetapi hanya bagi mereka yang bersedia tunduk pada <b>Raja Es</b> yang baru.</p>';
+  function cineClear() { CINE.timers.forEach(clearTimeout); CINE.timers = []; }
+  function cineLater(fn, ms) { const t = CINE.tok; CINE.timers.push(setTimeout(() => { if (t === CINE.tok) fn(); }, ms)); }
+
+  function cinePlay(cfg) {
+    cineEnsure(); CINE.tok++; cineClear();
+    CINE.cfg = cfg; CINE.i = 0; CINE.theme = cfg.theme; CINE.open = true; CINE.prev = currentState;
+    try { clearAllMovementKeys(); } catch (e) {}
+    currentState = STATE.COMBAT;
+    const el = CINE.el;
+    el.className = 'open t-' + cfg.theme;
+    el.querySelector('.cn-final').className = 'cn-final';
+    el.querySelector('.cn-stage').innerHTML = '';
+    el.querySelector('.cn-hint').style.display = '';
+    el.querySelector('.cn-skip').style.display = '';
+    void el.offsetWidth; el.classList.add('vis');
+    cineFxStart(cfg.theme);
+    cineLater(() => cineScene(), 1600);
+  }
+  function cineScene() {
+    const cfg = CINE.cfg; if (CINE.i >= cfg.scenes.length) return cineFinish();
+    const sc = CINE.sc = cfg.scenes[CINE.i], stage = CINE.el.querySelector('.cn-stage');
+    stage.classList.remove('out'); stage.innerHTML = '';
+    CINE.els = sc.lines.map(l => {
+      const o = typeof l === 'string' ? { t: l, c: sc.c || '' } : l, d = document.createElement('div');
+      d.className = 'cn-line ' + (o.c || ''); d.textContent = o.t; stage.appendChild(d); return d;
+    });
+    CINE.phase = 'reveal';
+    const gap = sc.gap || 1600;
+    CINE.els.forEach((d, k) => cineLater(() => { d.classList.add('in'); if (k === CINE.els.length - 1) cineHold(); }, 500 + k * gap));
+  }
+  function cineHold() {
+    CINE.phase = 'hold';
+    const chars = CINE.els.reduce((n, d) => n + d.textContent.length, 0);
+    cineLater(cineNext, CINE.sc.hold || Math.max(2600, 1200 + chars * 48));
+  }
+  function cineNext() {
+    CINE.phase = 'out'; CINE.el.querySelector('.cn-stage').classList.add('out');
+    cineLater(() => { CINE.i++; cineScene(); }, 1100);
+  }
+  function cineTap() {
+    if (!CINE.open) return;
+    if (CINE.phase === 'reveal') { cineClear(); CINE.els.forEach(d => d.classList.add('in')); cineHold(); }
+    else if (CINE.phase === 'hold') { cineClear(); cineNext(); }
+  }
+  function cineSkip() {
+    if (!CINE.open || CINE.phase === 'final') return;
+    cineClear(); CINE.tok++;
+    if (CINE.cfg.final) { cineFinish(true); } else cineClose();
+  }
+  function cineFinish(fast) {
+    const cfg = CINE.cfg;
+    if (!cfg.final) return cineClose();
+    CINE.phase = 'final';
+    const el = CINE.el, f = el.querySelector('.cn-final'), stage = el.querySelector('.cn-stage');
+    stage.innerHTML = ''; el.querySelector('.cn-hint').style.display = 'none'; el.querySelector('.cn-skip').style.display = 'none';
+    f.querySelector('.f-mark').textContent = cfg.final.mark || '';
+    f.querySelector('.f-end').textContent = cfg.final.end || 'TAMAT';
+    f.querySelector('.f-sub').textContent = cfg.final.sub || '';
+    const b = f.querySelector('.f-btns'); b.innerHTML = '';
+    (cfg.final.buttons || []).forEach(x => { const bt = document.createElement('button'); bt.type = 'button'; bt.textContent = x.label; bt.onclick = e => { e.stopPropagation(); x.fn(); }; b.appendChild(bt); });
+    f.classList.add('on'); void f.offsetWidth; setTimeout(() => f.classList.add('go'), fast ? 50 : 400);
+  }
+  function cineClose(after) {
+    const cfg = CINE.cfg; CINE.open = false; CINE.tok++; cineClear();
+    CINE.el.classList.remove('vis');
+    setTimeout(() => {
+      if (CINE.open) return;
+      CINE.el.classList.remove('open'); cineFxStop();
+      currentState = (CINE.prev === STATE.COMBAT || CINE.prev == null) ? STATE.EXPLORE : CINE.prev;
+      try { if (cfg && cfg.onEnd) cfg.onEnd(); } catch (e) {}
+      if (after) try { after(); } catch (e) {}
+      try { updateUI(); } catch (e) {}
+    }, 1350);
+  }
+
+  // partikel latar: bara (good), serbuk musim semi (neutral), salju biru (dark), salju redup (wake)
+  function cineFxStart(theme) {
+    cineFxStop();
+    const cv = CINE.el.querySelector('.cn-fx'), g = cv.getContext('2d');
+    const fit = () => { cv.width = innerWidth; cv.height = innerHeight; }; fit(); CINE.onResize = fit; window.addEventListener('resize', fit);
+    const W = () => cv.width, H = () => cv.height, R = (a, b) => a + Math.random() * (b - a);
+    const mk = (init) => {
+      if (theme === 'good') return { x: R(0, W()), y: init ? R(0, H()) : H() + 10, vx: R(-.15, .15), vy: -R(.3, 1.1), r: R(.8, 2.6), a: R(.3, .9), ph: R(0, 6.28), c: '255,' + Math.floor(R(150, 210)) + ',80' };
+      if (theme === 'neutral') return { x: R(0, W()), y: init ? R(0, H()) : -10, vx: R(.1, .5), vy: R(.2, .7), r: R(1.2, 3), a: R(.25, .7), ph: R(0, 6.28), c: Math.random() < .5 ? '235,245,215' : '255,230,150' };
+      if (theme === 'dark') return { x: R(0, W()), y: init ? R(0, H()) : -10, vx: R(-.3, .1), vy: R(.5, 1.5), r: R(.8, 3), a: R(.3, .85), ph: R(0, 6.28), c: '190,220,255' };
+      return { x: R(0, W()), y: init ? R(0, H()) : -10, vx: R(-.1, .1), vy: R(.15, .5), r: R(.8, 2.2), a: R(.15, .45), ph: R(0, 6.28), c: '200,220,235' };
+    };
+    CINE.parts = []; for (let k = 0; k < 80; k++) CINE.parts.push(mk(true));
+    let t = 0;
+    const loop = () => {
+      t += .02; g.clearRect(0, 0, W(), H());
+      CINE.parts.forEach((p, k) => {
+        p.x += p.vx + Math.sin(t + p.ph) * .25; p.y += p.vy;
+        if (theme === 'good') p.a += Math.sin(t * 3 + p.ph) * .01;
+        if (p.y < -12 || p.y > H() + 12 || p.x > W() + 12 || p.x < -12) CINE.parts[k] = mk(false);
+        g.beginPath(); g.fillStyle = 'rgba(' + p.c + ',' + Math.max(.05, Math.min(1, p.a)) + ')';
+        g.shadowColor = 'rgba(' + p.c + ',.8)'; g.shadowBlur = theme === 'good' ? 8 : 4;
+        g.arc(p.x, p.y, p.r, 0, 6.283); g.fill();
+      });
+      CINE.raf = requestAnimationFrame(loop);
+    };
+    loop();
+  }
+  function cineFxStop() { if (CINE.raf) cancelAnimationFrame(CINE.raf); CINE.raf = 0; if (CINE.onResize) { window.removeEventListener('resize', CINE.onResize); CINE.onResize = null; } }
+
+  // ===== NASKAH: BANGUN DARI HALUSINASI =====
+  const WAKE_SCENES = [
+    { lines: ['Dingin.'], hold: 2200 },
+    { lines: ['Bukan dingin badai. Hanya dingin salju yang menempel di pipinya.', 'Aldric membuka mata. Langit kelabu menggantung di atas Jalan Setapak.'] },
+    { lines: ['Tidak ada gerbang. Tidak ada bayangan di tengah badai.', 'Hanya Hearthstone di genggamannya, masih hangat, dan jejak langkahnya sendiri yang berhenti di tengah jalan.'] },
+    { c: 'm', lines: ['Malthus... tidak pernah ada.'], hold: 2800 },
+    { c: 'm', lines: ['Aku pingsan di sini. Dan pikiranku sendiri yang menyeretku ke pengadilan itu.'] },
+    { c: 'm', lines: ['Selama ini aku berkata tidak merasa bersalah. Pada orang-orang yang kuusir. Pada rumah-rumah yang kusegel.', 'Kuulang kalimat itu sampai terdengar seperti kebenaran.'] },
+    { c: 'm', lines: ['Ternyata aku berbohong. Aku merasakannya. Setiap malam.', 'Aku hanya terlalu pandai menguburnya.'] },
+    { c: 'm', lines: ['Rime-rot... kutukan itu tidak pernah ada.', 'Tidak ada kristal terkutuk yang tumbuh di darahku. Hanya rasa bersalah yang kutahan terlalu kuat, sampai dinginnya terasa nyata.'] },
+    { c: 'm', lines: ['Dan anehnya... aku lega.', 'Bukan karena dosaku hilang. Tidak. Tapi karena orang yang tak punya hati tak akan pernah merasa sesakit ini.'] },
+    { lines: [{ t: 'Aku masih manusia.', c: 'big m' }], hold: 4200 },
+    { c: 'm', lines: ['Selama aku masih bisa menyesal, aku masih bisa menebus.', 'Rasa bersalah ini bukan rantai. Ia kompas.'] },
+    { lines: ['Aldric bangkit perlahan, menepis salju dari bahunya.', 'Jalan ke timur terbentang di depannya. Aurelion menunggu.'] }
+  ];
+
+  // ===== NASKAH: EPILOG KETIGA ENDING =====
+  const ENDINGS = {
+    good: {
+      title: 'Epilog: Kehangatan dari Abu', sub: 'Good Ending — Pengorbanan Penuh', theme: 'good',
+      scenes: [
+        { lines: ['Aldric memeluk Sun-Engine.'], hold: 2600 },
+        { lines: ['Seluruh Rime-rot di darahnya mengalir keluar, menyerap panas yang tak terbatas.', 'Kristal es di pembuluh darahnya retak, menguap, dan menghanguskan tubuhnya dari dalam —', 'tetapi wajahnya tenang.'] },
+        { lines: ['Ia tersenyum, untuk pertama kalinya sejak meninggalkan Oakhaven.'], hold: 3400 },
+        { lines: ['Ledakan kehangatan menyapu Lembah Vaelen.', 'Oakhaven mencair.', 'Pohon Suci Aethel kembali bersemi.', 'Pipa magma Khaz-Karst berdenyut hangat.'], gap: 1900 },
+        { lines: ['Aurelion kehilangan mesinnya,', 'tetapi tidak kehilangan rakyatnya.'], gap: 2200 },
+        { lines: ['Aldric Vane dikenang bukan sebagai Juru Sita yang membekukan desa,', 'melainkan sebagai Pahlawan dari Abu —', 'lelaki yang menebus dosa dengan mengembalikan kehangatan yang pernah ia rampas.'], gap: 2200 },
+        { c: 'm', lines: ['Di tepi jalan Oakhaven yang dulu ia segel, seseorang menyalakan sebatang lilin.', 'Nyalanya kecil. Tetapi tidak padam.'], gap: 2400 },
+        { lines: ['Rasa bersalah yang pernah membekukannya', 'kini menjadi api yang menghangatkan mereka semua.'], gap: 2400 }
+      ],
+      mark: 'Aldric Vane — Pahlawan dari Abu'
+    },
+    neutral: {
+      title: 'Epilog: Musim Semi Tanpa Sihir', sub: 'Neutral Ending — Penghancuran Paksa', theme: 'neutral',
+      scenes: [
+        { lines: ['Aldric menghancurkan Sun-Engine dengan pedangnya.'], hold: 2600 },
+        { lines: ['Ledakan sihir melontarkannya ke luar istana.', 'Langit Aurelion pecah, dan untuk pertama kalinya dalam puluhan tahun,', 'salju berhenti turun di Lembah Vaelen.'], gap: 2000 },
+        { lines: ['Dunia kembali hangat.', 'Namun kekuatan sihir lenyap selamanya.'], gap: 2200 },
+        { lines: ['Kaum Elf kehilangan keabadian mereka.', 'Kaum Dwarf kehilangan mesin uap dan tambang ajaib mereka.'], gap: 2200 },
+        { lines: ['Ia menatap matahari terbit di atas Oakhaven,', 'dan berharap kehangatan ini cukup untuk menutup semua luka yang pernah ia buat.'], gap: 2400 },
+        { c: 'm', lines: ['Ia tahu itu tidak akan cukup.', 'Tetapi ia tetap berdiri di sana, sampai cahaya menyentuh wajahnya.'], gap: 2400 },
+        { lines: ['Musim semi datang tanpa sihir —', 'dan untuk pertama kalinya, tanpa utang yang disembunyikan.'], gap: 2400 }
+      ],
+      mark: 'Aldric Vane — Penjaga Musim Semi yang Rapuh'
+    },
+    dark: {
+      title: 'Epilog: Tahta Es', sub: 'Dark Ending — Pengganti Veyra', theme: 'dark',
+      scenes: [
+        { lines: ['Aldric membunuh Veyra dan meletakkan tangannya di atas Sun-Engine yang retak.'], hold: 3000 },
+        { lines: ['Ia berjanji akan mendistribusikan kehangatan secara “adil” —', 'tetapi Rime-rot telah merayapi hatinya:', 'rasa bersalah yang ia kubur, bukan ia dengarkan.'], gap: 2200 },
+        { lines: ['Ia menjadi penguasa baru Aurelion.', 'Pasar gelap yang dulu ia bela kini menjadi hukum.'], gap: 2200 },
+        { lines: ['Mereka yang menentangnya dibekukan di alun-alun istana,', 'menjadi patung es sebagai peringatan.'], gap: 2200 },
+        { lines: ['Lembah Vaelen tetap hangat —', 'tetapi hanya bagi mereka yang bersedia tunduk pada', 'Raja Es yang baru.'], gap: 2200 },
+        { c: 'm', lines: ['Di singgasana yang dingin, kadang ia mendengar suara tua dari badai di Jalan Setapak.', 'Ia tak pernah menoleh.'], gap: 2600 },
+        { lines: ['Dan lama-kelamaan, suara itu berhenti bertanya.'], hold: 4200 }
+      ],
+      mark: 'Aldric Vane — Raja Es'
     }
-    endingEl.classList.add('open');
+  };
+
+  let endingEl = null;
+  function showEnding(type) {
+    ST.ending = type; ST.step = 'done'; gameData.flags.ending = type; updateUI();
+    const E = ENDINGS[type] || ENDINGS.good;
+    const scenes = [{ lines: [{ t: 'Ash & Rime', c: 's' }, { t: E.title, c: 't' }, { t: E.sub, c: 's' }], gap: 1500, hold: 3200 }].concat(E.scenes);
+    cinePlay({
+      theme: E.theme, scenes,
+      final: {
+        mark: E.mark, end: 'TAMAT', sub: 'Ash & Rime — Chronicles of the Vaelen Vale',
+        buttons: [
+          { label: 'Lanjutkan Menjelajah', fn: () => cineClose() },
+          { label: 'Menu Utama', fn: () => cineClose(() => { if (typeof window.openMainMenu === 'function') window.openMainMenu(); }) }
+        ]
+      }
+    });
   }
   function showEndingChoice() {
     if (ST.ending) return;
