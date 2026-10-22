@@ -3404,6 +3404,55 @@
       }, 15);
     }
 
+    // ==========================================================================
+    // PEMECAH DIALOG PANJANG: teks panjang dipecah per kalimat menjadi beberapa
+    // halaman pendek ([Lanjut]); pilihan asli hanya muncul di halaman terakhir.
+    // Dipasang paling dalam, sehingga semua pembungkus startDialogue lain ikut aman.
+    // ==========================================================================
+    const DLG_MAX_CHARS = 190;
+    function dlgHardSplit(str, max) {
+      const out = []; let cur = '';
+      for (const w of str.split(/\s+/)) {
+        if (cur && (cur + ' ' + w).length > max) { out.push(cur); cur = w; }
+        else cur = cur ? cur + ' ' + w : w;
+      }
+      if (cur) out.push(cur);
+      return out;
+    }
+    function dlgSplitText(text, max) {
+      const t = String(text).replace(/\s+/g, ' ').trim();
+      if (t.length <= max) return [t];
+      let units = t.replace(/([.!?\u2026]+["\u201D')\]]*)\s+/g, '$1\u0001').split('\u0001');
+      const flat = [];
+      for (const u of units) {
+        if (u.length <= max) { flat.push(u); continue; }
+        const parts = u.replace(/([,;:\u2014\u2013]["\u201D')\]]*)\s+/g, '$1\u0001').split('\u0001');
+        for (const q of parts) { if (q.length <= max) flat.push(q); else dlgHardSplit(q, max).forEach(x => flat.push(x)); }
+      }
+      const pages = []; let cur = '';
+      for (const u of flat) {
+        if (cur && (cur + ' ' + u).length > max) { pages.push(cur); cur = u; }
+        else cur = cur ? cur + ' ' + u : u;
+      }
+      if (cur) pages.push(cur);
+      // hindari halaman terakhir yang terlalu pendek: gabungkan bila masih muat
+      if (pages.length > 1 && pages[pages.length - 1].length < 40 && (pages[pages.length - 2] + ' ' + pages[pages.length - 1]).length <= max * 1.25) {
+        const last = pages.pop(); pages[pages.length - 1] += ' ' + last;
+      }
+      return pages;
+    }
+    const _startDialogueRaw = startDialogue;
+    startDialogue = function (speaker, faction, color, text, choices) {
+      if (typeof text !== 'string') return _startDialogueRaw.apply(this, arguments);
+      const pages = dlgSplitText(text, DLG_MAX_CHARS);
+      if (pages.length <= 1) return _startDialogueRaw(speaker, faction, color, pages[0] === undefined ? text : pages[0], choices);
+      const show = i => {
+        if (i >= pages.length - 1) return _startDialogueRaw(speaker, faction, color, pages[i], choices);
+        _startDialogueRaw(speaker, faction, color, pages[i], [{ label: 'Lanjut \u25B8 (' + (i + 1) + '/' + pages.length + ')', action: () => show(i + 1) }]);
+      };
+      show(0);
+    };
+
     function finishTyping() {
       if (typingTimer) clearInterval(typingTimer);
       typingTimer = null;
@@ -3880,7 +3929,7 @@
               addItem('ever_coal', 'Batu Bara Abadi', 1, 'Inti bara geotermal yang tak pernah padam (Bisa diberikan pada Mira di Oakhaven)', false);
               updateUI();
               startDialogue('Insinyur Uap Tilda', 'Kaum Dwarf — Ahli Geotermal', '#4ea8de',
-                '"*FSSSSSH—KLIK!* Jarum manometer turun dari 90 ke 65, lalu berhenti tepat di 50 PSI! Kau menyelamatkan stasiun uap kami tanpa kekerasan sedikit pun! Ini 30 Perak dan [Batu Bara Abadi] (+20 Reputasi Dwarf)!"',
+                '"Jarum manometer turun dari 90 ke 65, lalu berhenti tepat di 50 PSI! Kau menyelamatkan stasiun uap kami tanpa kekerasan sedikit pun! Ini 30 Perak dan [Batu Bara Abadi] (+20 Reputasi Dwarf)!"',
                 [{ label: 'Terima 30 Perak & Batu Bara Abadi', action: closeDialogue }]
               );
             }
@@ -3953,7 +4002,7 @@
                 addItem('brew', 'Tonik Bara Dwarf', 2, 'Pulihkan +50 HP & +40% Suhu Tubuh', true);
                 updateUI();
                 startDialogue('Bramwell si Pembuat Bir', 'Kaum Dwarf — Master Kedai Khaz-Karst', '#ffbe0b',
-                  '"*GLUK-GLUK!* Sempurna! Aroma emasnya langsung semerbak ke seluruh penjuru gua! Terimalah 20 Perak dan 2 botol [Tonik Bara Dwarf] terbaikku (+15 Reputasi Dwarf)!"',
+                  '"Sempurna! Aroma emasnya langsung semerbak ke seluruh penjuru gua! Terimalah 20 Perak dan 2 botol [Tonik Bara Dwarf] terbaikku (+15 Reputasi Dwarf)!"',
                   [{ label: 'Terima 20 Perak & 2 Tonik Bara Dwarf', action: closeDialogue }]
                 );
               }
@@ -4297,7 +4346,7 @@
       const hasCore = gameData.inventory.find(i => i.id === 'golem_core' && i.qty > 0);
 
       startDialogue('Master Tempa Hilde', 'Kaum Dwarf — Empu Besi Khaz-Karst', '#f2994a',
-        '"*KLAANG!* Panas tungku magma di sini membuat baja permukaan terlihat seperti mainan kayu! Apa yang kau butuhkan di bengkel tempaku, petualang?"',
+        '"Panas tungku magma di sini membuat baja permukaan terlihat seperti mainan kayu! Apa yang kau butuhkan di bengkel tempaku, petualang?"',
         [
           {
             label: hasCore
@@ -4310,7 +4359,7 @@
                 window.EQ.sharpen(8);
                 updateUI();
                 startDialogue('Master Tempa Hilde', 'Kaum Dwarf — Empu Besi Khaz-Karst', '#f2994a',
-                  '"Demi janggut leluhur! Kau membawa Inti Automaton Besi! *KLAANG!* Lihatlah pijar rune merah di bilahmu sekarang (+8 Serangan Permanen)!"',
+                  '"Demi janggut leluhur! Kau membawa Inti Automaton Besi! Lihatlah pijar rune merah di bilahmu sekarang (+8 Serangan Permanen)!"',
                   [{ label: 'Terima kasih, Hilde.', action: closeDialogue }]
                 );
               } else {
@@ -4537,7 +4586,7 @@
                 window.EQ.sharpen(6);
                 updateUI();
                 startDialogue('Brokk', 'Kaum Karst — Penempa Terbuang', '#e5c07b',
-                  '"Berikan Batu Asah Karst milikmu itu. *Klaang! Klaang!* Nah, senjatamu sekarang jauh lebih mematikan (+6 Serangan Permanen)."',
+                  '"Berikan Batu Asah Karst milikmu itu. Nah, senjatamu sekarang jauh lebih mematikan (+6 Serangan Permanen)."',
                   [{ label: 'Terima kasih, Brokk.', action: closeDialogue }]
                 );
               } else {
@@ -8018,14 +8067,14 @@
     if (!gameData.flags.rewardClaimed) return oldInteract(npc);
     if (ST.step !== 'henrik') return oldInteract(npc);
     startDialogue('Vogt Henrik','Manusia — Kepala Desa Oakhaven','#e06c75',
-      '"Aldric... duduklah dulu. Kau pantas mendapat penjelasan yang jujur." Wajah Henrik tampak lebih tua dari yang kau ingat — lingkaran hitam di bawah matanya, kening berkerut dalam. "Selama ini aku menyimpan sesuatu darimu. Monster-monster di Hutan Belantara tidak sekadar kelaparan. Mereka keluar dari sarang karena sesuatu yang lebih besar telah membangunkan mereka. Aku mendengar bisik-bisik dari para pengungsi: ada yang melihat cahaya keunguan di langit barat tiga malam berturut-turut. Cahaya yang sama seperti ketika ibumu..." Ia berhenti, menunduk. "Maafkan aku. Aku tidak seharusnya mengungkit itu. Tapi kau harus tahu — Kaelen sang Pemburu Buta di pos perkemahan Hutan Belantara tahu lebih banyak. Ia dulu seorang ksatria Aurelion, sebelum matanya dibakar oleh sesuatu yang bukan api biasa. Temuilah dia. Ia menunggumu sejak seminggu lalu, seolah tahu kau akan datang."',
+      '"Aldric... duduklah dulu. Kau pantas mendapat penjelasan yang jujur. Selama ini aku menyimpan sesuatu darimu. Monster-monster di Hutan Belantara tidak sekadar kelaparan. Mereka keluar dari sarang karena sesuatu yang lebih besar telah membangunkan mereka. Aku mendengar bisik-bisik dari para pengungsi: ada yang melihat cahaya keunguan di langit barat tiga malam berturut-turut. Cahaya yang sama seperti ketika ibumu... Maafkan aku. Aku tidak seharusnya mengungkit itu. Tapi kau harus tahu — Kaelen sang Pemburu Buta di pos perkemahan Hutan Belantara tahu lebih banyak. Ia dulu seorang ksatria Aurelion, sebelum matanya dibakar oleh sesuatu yang bukan api biasa. Temuilah dia. Ia menunggumu sejak seminggu lalu, seolah tahu kau akan datang."',
       [{ label:'Aku akan mencarinya.', action:()=>{ gameData.flags.ch1_henrikBriefed=true; ST.step='kaelen'; updateUI(); closeDialogue(); } }]);
   }
 
   function kaelenStory() {
     if (ST.step === 'kaelen') {
       return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion — Pemburu Buta','#a9def9',
-        '"Kau melihatnya juga, kan? Mata ini buta, tapi aku bisa merasakan dingin yang salah di udara. Monster-monster ini bukan sekadar kelaparan — mereka didorong oleh sesuatu." Kaelen duduk di atas batu, pedangnya terhunus di pangkuan, meski matanya tak melihat arah mana pun. "Dengarkan aku baik-baik, Aldric. Sebelum kau boleh menghadapi Wendigo Lembah Beku, aku harus tahu apakah kau masih pantas disebut pemburu. Bukan karena aku meragukanmu — tapi karena Wendigo itu bukan monster biasa. Ia dulunya manusia. Dan aku tidak ingin kau mati seperti kawan-kawanku dulu. Buktikan pada tiga penghuni hutan ini bahwa kau masih punya nyali: bunuh seekor Serigala Embun, seekor Beruang Gua Raksasa, dan seekor Laba-Laba Kabut. Bawa buktinya padaku, lalu kita bicara tentang Wendigo."',
+        '"Kau melihatnya juga, kan? Mata ini buta, tapi aku bisa merasakan dingin yang salah di udara. Monster-monster ini bukan sekadar kelaparan — mereka didorong oleh sesuatu. Dengarkan aku baik-baik, Aldric. Sebelum kau boleh menghadapi Wendigo Lembah Beku, aku harus tahu apakah kau masih pantas disebut pemburu. Bukan karena aku meragukanmu — tapi karena Wendigo itu bukan monster biasa. Ia dulunya manusia. Dan aku tidak ingin kau mati seperti kawan-kawanku dulu. Buktikan pada tiga penghuni hutan ini bahwa kau masih punya nyali: bunuh seekor Serigala Embun, seekor Beruang Gua Raksasa, dan seekor Laba-Laba Kabut. Bawa buktinya padaku, lalu kita bicara tentang Wendigo."',
         [ { label:'Aku akan membuktikannya. (Ujian Pemburu dimulai)', action:()=>{ gameData.flags.ch1_trialsAccepted=true; ST.step='kaelen_trials'; updateUI(); closeDialogue(); } },
           { label:'Aku butuh waktu untuk bersiap.', action: closeDialogue } ]);
     }
@@ -8035,7 +8084,7 @@
       if (f.ch1_killWolf && f.ch1_killBear && f.ch1_killSpider) {
         ST.step = 'wendigo'; updateUI();
         return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion','#a9def9',
-          'Kaelen mengangguk pelan saat kau menaruh ketiga bukti di hadapannya. "Bagus. Kau masih punya api di dadamu. Sekarang dengarkan baik-baik: Wendigo itu dulunya seorang ksatria — seperti aku. Ia dikirim ke Lembah Beku untuk eksperimen yang tidak pernah dijelaskan padanya. Ketika ia kembali, ia tidak lagi manusia. Buru dia di barat, tapi jangan remehkan. Wendigo tidak menyerang dengan cakar saja — ia menyerang dengan kenangan. Kau akan melihat hal-hal yang belum pernah kau alami, dan itu akan terasa nyata. Jangan percaya pada matamu. Percayalah pada pedangmu."',
+          '"Bagus. Kau masih punya api di dadamu. Sekarang dengarkan baik-baik: Wendigo itu dulunya seorang ksatria — seperti aku. Ia dikirim ke Lembah Beku untuk eksperimen yang tidak pernah dijelaskan padanya. Ketika ia kembali, ia tidak lagi manusia. Buru dia di barat, tapi jangan remehkan. Wendigo tidak menyerang dengan cakar saja — ia menyerang dengan kenangan. Kau akan melihat hal-hal yang belum pernah kau alami, dan itu akan terasa nyata. Jangan percaya pada matamu. Percayalah pada pedangmu."',
           [{label:'Aku akan memburunya sekarang.',action:closeDialogue}]);
       }
       return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion','#a9def9',
@@ -8051,7 +8100,7 @@
         [{label:'Aku akan mencarinya.',action:closeDialogue}]);
       gameData.flags.ch1_blackAether = true; gameData.flags.ch1_kaelenDone = true; ST.chapter = 2; ST.step = 'keys'; updateUI();
       return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion — Pemburu Buta','#a9def9',
-        'Kaelen menerima pecahan itu dengan tangan gemetar. "Pecahan Aether Hitam... sama seperti yang kulihat dulu, sebelum mataku dibakar. Wendigo itu dulunya manusia — seorang ksatria yang dikirim ke Lembah Beku untuk eksperimen. Ia dibuang ke hutan ketika eksperimennya gagal. Musim dingin ini bukan bencana alam, Aldric. Ini buatan manusia. Ada seseorang di Ibu Kota yang sengaja membekukan pinggiran untuk memanaskan pusat. Dan orang itu masih hidup." Ia bangkit, meraba jalan menuju meja kayunya. "Untuk melewati badai es di Jalan Setapak yang menuju Aurelion, kau butuh Hearthstone — relik kuno yang dulu digunakan para pendiri untuk menahan musim dingin. Kuncinya dipecah dua dan diserahkan pada dua bangsa: Setengah Kunci Zamrud di Suaka Elf, dan Setengah Kunci Baja di Khaz-Karst. Satukan tiga api, Aldric. Api Elf, api Dwarf, dan api manusia."',
+        '"Pecahan Aether Hitam... sama seperti yang kulihat dulu, sebelum mataku dibakar. Wendigo itu dulunya manusia — seorang ksatria yang dikirim ke Lembah Beku untuk eksperimen. Ia dibuang ke hutan ketika eksperimennya gagal. Musim dingin ini bukan bencana alam, Aldric. Ini buatan manusia. Ada seseorang di Ibu Kota yang sengaja membekukan pinggiran untuk memanaskan pusat. Dan orang itu masih hidup. Untuk melewati badai es di Jalan Setapak yang menuju Aurelion, kau butuh Hearthstone — relik kuno yang dulu digunakan para pendiri untuk menahan musim dingin. Kuncinya dipecah dua dan diserahkan pada dua bangsa: Setengah Kunci Zamrud di Suaka Elf, dan Setengah Kunci Baja di Khaz-Karst. Satukan tiga api, Aldric. Api Elf, api Dwarf, dan api manusia."',
         [{label:'Aku akan menyatukan kunci-kunci itu.',action:closeDialogue}]);
     }
     if (ST.chapter >= 2) return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion','#a9def9',
@@ -8067,13 +8116,13 @@
     const f = gameData.flags;
     if (f.caelenQuestDone) f.elf_botanical = true;
     if (!f.elf_botanical) return startDialogue('Elara, Penenun Memori','Kaum Aethel','#c792ea',
-      '"Sebelum aku menyerahkan kunci padamu, aku harus tahu apakah kau benar-benar peduli pada hutan kami, atau hanya ingin memakai kekuatannya." Elara menusukkan jarum penenunnya ke alat tenun. "Dua hal yang harus kau lakukan. Pertama: Cendekiawan Caelen di utara sedang meneliti Bunga Embun Perak. Ia butuh sampel segar dari selatan. Bantu dia — jangan cabut akarnya, potong dengan lembut. Kedua: di dasar danau kecil dekat pohon tua di tengah hutan, ada pecahan memori yang terlepas ketika Wendigo mengamuk. Ambil pecahan itu, dan bawa padaku. Setelah keduanya selesai, baru kita bicara tentang kunci."',
+      '"Sebelum aku menyerahkan kunci padamu, aku harus tahu apakah kau benar-benar peduli pada hutan kami, atau hanya ingin memakai kekuatannya. Dua hal yang harus kau lakukan. Pertama: Cendekiawan Caelen di utara sedang meneliti Bunga Embun Perak. Ia butuh sampel segar dari selatan. Bantu dia — jangan cabut akarnya, potong dengan lembut. Kedua: di dasar danau kecil dekat pohon tua di tengah hutan, ada pecahan memori yang terlepas ketika Wendigo mengamuk. Ambil pecahan itu, dan bawa padaku. Setelah keduanya selesai, baru kita bicara tentang kunci."',
       [{label:'Aku akan membantu Caelen dan mencari pecahan memori.',action:closeDialogue}]);
     if (!f.elf_memoryShard) return startDialogue('Elara, Penenun Memori','Kaum Aethel','#c792ea',
       '"Kau sudah membantu Caelen. Sekarang cari pecahan memori di dasar danau dekat pohon tua — di tengah hutan, di mana airnya paling gelap."',
       [{label:'Aku akan menyelam ke danau.',action:closeDialogue}]);
     startDialogue('Elara, Penenun Memori','Kaum Aethel','#c792ea',
-      'Elara menggenggam Pecahan Aether Hitam dan Pecahan Memori di kedua tangannya. "Pohon Suci kami layu karena energinya dicuri. Untuk menghidupkannya kembali, aku butuh kehangatan dari tubuhmu sendiri — kehangatan yang kau bawa dari Wendigo. Ini akan mengorbankan sebagian Maximum HP-mu, untuk sementara. Maukah kau memberikannya?"',
+      '"Pohon Suci kami layu karena energinya dicuri. Untuk menghidupkannya kembali, aku butuh kehangatan dari tubuhmu sendiri — kehangatan yang kau bawa dari Wendigo. Ini akan mengorbankan sebagian Maximum HP-mu, untuk sementara. Maukah kau memberikannya?"',
       [ { label:'Ya. Ambil sebagian kehangatanku. (Max HP -25)', action:()=>{
             gameData.maxHp = Math.max(20, gameData.maxHp - 25); gameData.hp = Math.min(gameData.hp, gameData.maxHp);
             gameData.flags.elfKey = true; gameData.flags.elfSacrifice = true;
@@ -8098,7 +8147,7 @@
     if (ST.chapter < 2) return startDialogue('Thane Varek sang Radikal','Kaum Dwarf — Pemimpin Faksi Radikal','#e06c75', '"Manusia permukaan. Kau datang ke kota kami yang sekarat."', [{label:'Aku akan mencari tahu.',action:closeDialogue}]);
     if (!gameData.flags.varekProof) {
       if (!gameData.flags.golemDefeated) return startDialogue('Thane Varek sang Radikal','Kaum Dwarf','#e06c75',
-        '"Agen Ibu Kota memprogram ulang Automaton Besi di sektor tenggara. Hancurkan mesin itu, dan bawa buktinya padaku." Ia menatapmu dengan mata yang menyala seperti bara. "Tapi hati-hati: mesin itu tidak lagi bekerja sendirian. Ada sesuatu yang mengendalikannya dari kejauhan — sesuatu yang berbau Aether Hitam."',
+        '"Agen Ibu Kota memprogram ulang Automaton Besi di sektor tenggara. Hancurkan mesin itu, dan bawa buktinya padaku. Tapi hati-hati: mesin itu tidak lagi bekerja sendirian. Ada sesuatu yang mengendalikannya dari kejauhan — sesuatu yang berbau Aether Hitam."',
         [{label:'Aku akan menghancurkannya.',action:closeDialogue}]);
       gameData.flags.varekProof = true; updateUI();
       return startDialogue('Thane Varek sang Radikal','Kaum Dwarf','#e06c75',
@@ -8115,7 +8164,7 @@
     if (gameData.flags.varekProof) {
       gameData.flags.dwarfKey = true; addStoryItem('steel_key'); updateUI(); refreshStoryStep();
       return startDialogue('Thane Durgan Ironmantle','Raja Dwarf','#ffd966',
-        '"Varek mengirimmu. Aku sudah mendengar tentang kau menghancurkan Automaton Besi di sektor tenggara." Raja Durgan bangkit dari singgasananya, dan suaranya bergema di seluruh Aula Tahta. "Rakyatku telah lama hidup dalam ketakutan. Kau mengembalikan kehormatan mereka. Ambillah Setengah Kunci Baja ini — bukan sebagai hadiah, tetapi sebagai amanah."',
+        '"Varek mengirimmu. Aku sudah mendengar tentang kau menghancurkan Automaton Besi di sektor tenggara. Rakyatku telah lama hidup dalam ketakutan. Kau mengembalikan kehormatan mereka. Ambillah Setengah Kunci Baja ini — bukan sebagai hadiah, tetapi sebagai amanah."',
         [{label:'Terima kasih, Yang Mulia.',action:closeDialogue}]);
     }
     startDialogue('Thane Durgan Ironmantle','Raja Dwarf','#ffd966', '"Bantu Varek membersihkan sabotase di sektor tenggara dulu."', [{label:'Aku akan membantu Varek.',action:closeDialogue}]);
@@ -8421,7 +8470,7 @@
 
   function shadowTrial() {
     startDialogue('Roh Malthus', 'Gerbang Rahasia — Ujian Penebusan', '#9ef0ff',
-      '"Aldric Vane. Gerbang ini tidak dibuka oleh pedang." Roh Malthus melayang di antara dua pilar batu yang ditumbuhi lumut. "Ada tiga ujian, tiga wajah penyesalanmu. Pertama, bayangan orang-orang yang kau usir: kau hanya boleh menghindar sampai fajar. Kedua, rumah-rumah yang kau sita: ingat urutannya tanpa salah. Ketiga, api Hearthstone: jaga ia tetap menyala di antara terlalu panas dan terlalu dingin. Kau punya tiga Tekad. Jika habis, Hearthstone padam dan kau mengulang dari awal."',
+      '"Aldric Vane. Gerbang ini tidak dibuka oleh pedang. Ada tiga ujian, tiga wajah penyesalanmu. Pertama, bayangan orang-orang yang kau usir: kau hanya boleh menghindar sampai fajar. Kedua, rumah-rumah yang kau sita: ingat urutannya tanpa salah. Ketiga, api Hearthstone: jaga ia tetap menyala di antara terlalu panas dan terlalu dingin. Kau punya tiga Tekad. Jika habis, Hearthstone padam dan kau mengulang dari awal."',
       [{ label: 'Aku siap menghadapi ketiganya.', action: () => { closeDialogue(); trialStart(); } },
        { label: 'Beri aku waktu.', action: closeDialogue }]);
   }
@@ -8471,9 +8520,9 @@
     const first = !ST.clues[key];
     if (first) { ST.clues[key] = true; if (Object.keys(ST.clues).length >= 3) ST.step = 'veyra'; updateUI(); }
     const txt = {
-      roderic:'"Kau ingin tahu tentang Veyra? Aku bisa cerita." Kapten Roderic menurunkan suaranya. "Karavan pasokan ke istana tidak pernah berhenti, meski desa luar membeku. Mereka membawa kristal hitam ke bawah tanah. Aku pernah bertanya pada Veyra sekali — dan ia menjawab dengan senyum yang membuat bulu kudukku berdiri."',
-      tobias:'"Catatanku... semua ada di sini." Juru Tulis Tobias membuka buku besar yang berdebu. "Pengiriman panas bumi dari Khaz-Karst, Aether dari Hutan Elf — semuanya menuju Sun-Engine di bawah istana. Aku mencatatnya selama bertahun-tahun, tapi tidak pernah berani bertanya untuk apa."',
-      pip:'"Penyihir jubah ungu?" Pip mengangguk cepat. "Aku melihatnya semalam. Ia membawa pecahan hitam ke tangga rahasia di sisi istana. Tangga itu biasanya terkunci, tapi semalam terbuka."'
+      roderic:'"Kau ingin tahu tentang Veyra? Aku bisa cerita. Karavan pasokan ke istana tidak pernah berhenti, meski desa luar membeku. Mereka membawa kristal hitam ke bawah tanah. Aku pernah bertanya pada Veyra sekali — dan ia menjawab dengan senyum yang membuat bulu kudukku berdiri."',
+      tobias:'"Catatanku... semua ada di sini. Pengiriman panas bumi dari Khaz-Karst, Aether dari Hutan Elf — semuanya menuju Sun-Engine di bawah istana. Aku mencatatnya selama bertahun-tahun, tapi tidak pernah berani bertanya untuk apa."',
+      pip:'"Penyihir jubah ungu? Aku melihatnya semalam. Ia membawa pecahan hitam ke tangga rahasia di sisi istana. Tangga itu biasanya terkunci, tapi semalam terbuka."'
     }[key];
     startDialogue(info[0], info[1], info[2], first ? txt : '"Aku sudah bilang semua yang kutahu."', [{label:'Terima kasih.',action:closeDialogue}]);
     return true;
@@ -8483,7 +8532,7 @@
     if (ST.step === 'veyra' || Object.keys(ST.clues).length >= 3) {
       gameData.flags.ch4_truth = true; ST.step = 'engine'; updateUI();
       return startDialogue('Penyihir Istana Veyra','Manusia — Peneliti Aether','#c792ea',
-        'Veyra tidak terkejut melihatmu. Ia berdiri di balkon istana, menatap kota yang berkilau di bawah salju. "Jadi kau sudah tahu. Aku tidak akan berpura-pura." Suaranya tenang, hampir seperti seorang guru yang menjelaskan pelajaran. "Sun-Engine menyedot panas Khaz-Karst dan Aether Hutan Elf untuk menjaga Aurelion tetap hangat. Setiap musim dingin, aku harus memilih: membekukan pinggiran, atau membiarkan seluruh peradaban mati. Aku memilih pusat." Ia berbalik, dan untuk pertama kalinya kau melihat kelelahan di matanya. "Temui aku di Inti Mesin — tangga rahasia di sisi istana akan terbuka."',
+        '"Jadi kau sudah tahu. Aku tidak akan berpura-pura. Sun-Engine menyedot panas Khaz-Karst dan Aether Hutan Elf untuk menjaga Aurelion tetap hangat. Setiap musim dingin, aku harus memilih: membekukan pinggiran, atau membiarkan seluruh peradaban mati. Aku memilih pusat. Temui aku di Inti Mesin — tangga rahasia di sisi istana akan terbuka."',
         [{label:'Aku akan menghentikannya.',action:closeDialogue}]);
     }
     startDialogue('Penyihir Istana Veyra','Manusia','#c792ea', '"Aku sedang sibuk, Pengelana."', [{label:'Permisi.',action:closeDialogue}]);
@@ -8499,7 +8548,7 @@
   function veyraBossStory() {
     if (gameData.flags.finalBattleDone) return startDialogue('Sun-Engine','Mesin Surya — Retak','#ff875c', 'Mesin itu retak. Pilihanmu telah menentukan nasib Lembah Vaelen.', [{label:'Lihat epilog.',action:()=> showEndingChoice()}]);
     startDialogue('Arch-Mage Veyra','Penyihir Istana Aurelion — Arsitek Salju','#c792ea',
-      '"Kau datang juga, Juru Sita." Veyra berdiri di depan Sun-Engine yang berdenyut retak. "Kau tahu, aku tidak pernah membencimu. Kau hanya... berada di pihak yang salah dalam sejarah. Sun-Engine sudah retak. Untuk menghentikanku, kau harus menghancurkan mesin ini — dan aku tidak akan membiarkanmu. Bukan karena aku jahat, tapi karena aku sudah melihat apa yang terjadi jika mesin ini mati. Ribuan orang akan membeku dalam semalam. Apakah kau siap menanggungnya?"',
+      '"Kau datang juga, Juru Sita. Kau tahu, aku tidak pernah membencimu. Kau hanya... berada di pihak yang salah dalam sejarah. Sun-Engine sudah retak. Untuk menghentikanku, kau harus menghancurkan mesin ini — dan aku tidak akan membiarkanmu. Bukan karena aku jahat, tapi karena aku sudah melihat apa yang terjadi jika mesin ini mati. Ribuan orang akan membeku dalam semalam. Apakah kau siap menanggungnya?"',
       [ { label:'⚔ Lawan Veyra dan hancurkan Sun-Engine.', action:()=>{ closeDialogue(); startCombat('veyra'); } },
         { label:'Dengar dulu.', action: closeDialogue } ]);
   }
@@ -8575,8 +8624,8 @@
       player.x = c * T; player.y = r * T; updateCamera(); updateUI();
       const sub = document.getElementById('map-subtitle'); if (sub) sub.textContent = MAPS[id].subtitle;
       currentState = STATE.EXPLORE;
-      return startDialogue('Inti Mesin Surya','Ruang Takhta — Bawah Istana Aurelion','#ff875c',
-        'Panas dan dingin bertabrakan di udara. Di depanmu, Sun-Engine berdenyut retak — pipa-pipa Aether yang mengalirkan energi dari seluruh Lembah Vaelen kini berdesis tidak stabil. Dan di antara pipa-pipa itu, Arch-Mage Veyra berdiri. "Selamat datang di ruang takhtaku yang sebenarnya, Aldric," katanya tanpa berbalik.',
+      return startDialogue('Arch-Mage Veyra','Ruang Takhta — Inti Mesin Surya','#c792ea',
+        '"Selamat datang di ruang takhtaku yang sebenarnya, Aldric. Panas dan dingin bertabrakan di sini, pipa-pipa Aether dari seluruh Lembah Vaelen berdesis tidak stabil, dan Sun-Engine di belakangku hampir retak. Kau datang tepat pada waktunya."',
         [{label:'Hadapi Veyra.',action:closeDialogue}]);
     }
     oldSwitchMap(id, c, r);
