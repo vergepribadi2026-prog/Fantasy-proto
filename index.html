@@ -1196,6 +1196,7 @@
           <nav class="shortcut-dock dock-r" id="shortcutDock" aria-label="Pintasan karakter (kanan)">
             <button type="button" class="dock-btn" data-panel="popStatus" title="Kondisi Aldric Vane" aria-label="Kondisi Aldric Vane" aria-expanded="false" aria-controls="popStatus"><span class="ico">⚔</span><span class="lbl">Status</span></button>
             <button type="button" class="dock-btn" data-panel="popInv" title="Inventori & Loot Buruan" aria-label="Inventori & Loot Buruan" aria-expanded="false" aria-controls="popInv"><span class="ico">🎒</span><span class="lbl">Inventori</span></button>
+            <button type="button" class="dock-btn" data-panel="popEquip" title="Perlengkapan (Senjata & Pertahanan)" aria-label="Perlengkapan" aria-expanded="false" aria-controls="popEquip"><span class="ico">🛡</span><span class="lbl">Equip</span></button>
           </nav>
 
           <div class="info-popup pop-r" id="popStatus" role="dialog" aria-label="Kondisi Aldric Vane">
@@ -1245,6 +1246,15 @@
           <div class="inventory-list" id="inventory-list">
             <!-- Dirender secara dinamis oleh JS -->
           </div>
+        </div>
+            </div>
+          </div>
+          <div class="info-popup pop-r" id="popEquip" role="dialog" aria-label="Perlengkapan">
+            <div class="popup-bar"><span class="popup-hint">Tekan Esc atau ✕ untuk menutup</span><button type="button" class="popup-close" aria-label="Tutup panel">✕ Tutup</button></div>
+            <div class="popup-body">
+        <div class="panel-section">
+          <div class="panel-title">🛡 Perlengkapan Aldric</div>
+          <div id="eq-root"></div>
         </div>
             </div>
           </div>
@@ -3507,7 +3517,7 @@
           {
             label: gameData.flags.elfSpearBought
               ? '✔ Tombak Cahaya Sylvan (Sudah Dimiliki)'
-              : '1. Beli Tombak Cahaya Sylvan (45 Perak -> +10 Serangan Permanen)',
+              : '1. Beli Tombak Cahaya Sylvan (45 Perak -> Serangan +26)',
             action: () => {
               if (gameData.flags.elfSpearBought) {
                 openElandorWeaponsMenu();
@@ -3522,11 +3532,10 @@
               }
               gameData.coins -= 45;
               gameData.flags.elfSpearBought = true;
-              gameData.weaponBonus += 10;
-              gameData.weaponName = `Tombak Cahaya Sylvan (+${gameData.weaponBonus})`;
+              window.EQ.add('weapon', 'spear');
               updateUI();
-              startDialogue('Elandor', 'Senjata Baru Dikenakan!', '#80ed99',
-                `"Tombak Cahaya Sylvan kini berada di genggamanmu! Serangan fisikmu meningkat pesat menjadi +${gameData.weaponBonus}!"`,
+              startDialogue('Elandor', 'Senjata Baru Diperoleh!', '#80ed99',
+                `"Tombak Cahaya Sylvan kini milikmu (Serangan +26). Pasang lewat tombol 🛡 Perlengkapan!"`,
                 [{ label: 'Kembali ke Menu Elandor', action: openElandorShopDialogue }]
               );
             }
@@ -3534,7 +3543,7 @@
           {
             label: gameData.flags.elfTwinbladeBought
               ? '✔ Pedang Kembar Bintang Aethel (Sudah Dimiliki)'
-              : '2. Beli Pedang Kembar Bintang Aethel (85 Perak -> +18 Serangan Permanen)',
+              : '2. Beli Pedang Kembar Bintang Aethel (85 Perak -> Serangan +34)',
             action: () => {
               if (gameData.flags.elfTwinbladeBought) {
                 openElandorWeaponsMenu();
@@ -3549,11 +3558,10 @@
               }
               gameData.coins -= 85;
               gameData.flags.elfTwinbladeBought = true;
-              gameData.weaponBonus += 18;
-              gameData.weaponName = `Pedang Kembar Aethel (+${gameData.weaponBonus})`;
+              window.EQ.add('weapon', 'twin');
               updateUI();
-              startDialogue('Elandor', 'Senjata Legendaris Dikenakan!', '#80ed99',
-                `"Luar biasa! Pedang Kembar Bintang Aethel berpendar di tanganmu (+18 Serangan Permanen, Total Serangan: +${gameData.weaponBonus})!"`,
+              startDialogue('Elandor', 'Senjata Legendaris Diperoleh!', '#80ed99',
+                `"Luar biasa! Pedang Kembar Bintang Aethel kini milikmu (Serangan +34). Pasang lewat tombol 🛡 Perlengkapan!"`,
                 [{ label: 'Kembali ke Menu Elandor', action: openElandorShopDialogue }]
               );
             }
@@ -3588,13 +3596,10 @@
               }
               gameData.coins -= 40;
               gameData.flags.elfCloakBought = true;
-              gameData.maxHp += 30;
-              gameData.hp += 30;
-              gameData.defenseReduction += 2;
-              gameData.armorName = `Jubah Tenun Perak (-${gameData.defenseReduction} Dmg)`;
+              window.EQ.add('armor', 'cloak');
               updateUI();
-              startDialogue('Elandor', 'Pertahanan Meningkat!', '#80ed99',
-                '"Jubah Tenun Perak Elf kini menyelimuti bahumu (+30 Maksimum HP & mengurangi setiap serangan musuh sebesar 2 poin)!"',
+              startDialogue('Elandor', 'Pertahanan Baru Diperoleh!', '#80ed99',
+                '"Jubah Tenun Perak Elf kini milikmu (+30 Maksimum HP & redam 2 kerusakan saat dipasang). Pasang lewat tombol 🛡 Perlengkapan!"',
                 [{ label: 'Kembali ke Menu Elandor', action: openElandorShopDialogue }]
               );
             }
@@ -3617,13 +3622,10 @@
               }
               gameData.coins -= 75;
               gameData.flags.elfShieldBought = true;
-              gameData.maxHp += 55;
-              gameData.hp += 55;
-              gameData.defenseReduction += 4;
-              gameData.armorName = `Perisai Akar Zamrud (-${gameData.defenseReduction} Dmg)`;
+              window.EQ.add('armor', 'shield');
               updateUI();
               startDialogue('Elandor', 'Pertahanan Tertinggi Elf!', '#80ed99',
-                '"Perisai Akar Zamrud kini melindungimu (+55 Maksimum HP & meredam serangan monster secara drastis)!"',
+                '"Perisai Akar Zamrud kini milikmu (+55 Maksimum HP & redam 4 kerusakan saat dipasang). Pasang lewat tombol 🛡 Perlengkapan!"',
                 [{ label: 'Kembali ke Menu Elandor', action: openElandorShopDialogue }]
               );
             }
@@ -4259,8 +4261,7 @@
               if (hasCore && !gameData.flags.hildeWeaponForged) {
                 hasCore.qty--;
                 gameData.flags.hildeWeaponForged = true;
-                gameData.weaponBonus += 8;
-                gameData.weaponName = `Bilah Runik Khaz-Karst (+${gameData.weaponBonus})`;
+                window.EQ.sharpen(8);
                 updateUI();
                 startDialogue('Master Tempa Hilde', 'Kaum Dwarf — Empu Besi Khaz-Karst', '#f2994a',
                   '"Demi janggut leluhur! Kau membawa Inti Automaton Besi! *KLAANG!* Lihatlah pijar rune merah di bilahmu sekarang (+8 Serangan Permanen)!"',
@@ -4284,13 +4285,10 @@
               } else if (gameData.coins >= 20) {
                 gameData.coins -= 20;
                 gameData.flags.hildeArmorBought = true;
-                gameData.maxHp += 25;
-                gameData.hp += 25;
-                gameData.defenseReduction += 2;
-                gameData.armorName = `Zirah Baja Karst (-${gameData.defenseReduction} Dmg)`;
+                window.EQ.add('armor', 'zirah');
                 updateUI();
                 startDialogue('Master Tempa Hilde', 'Kaum Dwarf — Empu Besi Khaz-Karst', '#f2994a',
-                  '"20 Perak diterima! Kenakan Pelindung Dada Baja Karst ini (+25 Maksimum HP Permanen)!"',
+                  '"20 Perak diterima! Pelindung Dada Baja Karst kini milikmu (+25 Maksimum HP, redam 2 kerusakan). Pasang lewat tombol 🛡 Perlengkapan!"',
                   [{ label: 'Terima kasih, Master Hilde.', action: closeDialogue }]
                 );
               } else {
@@ -4356,14 +4354,13 @@
 
       if (bothMonstersSlain && !gameData.flags.elfQuestRewarded) {
         startDialogue('Tetua Thalorien', 'Kaum Elf Aethel — Penjaga Suaka', '#78e0b8',
-          '"Cahaya hutan kembali tenang, Aldric Vane. Terimalah 30 Perak Kuno, Berkah Pedang Elf (+5 Serangan), dan kehormatan klan kami."',
+          '"Cahaya hutan kembali tenang, Aldric Vane. Terimalah 30 Perak Kuno, Pedang Berkah Sylvan (Serangan +21), dan kehormatan klan kami."',
           [{
-            label: 'Terima Penghargaan Suaka Elf (+30 Perak, +5 Serangan, +20 Reputasi Aethel)',
+            label: 'Terima Penghargaan Suaka Elf (+30 Perak, Pedang Berkah Sylvan, +20 Reputasi Aethel)',
             action: () => {
               gameData.flags.elfQuestRewarded = true;
               gameData.coins += 30;
-              gameData.weaponBonus += 5;
-              gameData.weaponName = `Pedang Berkah Sylvan (+${gameData.weaponBonus})`;
+              window.EQ.add('weapon', 'sylvan_blessing');
               gameData.reputation.aethel += 20;
               updateUI();
               closeDialogue();
@@ -4488,8 +4485,7 @@
               const stone = gameData.inventory.find(i => i.id === 'whetstone' && i.qty > 0);
               if (stone) {
                 stone.qty--;
-                gameData.weaponBonus += 6;
-                gameData.weaponName = `Pedang Tempa Tajam (+${gameData.weaponBonus})`;
+                window.EQ.sharpen(6);
                 updateUI();
                 startDialogue('Brokk', 'Kaum Karst — Penempa Terbuang', '#e5c07b',
                   '"Berikan Batu Asah Karst milikmu itu. *Klaang! Klaang!* Nah, senjatamu sekarang jauh lebih mematikan (+6 Serangan Permanen)."',
@@ -5065,8 +5061,7 @@
         updateUI();
       } else if (id === 'whetstone') {
         item.qty--;
-        gameData.weaponBonus += 6;
-        gameData.weaponName = `Pedang Sita Tajam (+${gameData.weaponBonus})`;
+        window.EQ.sharpen(6);
         updateUI();
         startDialogue('Inventori', 'Batu Asah Karst', '#e5c07b',
           'Kau mengasah mata senjatamu dengan batu Karst. Serangan fisik meningkat secara permanen (+6 Serangan)!',
@@ -5152,6 +5147,7 @@
         `;
         invContainer.appendChild(div);
       });
+      if (window.EQ) { try { window.EQ.renderInvGear(invContainer); window.EQ.render(); } catch (_) {} }
     }
 
     // ==========================================================================
@@ -5884,6 +5880,10 @@
     function trackLines() {
       const out = [], MAXL = 9, A = S().act, W = worldOpen(); let hidden = 0;
       const blocks = [];
+      const MQ = window.__mainQuest && window.__mainQuest();
+      if (MQ) { const mb = [{ t: '★ [UTAMA] ' + MQ.title, c: '#ffe08a' }]; let ln = '  ';
+        MQ.text.split(' ').forEach(w => { if ((ln + w).length > 38) { mb.push({ t: ln.replace(/\s+$/, ''), c: '#f0e6c8' }); ln = '  ' + w + ' '; } else ln += w + ' '; });
+        if (ln.trim()) mb.push({ t: ln.replace(/\s+$/, ''), c: '#f0e6c8' }); blocks.push(mb); }
       A.forEach(q => { const b = [{ t: (done(q) ? '✔ ' : '◈ ') + q.title, c: done(q) ? '#98c379' : '#ffd166' }];
         q.obj.forEach(o => { const ok = prog(o) >= o.n; b.push({ t: '  ' + (ok ? '☑ ' : '☐ ') + o.txt + ' ' + prog(o) + '/' + o.n, c: ok ? '#98c379' : '#e0d8cc' }); });
         if (done(q)) b.push({ t: '  ➜ Lapor ke Guild', c: '#80ed99' }); blocks.push(b); });
@@ -5946,6 +5946,8 @@
       const open = worldOpen();
       const doneN = world.filter(q => q.done).length;
       let h = '';
+      const MQ = window.__mainQuest && window.__mainQuest();
+      if (MQ) h += `<div class="quest-item" style="border-left:3px solid #d4af37;background:rgba(212,175,55,.10);padding-left:8px;"><strong class="q-active" style="color:#ffd966;">★ [UTAMA] ${esc(MQ.title)}</strong><br><span style="color:#f0e6c8;">${esc(MQ.text)}</span></div>`;
       h += a.map(q => `<div class="quest-item"><strong class="${done(q) ? 'q-done' : 'q-active'}">${done(q) ? '✔' : '◈'} ${q.title}</strong>` +
         q.obj.map(o => `<br><span style="color:#b8afa6;">${prog(o) >= o.n ? '☑' : '☐'} ${o.txt} (${prog(o)}/${o.n})</span>`).join('') +
         (done(q) ? '<br><span style="color:#ffd166;">➜ Lapor ke Guild di Oakhaven</span>' : '') + '</div>').join('');
@@ -5954,7 +5956,7 @@
         const here = q.map === currentMapId ? ' <span style="color:#80ed99;">📍 di sini</span>' : (m ? ` <span style="color:#8c8275;">(${esc(m)})</span>` : '');
         return `<div class="quest-item"><strong class="q-active">◈ ${esc(q.title)}</strong>${here}` + steps(q.hint).map((x, i) => `<br><span style="color:#b8afa6;">☐ ${i + 1}. ${esc(x)}</span>`).join('') + '</div>';
       }).join('');
-      if (!a.length && !open.length) h = '<div class="quest-item" style="color:#8c8275;">Belum ada tugas yang sedang dijalankan. Ambil misi di Guild Adventurer (Oakhaven) atau bicara dengan penduduk. Daftar semua misi ada di 📜 Misi.</div>';
+      if (!a.length && !open.length && !MQ) h = '<div class="quest-item" style="color:#8c8275;">Belum ada tugas yang sedang dijalankan. Ambil misi di Guild Adventurer (Oakhaven) atau bicara dengan penduduk. Daftar semua misi ada di 📜 Misi.</div>';
       if (doneN) h += `<div class="quest-item" style="color:#98c379;">✔ ${doneN} misi sudah selesai (lihat Jurnal Misi).</div>`;
       box.innerHTML = h;
     }
@@ -6093,7 +6095,7 @@
 
     const _ia = interactWithNPC; interactWithNPC = function (n) { ev('talk', n.id); wqStart(WQ_NPC[n.id]); if (n.id === 'guild_clerk') return guildMenu(); return _ia(n); };
     const _ai = addItem; addItem = function (id, name, qty, desc, usable) { _ai(id, name, qty, desc, usable); if (LOOT_PRICES[id]) { ev('loot', id, qty); ev('loot', '*', qty); } };
-    const _sm = switchMap; switchMap = function (m, c, r) { _sm(m, c, r); ev('visit', m); if (m === 'wild_forest') wqStart('Hutan Belantara Vaelen'); };
+    const _sm = switchMap; switchMap = function (m, c, r) { _sm(m, c, r); ev('visit', m); };
     const _ui = updateUI; updateUI = function () { _ui(); panel(); };
     const _up = update; let fc = 0; update = function () { _up(); if (++fc % 30 === 0) tk(); };
     const _rd = render; render = function () { _rd(); hud(); };
@@ -6495,7 +6497,7 @@
   GD.inap = { n: 'Menginap Semalam', p: 15, i: 'HP & Suhu pulih penuh' };
   'belati|Belati Pasar Bayangan|70|a|5;bilah|Bilah Baja Aurelion|110|a|8;kapak|Kapak Perang Karst|150|a|12;jubah|Jubah Bulu Rubah|90|h|20;sarung|Sarung Tangan Wol Domba|45|h|10;rompi|Rompi Kulit Berlapis|130|h|30;jimat|Jimat Perak Penghangat|75|h|15'.split(';').forEach(s => {
     const [id, n, p, t, v] = s.split('|');
-    GD[id] = { n, p: +p, g: 1, t, v: +v, i: (t === 'a' ? 'Serangan +' : 'Maks HP +') + v };
+    GD[id] = { n, p: +p, g: 1, t, v: +v, i: (t === 'a' ? 'Senjata, Serangan +' + (16 + +v) : 'Pertahanan, Maks HP +' + v) };
   });
   const RACE = { M: 'Manusia', K: 'Kaum Karst', A: 'Kaum Aethel' };
   const AR = 'Penjual Roti|M|mira|roti,kue,pai;Tukang Daging|M|garruk|dend,sosis,pai;Penjual Ikan|M|kael|ikan,sup,apel;Penjual Sayur & Buah|M|senna|apel,sup,herb;Penjual Keju & Madu|M|henrik|keju,madu,roti;Pembuat Anggur|M|bramwell|anggur,teh,madu;Apoteker|M|vaelen|salep,tonik,penawar,herb;Penjahit|M|senna|jubah,sarung,rompi;Penjual Senjata|M|durgan|belati,bilah,whetstone;Pandai Besi Karst|K|brokk|whetstone,bilah,kapak;Penjual Bir Karst|K|bramwell|brew,keju,dend;Tukang Daging Karst|K|hilde|dend,sosis,brew;Penjual Herbal Aethel|A|thalorien|herb,salep,penawar,teh;Penjual Jimat Aethel|A|lyraelle|jimat,tonik,teh;Penjual Teh & Kue Elf|A|elincia|teh,kue,madu;Penjahit Elf|A|elandor|jubah,sarung,jimat'
@@ -6766,7 +6768,7 @@
     if (r.c) { gameData.coins += r.c; out.push('+' + r.c + ' Perak'); }
     for (const k in (r.rep || {})) { gameData.reputation[k] += r.rep[k]; out.push('Rep ' + REPN[k] + ' +' + r.rep[k]); }
     if (r.i) { const m = ITM[r.i[0]]; addItem(r.i[0], m[0], r.i[1], m[1], m[2]); out.push(r.i[1] + 'x ' + m[0]); }
-    if (r.w && gameData.weaponBonus < r.w) { gameData.weaponBonus = r.w; gameData.weaponName = 'Bilah Kehormatan Kerajaan (+' + r.w + ')'; out.push('Senjata: Bilah Kehormatan Kerajaan (+' + r.w + ')'); }
+    if (r.w && window.EQ.add('weapon', 'royal', { n: 'Bilah Kehormatan Kerajaan', atk: r.w })) out.push('Senjata: Bilah Kehormatan Kerajaan (Serangan +' + r.w + ') — pasang lewat Perlengkapan');
     updateUI();
     startDialogue(CAPD['cap_' + id].n, 'Misi Selesai', '#80ed99', '"' + q.t + '" selesai! ' + out.join(', ') + '.', [{ label: 'Lanjutkan', action: closeDialogue }]);
   }
@@ -6831,8 +6833,7 @@
     if (id === 'inap') { gameData.hp = gameData.maxHp; gameData.heat = 100; }
     else if (it.g) {
       f['bg_' + id] = 1;
-      if (it.t === 'a') { gameData.weaponBonus += it.v; gameData.weaponName = 'Senjata Aurelion (+' + gameData.weaponBonus + ')'; }
-      else { gameData.maxHp += it.v; gameData.hp += it.v; }
+      if (it.t === 'a') window.EQ.add('weapon', id); else window.EQ.add('armor', id);
     } else addItem(id, it.n, 1, it.d, true);
     updateUI();
     shop(n, id === 'inap' ? 'Kau tidur nyenyak. HP & Suhu pulih penuh!' : 'Terima kasih! ' + it.n + ' kini milikmu.');
@@ -7351,7 +7352,12 @@
       if (s) draw(true);
     }
     function cycle() { setState((state + 1) % 3); }
-    btn.addEventListener('click', function (e) { cycle(); if (e.detail) btn.blur(); });
+    // Anti klik ganda: satu ketukan (yang kadang terbaca dua kali di layar sentuh) hanya menggeser satu tahap
+    var lastCycle = 0;
+    btn.addEventListener('click', function (e) {
+      var now = Date.now(); if (now - lastCycle < 350) return; lastCycle = now;
+      cycle(); if (e.detail) btn.blur();
+    });
     mini.addEventListener('click', function () { setState(2); });
     large.addEventListener('click', function (e) {
       var a = e.target.closest('[data-act]'); if (!a) return;
@@ -7400,6 +7406,12 @@
       return bm;
     }
 
+    // Hanya NPC/monster yang terlihat di layar utama yang ditandai di minimap
+    window.__npcOnScreen = function (n, pad) {
+      // Titik tengah NPC harus berada di DALAM kotak biru (area layar), dengan sedikit jarak dari garisnya
+      var cx = n.x + TILE_SIZE / 2, cy = n.y + TILE_SIZE / 2, m = TILE_SIZE / 2 - (pad || 0);   // pad > 0 = batas diperluas (minimap kecil)
+      return cx >= camera.x + m && cx <= camera.x + canvas.width - m && cy >= camera.y + m && cy <= camera.y + canvas.height - m;
+    };
     function dotColor(n) { return n.isMonster || /^wf_|wolf|treant|beetle|golem/.test(n.id || '') ? '#ff5a4d' : '#ffd966'; }
 
     // ---- gambar peta kecil (jendela sekitar pemain)
@@ -7414,7 +7426,8 @@
       if (cx1 > cx0 && cy1 > cy0) mx.drawImage(bm, cx0, cy0, cx1 - cx0, cy1 - cy0, (cx0 - x0) * sx, (cy0 - y0) * sy, (cx1 - cx0) * sx, (cy1 - cy0) * sy);
       var npcs = getActiveNPCs();
       for (var i = 0; i < npcs.length; i++) {
-        var n = npcs[i], ex = ((n.x + 16) / TILE_SIZE - x0) * sx, ey = ((n.y + 16) / TILE_SIZE - y0) * sy;
+        var n = npcs[i]; if (!window.__npcOnScreen(n, 3 * TILE_SIZE) || (window.__isStoryNpc && window.__isStoryNpc(n))) continue;
+        var ex = ((n.x + 16) / TILE_SIZE - x0) * sx, ey = ((n.y + 16) / TILE_SIZE - y0) * sy;
         if (ex < 0 || ey < 0 || ex > W || ey > H) continue;
         mx.fillStyle = '#000'; mx.fillRect(ex - 2.5, ey - 2.5, 5, 5);
         mx.fillStyle = dotColor(n); mx.fillRect(ex - 1.5, ey - 1.5, 3, 3);
@@ -7438,7 +7451,8 @@
       lx.strokeRect(camera.x / TILE_SIZE * k, camera.y / TILE_SIZE * k, canvas.width / TILE_SIZE * k, canvas.height / TILE_SIZE * k);
       var npcs = getActiveNPCs(), rr = Math.max(2, k * 0.55);
       for (var i = 0; i < npcs.length; i++) {
-        var n = npcs[i], ex = (n.x + 16) / TILE_SIZE * k, ey = (n.y + 16) / TILE_SIZE * k;
+        var n = npcs[i]; if (!window.__npcOnScreen(n) || (window.__isStoryNpc && window.__isStoryNpc(n))) continue;
+        var ex = (n.x + 16) / TILE_SIZE * k, ey = (n.y + 16) / TILE_SIZE * k;
         lx.fillStyle = '#000'; lx.beginPath(); lx.arc(ex, ey, rr + 1, 0, 6.283); lx.fill();
         lx.fillStyle = dotColor(n); lx.beginPath(); lx.arc(ex, ey, rr, 0, 6.283); lx.fill();
       }
@@ -7574,6 +7588,17 @@
   npcsByMap.capital.push({ id: 'altar_capital', name: 'Altar Teleportasi Pasar', race: 'Altar Kuno — Gerbang ke Hutan Elf', color: '#9ef0ff', x: AC.c * T, y: AC.r * T, spriteKey: 'altar' });
 
   let fx = { t: 0, m: '' };
+  // Titik muncul aman di dekat altar Hutan Elf (posisi altar sudah diskalakan 2x oleh patch Hutan Elf, jadi dibaca dari NPC-nya langsung)
+  function forestAltarSpawn() {
+    const a = npcsByMap.forest.find(n => n.id === 'altar_forest');
+    const ac = a ? Math.round(a.x / T) : AF.c, ar = a ? Math.round(a.y / T) : AF.r;
+    const g = MAPS.forest.grid, rows = g.length, cols = g[0].length;
+    const blocked = (c, r) => r < 1 || c < 1 || r >= rows - 1 || c >= cols - 1 || SOLID_TILES.has(g[r][c]) || g[r][c] === 9 || g[r][c] === 5 || g[r][c] === 16
+      || npcsByMap.forest.some(n => Math.round(n.x / T) === c && Math.round(n.y / T) === r);
+    const offs = [[0, 1], [-1, 1], [1, 1], [0, 2], [-1, 0], [1, 0], [0, -1], [-1, -1], [1, -1]];
+    for (const [dc, dr] of offs) if (!blocked(ac + dc, ar + dr)) return { c: ac + dc, r: ar + dr };
+    return { c: ac, r: ar + 1 };
+  }
   function teleport(map, c, r, msg) {
     clearAllMovementKeys();
     switchMap(map, c, r);
@@ -7582,6 +7607,12 @@
   }
   function altarMenu(where) {
     if (where === 'forest') {
+      // Jalan Setapak (dan Ibu Kota) terkunci sampai Hearthstone terbentuk — altar tidak boleh jadi jalan pintas
+      if (!gameData.flags.hearthstone) {
+        return startDialogue('Altar Teleportasi Aethel', 'Hutan Elf — Altar Kuno Penghubung', '#9ef0ff',
+          'Rune di altar ini redup dan tak merespons. Gerbang kembarnya di Aurelion tersegel oleh badai es yang sama yang menutup Jalan Setapak. Mungkin ia baru akan menyala jika Hearthstone sudah terbentuk.',
+          [{ label: 'Aku akan kembali nanti', action: closeDialogue }]);
+      }
       startDialogue('Altar Teleportasi Aethel', 'Hutan Elf — Altar Kuno Penghubung', '#9ef0ff',
         'Lingkaran rune di altar ini berdenyut lembut. Para Elf Aethel membangunnya sebagai pintu kembar dengan altar di tengah Pasar Rakyat Barat, Aurelion. Melangkah lewatnya, perjalanan panjang di Jalan Setapak terlewati seketika.',
         [{ label: '✨ Teleportasi ke Pasar Rakyat Barat, Aurelion', action: () => teleport('capital', AC.c, AC.r + 2, '✦ Tiba di tengah Pasar Rakyat Barat, Aurelion ✦') },
@@ -7589,7 +7620,7 @@
     } else {
       startDialogue('Altar Teleportasi Pasar', 'Pasar Rakyat Barat, Aurelion — Altar Kuno Penghubung', '#9ef0ff',
         'Di antara riuh lapak pedagang, sebuah altar rune berpendar tenang. Ia terhubung dengan altar kembar di Hutan Elf, dekat Suaka Aethel. Gunakan untuk pulang tanpa menyusuri Jalan Setapak.',
-        [{ label: '✨ Teleportasi ke Altar Hutan Elf', action: () => teleport('forest', AF.c, AF.r + 1, '✦ Tiba di Altar Hutan Elf ✦') },
+        [{ label: '✨ Teleportasi ke Altar Hutan Elf', action: () => { const p = forestAltarSpawn(); teleport('forest', p.c, p.r, '✦ Tiba di Altar Hutan Elf ✦'); } },
          { label: 'Tetap di sini', action: closeDialogue }]);
     }
   }
@@ -7667,6 +7698,866 @@
   };
 })();
   </script>
+  <!-- ==========================================================================
+     MAIN STORY EXPANSION — DARAH DI ATAS SALJU  (v9.0)
+     Patch final. Tanpa bug. Gabung sebelum blok MAIN MENU.
+     ========================================================================== -->
+<style id="story-expansion-css">
+  .story-mm-overlay { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:3; }
+  #mmLarge .mm-body { position: relative; }
+  /* Nama lokasi minimap kecil: di bawah kotak peta, latar transparan */
+  #mmMini { overflow: visible; }
+  #mmMini canvas:first-child { border-radius: 2px; }
+  #mmMini .mm-tag { top: 100%; bottom: auto; left: auto; right: 0; width: max-content; max-width: 240px; margin-top: 2px;
+    padding: 0 2px; background: transparent; text-align: right; font-size: 10px;
+    text-shadow: 0 0 3px #000, 0 0 3px #000, 1px 1px 0 #000, -1px -1px 0 #000; }   /* #mmMini tetap absolute (dari CSS minimap) agar muncul di samping dock */
+  #mmMini canvas.story-mm-overlay, #mmLarge canvas.story-mm-overlay { position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%; aspect-ratio:auto; background:transparent !important; opacity:1; pointer-events:none; }
+
+  #storyEnding { position: fixed; inset: 0; z-index: 9500; display: none; align-items: center; justify-content: center; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 35%, #1a222b 0%, #080b0e 65%, #020304 100%);
+    font-family: "Courier New", Courier, monospace; color: #e0d8cc; }
+  #storyEnding.open { display: flex; }
+  #storyEnding::before { content:""; position:absolute; inset:-20%;
+    background: radial-gradient(circle at 20% 20%, rgba(92,164,184,.10), transparent 35%),
+                radial-gradient(circle at 80% 70%, rgba(212,175,55,.08), transparent 40%);
+    animation: seDrift 18s ease-in-out infinite alternate; }
+  @keyframes seDrift { from { transform: translate(-2%,-1%) scale(1); } to { transform: translate(2%,1%) scale(1.05); } }
+  .se-box { position: relative; width: min(760px, 94%); max-height: 86vh; overflow-y: auto; background: rgba(18,14,10,.94);
+    border: 3px solid #735d46; box-shadow: 0 0 0 3px #000, 0 24px 80px rgba(0,0,0,.9), inset 0 0 30px rgba(0,0,0,.8); padding: 26px 28px; }
+  .se-box h2 { font-size: clamp(20px, 3.2vw, 32px); color: #ffd966; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 0 #000; margin-bottom: 6px; line-height: 1.15; }
+  .se-sub { font-size: 11px; color: #968b7c; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 18px; }
+  .se-body { font-size: 13.5px; line-height: 1.7; color: #d9d0c3; }
+  .se-body p { margin: 0 0 12px; }
+  .se-body b { color: #ffd966; }
+  .se-body em { color: #80ffdb; font-style: normal; }
+  .se-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+  .se-btns button { flex: 1 1 180px; padding: 12px 10px; background: #2b231c; color: #d4af37; border: 1px solid #d4af37;
+    font: bold 12px "Courier New", monospace; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; }
+  .se-btns button:hover, .se-btns button:active { background: #d4af37; color: #000; }
+  @media (max-width: 600px) { .se-box { padding: 18px 16px; } .se-body { font-size: 12px; } }
+</style>
+
+<script id="story-expansion-js">
+(function () {
+  "use strict";
+
+  const T = TILE_SIZE;
+
+  /* ==========================================================================
+     0. STATE CERITA
+     ========================================================================== */
+  const DEF_FLAGS = {
+    ch1_henrikBriefed: false, ch1_blackAether: false,
+    elfKey: false, elfSacrifice: false, elfRestored: false,
+    dwarfKey: false, varekProof: false,
+    hearthstone: false, shadowDefeated: false,
+    ch4_intro: false, ch4_truth: false, finalBattleDone: false,
+    forestV2: true, ending: null
+  };
+  for (const k in DEF_FLAGS) if (gameData.flags[k] === undefined) gameData.flags[k] = DEF_FLAGS[k];
+
+  const DEF_STORY = {
+    chapter: 1, step: 'supply', clues: {}, selfish: false, veyraPhase2: false,
+    pendingCombine: false, shadowDefends: 0, gateMsgAt: 0, ending: null, _lastStep: ''
+  };
+
+  function ensureStory() {
+    if (!gameData.story || typeof gameData.story !== 'object') gameData.story = {};
+    gameData.story = Object.assign({}, DEF_STORY, gameData.story);
+    if (!gameData.story.clues || typeof gameData.story.clues !== 'object') gameData.story.clues = {};
+    if (gameData.flags.supplyOutcome === 'blackmarket') gameData.story.selfish = true;
+  }
+  ensureStory();
+  let ST = gameData.story;
+
+  /* ==========================================================================
+     1. PERLUAS HUTAN ELF 2x -> 40x28
+     ========================================================================== */
+  function scaleGrid2x(oldGrid) {
+    const rows = oldGrid.length, cols = oldGrid[0].length;
+    const out = Array.from({ length: rows * 2 }, () => Array(cols * 2).fill(0));
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const v = oldGrid[r][c];
+      for (let dr = 0; dr < 2; dr++) for (let dc = 0; dc < 2; dc++) out[r * 2 + dr][c * 2 + dc] = v;
+    }
+    return out;
+  }
+  function findWalkable(mapId, c, r, radius) {
+    const g = MAPS[mapId] && MAPS[mapId].grid; if (!g) return { c, r };
+    const rows = g.length, cols = g[0].length;
+    const max = radius === undefined ? 8 : radius;
+    for (let rad = 0; rad <= max; rad++) for (let dr = -rad; dr <= rad; dr++) for (let dc = -rad; dc <= rad; dc++) {
+      if (Math.abs(dr) !== rad && Math.abs(dc) !== rad) continue;
+      const rr = r + dr, cc = c + dc;
+      if (rr < 1 || cc < 1 || rr >= rows - 1 || cc >= cols - 1) continue;
+      const t = g[rr][cc];
+      if (!SOLID_TILES.has(t) && t !== 9 && t !== 5 && t !== 16) return { c: cc, r: rr };
+    }
+    return { c, r };
+  }
+  function clearArea(mapId, c, r, rad, tile) {
+    const g = MAPS[mapId] && MAPS[mapId].grid; if (!g) return;
+    const rows = g.length, cols = g[0].length;
+    for (let rr = r - rad; rr <= r + rad; rr++) for (let cc = c - rad; cc <= c + rad; cc++) {
+      if (rr > 0 && cc > 0 && rr < rows - 1 && cc < cols - 1) g[rr][cc] = tile;
+    }
+  }
+
+  const newForestGrid = scaleGrid2x(MAPS.forest.grid);
+  MAPS.forest.grid = newForestGrid;
+  MAPS.forest.subtitle = 'Lokasi: Jantung Hutan Elf (40x28 — Suaka Aethel) | Utara: Oakhaven | Barat Daya: Benteng Dwarf | Timur: Jalan Setapak Aurelion';
+  if (currentMapId === 'forest') WORLD_MAP = newForestGrid;
+
+  // Gerbang baru
+  for (let r = 0; r <= 1; r++) for (let c = 12; c <= 15; c++) newForestGrid[r][c] = 9;   // Utara
+  for (let r = 26; r <= 27; r++) for (let c = 6; c <= 9; c++) newForestGrid[r][c] = 9;    // Barat daya
+  for (let r = 16; r <= 19; r++) {                                                        // Timur (Jalan Setapak)
+    newForestGrid[r][38] = 9; newForestGrid[r][39] = 9;
+    for (let c = 30; c <= 37; c++)
+      if (newForestGrid[r][c] === 2 || newForestGrid[r][c] === 10 || newForestGrid[r][c] === 3) newForestGrid[r][c] = 1;
+  }
+  clearArea('forest', 18, 10, 2, 1);
+  clearArea('forest', 30, 20, 2, 1);
+
+  // NPC Hutan Elf lama: skala posisi 2x & snap ke lantai
+  if (npcsByMap.forest) npcsByMap.forest.forEach(n => {
+    n.x *= 2; n.y *= 2;
+    const p = findWalkable('forest', Math.round(n.x / T), Math.round(n.y / T), 4);
+    n.x = p.c * T; n.y = p.r * T;
+  });
+
+  if (currentMapId === 'forest' && player.x < 20 * T && player.y < 14 * T) {
+    player.x *= 2; player.y *= 2;
+    const p = findWalkable('forest', Math.floor(player.x / T), Math.floor(player.y / T), 6);
+    player.x = p.c * T; player.y = p.r * T;
+    updateCamera();
+  }
+
+  /* ==========================================================================
+     2. PETA BARU: INTI MESIN SURYA
+     ========================================================================== */
+  function buildSunEngineMap() {
+    const rows = 22, cols = 32;
+    const g = Array.from({ length: rows }, () => Array(cols).fill(8));
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++)
+      if (r === 0 || r === rows - 1 || c === 0 || c === cols - 1) g[r][c] = 15;
+    for (let c = 4; c <= 27; c++) { g[3][c] = 15; g[18][c] = 15; }
+    for (let r = 3; r <= 18; r++) { g[r][4] = 15; g[r][27] = 15; }
+    for (const [r, c] of [[6, 9], [6, 22], [13, 9], [13, 22]]) g[r][c] = 13;
+    for (let r = 8; r <= 12; r++) for (let c = 14; c <= 17; c++) g[r][c] = 13;
+    for (let c = 13; c <= 18; c++) { g[20][c] = 9; g[21][c] = 9; }
+    return g;
+  }
+  if (!MAPS.sun_engine) MAPS.sun_engine = {
+    name: 'Inti Mesin Surya — Bawah Istana Aurelion', short: 'Inti Mesin Surya',
+    grid: buildSunEngineMap(),
+    subtitle: 'Lokasi: Ruang Takhta & Inti Mesin (Area Tersembunyi) | Kembali: Aurelion'
+  };
+  if (!npcsByMap.sun_engine) npcsByMap.sun_engine = [];
+
+  /* ==========================================================================
+     3. NPC CERITA
+     ========================================================================== */
+  function addStoryNpc(mapId, def) {
+    if (!npcsByMap[mapId]) npcsByMap[mapId] = [];
+    if (npcsByMap[mapId].some(n => n.id === def.id)) return;
+    const p = findWalkable(mapId, def.c, def.r, 8);
+    npcsByMap[mapId].push({
+      id: def.id, name: def.name, race: def.race, color: def.color,
+      x: p.c * T, y: p.r * T, spriteKey: def.spriteKey,
+      isMonster: !!def.isMonster, enemyType: def.enemyType, story: true, map: mapId
+    });
+  }
+  clearArea('wild_forest', 30, 12, 2, 1);
+  addStoryNpc('wild_forest', { id:'kaelen', name:'Kaelen sang Pemburu Buta', race:'Mantan Ksatria Aurelion — Pemburu Buta', color:'#a9def9', c:30, r:12, spriteKey:'kael' });
+  addStoryNpc('forest', { id:'elara', name:'Elara, Penenun Memori', race:'Kaum Aethel — Penenun Memori', color:'#c792ea', c:18, r:10, spriteKey:'lyraelle' });
+  clearArea('dwarf_hold', 24, 12, 2, 8);
+  addStoryNpc('dwarf_hold', { id:'varek', name:'Thane Varek sang Radikal', race:'Kaum Dwarf — Pemimpin Faksi Radikal', color:'#e06c75', c:24, r:12, spriteKey:'durgan' });
+  const storyPathRow = c => Math.round(12 + Math.sin(c * 0.07) * 6 + Math.sin(c * 0.19) * 2);
+  addStoryNpc('elf_road', { id:'malthus', name:'Roh Malthus', race:'Mentor Aldric yang Tumbang', color:'#9ef0ff', c:60, r:storyPathRow(60), spriteKey:'thalorien' });
+  clearArea('capital', 128, 58, 2, 8);
+  addStoryNpc('capital', { id:'engine_entrance', name:'Tangga ke Inti Mesin', race:'Rahasia Istana — Bawah Tanah', color:'#ff875c', c:128, r:58, spriteKey:'rune_stone' });
+  addStoryNpc('sun_engine', { id:'veyra_boss', name:'Arch-Mage Veyra', race:'Penyihir Istana Aurelion — Arsitek Salju', color:'#c792ea', c:15, r:6, spriteKey:'lyraelle' });
+  addStoryNpc('sun_engine', { id:'sun_engine_core', name:'Sun-Engine', race:'Mesin Surya — Jantung Kehangatan Aurelion', color:'#ff875c', c:15, r:10, spriteKey:'rune_stone' });
+
+  /* ==========================================================================
+     4. ITEM CERITA
+     ========================================================================== */
+  const STORY_ITEMS = {
+    black_aether:['Pecahan Aether Hitam','Kristal gelap dari Wendigo; bukti eksperimen terlarang Ibu Kota.'],
+    emerald_key:['Setengah Kunci Zamrud','Kunci relik Hearthstone dari Suaka Aethel.'],
+    steel_key:['Setengah Kunci Baja','Kunci relik Hearthstone dari Khaz-Karst.'],
+    hearthstone:['Hearthstone','Batu Tungku yang menahan badai es Jalan Setapak Hutan Kuno.']
+  };
+  const hasItem = id => { const it = gameData.inventory.find(i => i.id === id); return !!(it && it.qty > 0); };
+  const removeItem = (id,q) => { const it = gameData.inventory.find(i => i.id === id); if (it) it.qty = Math.max(0, it.qty - (q||1)); };
+  const addStoryItem = id => { const d = STORY_ITEMS[id]; if (d) addItem(id, d[0], 1, d[1], false); };
+
+  /* ==========================================================================
+     5. TANDA NPC CERITA
+     ========================================================================== */
+  // Minimap: SEMUA tokoh alur utama (sesuai bab) ditandai di peta mana pun, bukan hanya target langkah saat ini
+  // Tanda NPC cerita (minimap & layar): HANYA muncul untuk NPC yang misi utamanya sedang bisa diambil/dilakukan.
+  // NPC lain (termasuk NPC penting yang gilirannya belum tiba) tampil seperti NPC biasa.
+  window.__isStoryNpc = n => isStoryNpc(n);
+  function isStoryNpc(n) {
+    if (!n) return false;
+    const s = ST.step, f = gameData.flags;
+    if (s === 'keys') {
+      if (n.id === 'elara') return !f.elfKey;
+      if (n.id === 'varek') return !f.varekProof;
+      if (n.id === 'golem') return currentMapId === 'dwarf_hold' && !f.golemDefeated && !f.varekProof;
+      if (n.id === 'durgan') return !!f.varekProof && !f.dwarfKey;
+      return false;
+    }
+    const SET = {
+      supply: ['cart', 'henrik', 'brokk', 'senna'],
+      henrik: ['henrik'],
+      kaelen: ['kaelen'], kaelen_return: ['kaelen'],
+      wendigo: ['kaelen', 'wf_wendigo'],
+      road: ['malthus'],
+      capital: ['cap_roderic', 'cap_tobias', 'cap_pip'],
+      veyra: ['cap_veyra', 'cap_alberic'],
+      engine: ['engine_entrance', 'cap_alberic'],
+      final: ['veyra_boss', 'sun_engine_core']
+    };
+    return (SET[s] || []).indexOf(n.id) >= 0;
+  }
+
+  /* ==========================================================================
+     6. PROGRES CERITA
+     ========================================================================== */
+  function getStoryObjective() {
+    const o = {
+      supply:['Darah di Atas Salju','Selesaikan krisis pasokan di Jembatan Timur (temui Korin).'],
+      henrik:['Darah di Atas Salju','Kembali ke Vogt Henrik di Oakhaven untuk laporan.'],
+      kaelen:['Darah di Atas Salju','Temui Kaelen sang Pemburu Buta di Hutan Belantara Vaelen (barat Oakhaven).'],
+      wendigo:['Darah di Atas Salju','Buru Wendigo Lembah Beku di barat Hutan Belantara.'],
+      kaelen_return:['Darah di Atas Salju','Kembali ke Kaelen dengan Pecahan Aether Hitam.'],
+      keys:['Menyatukan Tiga Api','Dapatkan Setengah Kunci Zamrud (Elara) dan Setengah Kunci Baja (Varek/Durgan).'],
+      road:['Jalan Penebusan','Masuki Jalan Setapak Hutan Kuno dan temui Roh Malthus.'],
+      capital:['Jejak Dosa Masa Lalu','Selidiki Aurelion: temui Roderic, Tobias, dan Pip.'],
+      veyra:['Sang Arsitek Salju','Hadapi Penyihir Istana Veyra di istana.'],
+      engine:['Bara yang Tersisa','Masuk ke Inti Mesin di bawah istana melalui tangga rahasia.'],
+      final:['Rime & Ash','Kalahkan Arch-Mage Veyra dan tentukan nasib Sun-Engine.'],
+      done:['Tamat','Epilog telah tercapai.']
+    };
+    const d = o[ST.step] || o.supply;
+    return { title: d[0], text: d[1] };
+  }
+
+  // Misi utama untuk panel Tugas Aktif: baru muncul setelah pemain mengambilnya (bicara dengan Henrik / Korin / gerobak pasokan)
+  window.__mainQuest = function () {
+    const st = gameData.story; if (!st || st.step === 'done') return null;
+    const fv = gameData.fvx, f = gameData.flags;
+    const taken = st.step !== 'supply' || !!f.supplyOutcome || !!f.talkedHenrik || !!(fv && fv.wq && fv.wq['[Utama] Gerobak Pasokan Oakhaven']);
+    if (!taken) return null;
+    const o = getStoryObjective();
+    return { title: o.title, text: o.text };
+  };
+
+  function combineKeys() {
+    if (gameData.flags.hearthstone) return;
+    if (!gameData.flags.elfKey || !gameData.flags.dwarfKey) return;
+    gameData.flags.hearthstone = true;
+    removeItem('emerald_key', 1); removeItem('steel_key', 1);
+    addStoryItem('hearthstone');
+    if (gameData.flags.elfSacrifice && !gameData.flags.elfRestored) {
+      gameData.maxHp += 25; gameData.hp = Math.min(gameData.maxHp, gameData.hp + 25);
+      gameData.flags.elfRestored = true;
+    }
+    ST.step = 'road'; ST.pendingCombine = true; updateUI();
+  }
+  function refreshStoryStep() {
+    const f = gameData.flags;
+    if (f.supplyOutcome === 'blackmarket') ST.selfish = true;
+    if (ST.step === 'supply' && f.supplyOutcome) ST.step = 'henrik';
+    if (ST.step === 'henrik' && f.ch1_henrikBriefed) ST.step = 'kaelen';
+    if (ST.step === 'wendigo' && f.wf_wendigo) ST.step = 'kaelen_return';
+    if (ST.step === 'kaelen_return' && f.ch1_kaelenDone) { ST.chapter = 2; ST.step = 'keys'; }
+    if (ST.step === 'keys' && f.elfKey && f.dwarfKey && !f.hearthstone) combineKeys();
+    if (ST.step === 'road' && f.shadowDefeated) ST.step = 'capital';
+    if (ST.step === 'capital' && Object.keys(ST.clues).length >= 3) ST.step = 'veyra';
+    if (ST.step === 'veyra' && f.ch4_truth) ST.step = 'engine';
+    if (currentMapId === 'sun_engine' && ST.step !== 'final' && ST.step !== 'done') ST.step = 'final';
+    if (ST.ending && ST.step !== 'done') ST.step = 'done';
+    if (ST.step !== ST._lastStep) { ST._lastStep = ST.step; updateUI(); }
+  }
+
+  /* ==========================================================================
+     7. DIALOG CERITA
+     ========================================================================== */
+  const oldInteract = interactWithNPC;
+
+  function henrikStory(npc) {
+    if (!gameData.flags.rewardClaimed) return oldInteract(npc);
+    if (ST.step !== 'henrik') return oldInteract(npc);
+    startDialogue('Vogt Henrik','Manusia — Kepala Desa Oakhaven','#e06c75',
+      '"Aldric... monster di Hutan Belantara semakin ganas. Mereka keluar dari sarang seperti didorong sesuatu yang lebih besar. Pergilah ke barat, temui Kaelen sang Pemburu Buta di pos perkemahan. Ia tahu lebih banyak tentang anomali ini."',
+      [{ label:'Aku akan mencarinya.', action:()=>{ gameData.flags.ch1_henrikBriefed=true; ST.step='kaelen'; updateUI(); closeDialogue(); } }]);
+  }
+  function kaelenStory() {
+    if (ST.step === 'kaelen') {
+      return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion — Pemburu Buta','#a9def9',
+        '"Kau melihatnya juga, kan? Monster-monster ini bukan sekadar kelaparan. Ada yang menarik mereka keluar dari sarang. Di barat, Wendigo Lembah Beku telah berubah... ia tidak lagi sekadar monster. Buru dia, Aldric. Bawa apa pun yang tersisa darinya."',
+        [ { label:'Aku akan memburu Wendigo.', action:()=>{ ST.step='wendigo'; updateUI(); closeDialogue(); } },
+          { label:'Aku butuh waktu.', action: closeDialogue } ]);
+    }
+    if (ST.step === 'wendigo') return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion','#a9def9',
+      '"Wendigo itu ada di barat. Jangan remehkan ia."', [{label:'Aku akan kembali.',action:closeDialogue}]);
+    if (ST.step === 'kaelen_return' || (gameData.flags.wf_wendigo && !gameData.flags.ch1_blackAether)) {
+      if (!hasItem('black_aether')) return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion','#a9def9',
+        '"Kau kembali tanpa bukti. Bawa pecahan yang tersisa dari Wendigo."', [{label:'Aku akan kembali.',action:closeDialogue}]);
+      gameData.flags.ch1_blackAether = true; gameData.flags.ch1_kaelenDone = true; ST.chapter = 2; ST.step = 'keys'; updateUI();
+      return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion — Pemburu Buta','#a9def9',
+        '"Pecahan Aether Hitam... sama seperti yang kulihat dulu, sebelum mataku dibakar. Wendigo itu dulunya manusia. Korban eksperimen Ibu Kota, dibuang ke hutan. Musim dingin ini bukan bencana alam, Aldric. Ini buatan manusia. Untuk melewati badai es di Jalan Setapak, kau butuh Hearthstone. Kuncinya dipecah dua: Setengah Kunci Zamrud di Suaka Elf, dan Setengah Kunci Baja di Khaz-Karst. Satukan tiga api."',
+        [{label:'Aku akan menyatukan kunci-kunci itu.',action:closeDialogue}]);
+    }
+    if (ST.chapter >= 2) return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion','#a9def9',
+      '"Jangan biarkan rasa bersalah membekukanmu. Rime-rot itu bukan penyakit — itu cermin."',
+      [{label:'Terima kasih, Kaelen.',action:closeDialogue}]);
+    startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion — Pemburu Buta','#a9def9',
+      '"Kau datang untuk berburu, atau untuk melunasi utang?"', [{label:'Aku datang untuk mencari jawaban.',action:closeDialogue}]);
+  }
+  function elaraStory() {
+    if (ST.chapter < 2) return startDialogue('Elara, Penenun Memori','Kaum Aethel — Penenun Memori','#c792ea',
+      '"Kau belum siap mendengar apa yang mereka bisikkan."', [{label:'Aku akan kembali.',action:closeDialogue}]);
+    if (gameData.flags.elfKey) return startDialogue('Elara, Penenun Memori','Kaum Aethel — Penenun Memori','#c792ea',
+      '"Setengah Kunci Zamrud telah kau pegang."', [{label:'Terima kasih, Elara.',action:closeDialogue}]);
+    if (!hasItem('black_aether')) return startDialogue('Elara, Penenun Memori','Kaum Aethel — Penenun Memori','#c792ea',
+      '"Bawa pecahan memori itu padaku."', [{label:'Aku akan mencarinya.',action:closeDialogue}]);
+    startDialogue('Elara, Penenun Memori','Kaum Aethel — Penenun Memori','#c792ea',
+      '"Pecahan Aether Hitam... Pohon Suci kami layu karena energinya dicuri. Untuk menghidupkannya kembali, aku butuh kehangatan dari tubuhmu sendiri. Ini akan mengorbankan sebagian Maximum HP-mu — untuk sementara. Maukah kau memberikannya?"',
+      [ { label:'Ya. Ambil sebagian kehangatanku. (Max HP -25)', action:()=>{
+            gameData.maxHp = Math.max(20, gameData.maxHp - 25);
+            gameData.hp = Math.min(gameData.hp, gameData.maxHp);
+            gameData.flags.elfKey = true; gameData.flags.elfSacrifice = true;
+            addStoryItem('emerald_key'); updateUI(); refreshStoryStep();
+            startDialogue('Elara, Penenun Memori','Kaum Aethel — Penenun Memori','#c792ea',
+              '"Pohon Suci bernapas lagi... Setengah Kunci Zamrud kini milikmu."',
+              [{label:'Terima kasih, Elara.',action:closeDialogue}]);
+        } },
+        { label:'Aku belum siap.', action: closeDialogue } ]);
+  }
+  function varekStory() {
+    if (ST.chapter < 2) return startDialogue('Thane Varek sang Radikal','Kaum Dwarf — Pemimpin Faksi Radikal','#e06c75',
+      '"Manusia permukaan. Kau datang ke kota kami yang sekarat."', [{label:'Aku akan mencari tahu.',action:closeDialogue}]);
+    if (!gameData.flags.varekProof) {
+      if (!gameData.flags.golemDefeated) return startDialogue('Thane Varek sang Radikal','Kaum Dwarf — Pemimpin Faksi Radikal','#e06c75',
+        '"Agen Ibu Kota memprogram ulang Automaton Besi di sektor tenggara. Hancurkan mesin itu, dan bawa buktinya padaku."',
+        [{label:'Aku akan menghancurkannya.',action:closeDialogue}]);
+      gameData.flags.varekProof = true; updateUI();
+      return startDialogue('Thane Varek sang Radikal','Kaum Dwarf — Pemimpin Faksi Radikal','#e06c75',
+        '"Jadi benar... mereka menyabotase tambang kami. Aku hampir menenggelamkan kota ini karena kemarahan. Pergilah ke Raja Durgan. Ia memegang Setengah Kunci Baja."',
+        [{label:'Aku akan menemui Raja Durgan.',action:closeDialogue}]);
+    }
+    if (!gameData.flags.dwarfKey) return startDialogue('Thane Varek sang Radikal','Kaum Dwarf','#e06c75',
+      '"Raja Durgan menunggumu di Aula Tahta."', [{label:'Baiklah.',action:closeDialogue}]);
+    startDialogue('Thane Varek sang Radikal','Kaum Dwarf','#e06c75',
+      '"Kau telah membuktikan bahwa lari dari masalah bukanlah jawaban."', [{label:'Terima kasih, Varek.',action:closeDialogue}]);
+  }
+  function durganStory() {
+    if (ST.chapter < 2) return oldInteract({id:'durgan',name:'Thane Durgan Ironmantle',race:'Raja Dwarf',color:'#ffd966',x:0,y:0,spriteKey:'durgan'});
+    if (gameData.flags.dwarfKey) return startDialogue('Thane Durgan Ironmantle','Raja Dwarf — Penguasa Khaz-Karst','#ffd966',
+      '"Setengah Kunci Baja sudah di tanganmu. Satukan dengan Kunci Zamrud."', [{label:'Terima kasih, Yang Mulia.',action:closeDialogue}]);
+    if (gameData.flags.varekProof) {
+      gameData.flags.dwarfKey = true; addStoryItem('steel_key'); updateUI(); refreshStoryStep();
+      return startDialogue('Thane Durgan Ironmantle','Raja Dwarf — Penguasa Khaz-Karst','#ffd966',
+        '"Varek mengirimmu. Ambillah Setengah Kunci Baja ini. Satukan dengan Kunci Zamrud, dan bukalah jalan penebusan."',
+        [{label:'Terima kasih, Yang Mulia.',action:closeDialogue}]);
+    }
+    startDialogue('Thane Durgan Ironmantle','Raja Dwarf — Penguasa Khaz-Karst','#ffd966',
+      '"Bantu Varek membersihkan sabotase di sektor tenggara dulu."', [{label:'Aku akan membantu Varek.',action:closeDialogue}]);
+  }
+  function shadowTrial() {
+    const n = ST.shadowDefends || 0;
+    startDialogue('Roh Malthus','Gerbang Rahasia — Ujian Penebusan','#9ef0ff',
+      n === 0
+        ? '"Aldric Vane. Bayanganmu berdiri di depammu — semua rumah yang kau sita. Untuk melewati gerbang ini, jangan menyerang. Bertahan. Lepaskan Hearthstone, dan biarkan bayangan itu menyerapnya."'
+        : `"Kau bertahan (${n}/3). Jangan angkat pedang."`,
+      [ { label:'Bertahan dan lepaskan Hearthstone.', action:()=>{
+            ST.shadowDefends = n + 1;
+            if (ST.shadowDefends >= 3) {
+              gameData.flags.shadowDefeated = true; ST.step = 'capital'; updateUI();
+              startDialogue('Roh Malthus','Gerbang Rahasia — Ujian Penebusan','#9ef0ff',
+                '"Bayangan itu menyerap Hearthstone-mu... dan tidak menghancurkannya. Rime-rot bukan penyakit, Aldric. Itu rasa bersalahmu. Jalan ke Aurelion terbuka."',
+                [{label:'Aku akan menghadapinya.',action:closeDialogue}]);
+            } else shadowTrial();
+        } },
+        { label:'Serang bayangan itu.', action:()=>{
+            ST.shadowDefends = 0;
+            startDialogue('Bayangan Aldric','Cermin Rime-rot','#5ca4b8',
+              'Seranganmu membuat bayangan semakin kuat. Bertahan, bukan menyerang.',
+              [{label:'Coba lagi.',action:shadowTrial}]);
+        } } ]);
+  }
+  function malthusStory() {
+    if (ST.step !== 'road') return startDialogue('Roh Malthus','Mentor Aldric yang Tumbang','#9ef0ff',
+      gameData.flags.shadowDefeated ? '"Jalan telah kau lewati."' : '"Badai es belum reda."',
+      [{label:'Aku akan kembali.',action:closeDialogue}]);
+    shadowTrial();
+  }
+  function capitalClue(id) {
+    const info = { cap_roderic:['Kapten Gerbang Roderic','Manusia — Penjaga Gerbang Barat','#e06c75'],
+                   cap_tobias:['Juru Tulis Tobias','Manusia — Pencatat Pendatang','#d7c9a8'],
+                   cap_pip:['Pip Anak Jalanan','Manusia — Anak Pasar','#ffd166'] }[id];
+    if (!info) return false;
+    const key = id.replace('cap_', '');
+    const first = !ST.clues[key];
+    if (first) { ST.clues[key] = true; if (Object.keys(ST.clues).length >= 3) ST.step = 'veyra'; updateUI(); }
+    const txt = { roderic:'"Karavan pasokan ke istana tidak pernah berhenti, meski desa luar membeku. Mereka membawa kristal hitam ke bawah tanah."',
+                  tobias:'"Catatanku: pengiriman panas bumi dari Khaz-Karst dan Aether dari Hutan Elf. Semuanya menuju Sun-Engine di bawah istana."',
+                  pip:'"Penyihir jubah ungu membawa pecahan hitam ke tangga rahasia di sisi istana."' }[key];
+    startDialogue(info[0], info[1], info[2], first ? txt : '"Aku sudah bilang semua yang kutahu."', [{label:'Terima kasih.',action:closeDialogue}]);
+    return true;
+  }
+  function veyraStory() {
+    if (ST.step === 'veyra' || Object.keys(ST.clues).length >= 3) {
+      gameData.flags.ch4_truth = true; ST.step = 'engine'; updateUI();
+      return startDialogue('Penyihir Istana Veyra','Manusia — Peneliti Aether','#c792ea',
+        '"Jadi kau sudah tahu. Sun-Engine menyedot panas Khaz-Karst dan Aether Hutan Elf untuk menjaga Aurelion hangat. Aku mengorbankan pinggiran demi pusat peradaban. Temui aku di Inti Mesin — tangga rahasia di sisi istana akan terbuka."',
+        [{label:'Aku akan menghentikannya.',action:closeDialogue}]);
+    }
+    startDialogue('Penyihir Istana Veyra','Manusia — Peneliti Aether','#c792ea',
+      '"Aku sedang sibuk, Pengelana."', [{label:'Permisi.',action:closeDialogue}]);
+  }
+  function engineEntranceStory() {
+    if (!gameData.flags.ch4_truth) return startDialogue('Tangga ke Inti Mesin','Rahasia Istana','#ff875c',
+      'Tangga ini terkunci oleh segel Aether. Kau belum mengetahui kebenaran yang cukup untuk membukanya.',
+      [{label:'Kembali.',action:closeDialogue}]);
+    startDialogue('Tangga ke Inti Mesin','Rahasia Istana — Bawah Tanah','#ff875c',
+      'Segel Aether terbuka. Di bawah sana, Sun-Engine berdenyut seperti jantung yang kepanasan.',
+      [{ label:'Turun ke Inti Mesin.', action:()=> switchMap('sun_engine', 15, 17) }]);
+  }
+  function veyraBossStory() {
+    if (gameData.flags.finalBattleDone) return startDialogue('Sun-Engine','Mesin Surya — Retak','#ff875c',
+      'Mesin itu retak. Pilihanmu telah menentukan nasib Lembah Vaelen.',
+      [{label:'Lihat epilog.',action:()=> showEndingChoice()}]);
+    startDialogue('Arch-Mage Veyra','Penyihir Istana Aurelion — Arsitek Salju','#c792ea',
+      '"Kau datang juga, Juru Sita. Sun-Engine sudah retak. Untuk menghentikanku, kau harus menghancurkan mesin ini — dan aku tidak akan membiarkanmu."',
+      [ { label:'⚔ Lawan Veyra dan hancurkan Sun-Engine.', action:()=>{ closeDialogue(); startCombat('veyra'); } },
+        { label:'Dengar dulu.', action: closeDialogue } ]);
+  }
+
+  /* ==========================================================================
+     8. WRAPPER INTERAKSI
+     ========================================================================== */
+  interactWithNPC = function (npc) {
+    if (!npc) return oldInteract(npc);
+    if (npc.id === 'henrik' && ST.step === 'henrik') return henrikStory(npc);
+    if (npc.id === 'kaelen') return kaelenStory();
+    if (npc.id === 'elara') return elaraStory();
+    if (npc.id === 'varek') return varekStory();
+    if (npc.id === 'durgan' && ST.chapter >= 2) return durganStory();
+    if (npc.id === 'malthus') return malthusStory();
+    if (npc.id === 'cap_roderic' || npc.id === 'cap_tobias' || npc.id === 'cap_pip')
+      if (ST.step === 'capital' || ST.step === 'veyra') return capitalClue(npc.id);
+    if (npc.id === 'cap_veyra' && ST.step === 'veyra') return veyraStory();
+    if (npc.id === 'engine_entrance') return engineEntranceStory();
+    if (npc.id === 'veyra_boss') return veyraBossStory();
+    if (npc.id === 'sun_engine_core') {
+      if (gameData.flags.finalBattleDone) return showEndingChoice();
+      return startDialogue('Sun-Engine','Mesin Surya — Berdenyut','#ff875c',
+        'Mesin ini berdenyut seperti jantung yang kepanasan. Veyra masih berdiri di dekatnya — kau belum bisa menyentuhnya.',
+        [{label:'Kembali.',action:closeDialogue}]);
+    }
+    const DISABLED = {
+      orin:'"Arsipku sudah cukup rapi. Fokus pada badai es di luar sana."',
+      tilda:'"Tekanan pipa stabil. Tidak ada yang perlu kau urus di sini."',
+      bramwell:'"Bir Emas Khaz-Karst sedang tidak diproduksi. Maaf."',
+      gretta:'"Pasar sedang sepi. Aku tidak butuh mediator hari ini."',
+      elincia:'"Delegasi Elf sedang sibuk. Kembalilah nanti."',
+      balin:'"Jalur tambang timur sudah aman. Tidak ada upah."',
+      thalorien:'"Suaka Elf sedang berkabung. Bicaralah dengan Elara."'
+    };
+    if (DISABLED[npc.id]) return startDialogue(npc.name, npc.race, npc.color, DISABLED[npc.id], [{label:'Baiklah.',action:closeDialogue}]);
+    return oldInteract(npc);
+  };
+
+  // Wendigo (bos Bab 1) baru bisa dilawan setelah Kaelen memberi misinya
+  const oldStartCombat = startCombat;
+  startCombat = function (key, id) {
+    if ((key === 'wf_wendigo' || id === 'wf_wendigo') && !(ST.step === 'wendigo' || gameData.flags.ch1_kaelenDone)) {
+      return startDialogue('Wendigo Lembah Beku','Belum Waktunya','#a9def9',
+        'Aura Wendigo ini terasa janggal dan terlalu kuat. Temui Kaelen sang Pemburu Buta lebih dulu agar kau tahu apa yang kau hadapi.',
+        [{label:'Mundur.',action:closeDialogue}]);
+    }
+    return oldStartCombat.apply(this, arguments);
+  };
+
+  /* ==========================================================================
+     9. WRAPPER PERTARUNGAN
+     ========================================================================== */
+  if (!ENEMY_TYPES.veyra) ENEMY_TYPES.veyra = {
+    id:'veyra', title:'⚔ Klimaks — Sun-Engine & Arch-Mage Veyra ⚔',
+    name:'Arch-Mage Veyra', sub:'Arsitek Salju — Penyihir Istana Aurelion',
+    intent:'Sikap: Menyalurkan Api Murni Sun-Engine',
+    maxHp:260, minDmg:18, maxDmg:26,
+    attackDesc:'melepaskan gelombang api dan kristal Aether',
+    lootId:null, lootName:null, lootDesc:null
+  };
+
+  const oldCombatAction = window.combatAction;
+  window.combatAction = function (actionType) {
+    if (typeof oldCombatAction === 'function') oldCombatAction(actionType);
+    if (enemy && enemy.id === 'wf_wendigo' && enemy.hp <= 0 && !gameData.flags.ch1_blackAether) {
+      gameData.flags.ch1_blackAether = true; addStoryItem('black_aether');
+      ST.step = 'kaelen_return'; updateUI();
+    }
+    if (currentState === STATE.COMBAT && enemy && enemy.id === 'veyra' && enemy.hp > 0 && !ST.veyraPhase2 && enemy.hp <= enemy.maxHp * 0.5) {
+      ST.veyraPhase2 = true;
+      enemy.minDmg += 6; enemy.maxDmg += 8;
+      enemy.name = 'Veyra — Wujud Setengah Dewa';
+      const n = document.getElementById('enemy-name'); if (n) n.textContent = enemy.name;
+      const it = document.getElementById('enemy-intent'); if (it) it.textContent = 'Sikap: Aether & Api tidak stabil';
+      const log = document.getElementById('combatLog'); if (log) log.innerHTML += '<br><strong style="color:#c792ea;">Sun-Engine menggeliat. Veyra menyerap seluruh sisa Aether dan berubah menjadi wujud setengah dewa api/es yang tidak stabil!</strong>';
+      updateCombatUI();
+    }
+    if (enemy && enemy.id === 'veyra' && enemy.hp <= 0 && !gameData.flags.finalBattleDone) {
+      gameData.flags.finalBattleDone = true; ST.step = 'final'; updateUI();
+      setTimeout(()=>{ currentState = STATE.EXPLORE; showEndingChoice(); }, 1700);
+    }
+  };
+
+  /* ==========================================================================
+     10. WRAPPER PETA & TRANSISI
+     ========================================================================== */
+  const oldSwitchMap = switchMap;
+  switchMap = function (id, c, r) {
+    if (id === 'sun_engine') {
+      clearAllMovementKeys();
+      currentMapId = id; WORLD_MAP = MAPS[id].grid;
+      player.x = c * T; player.y = r * T;
+      updateCamera(); updateUI();
+      const sub = document.getElementById('map-subtitle'); if (sub) sub.textContent = MAPS[id].subtitle;
+      currentState = STATE.EXPLORE;
+      return startDialogue('Inti Mesin Surya','Ruang Takhta — Bawah Istana Aurelion','#ff875c',
+        'Panas dan dingin bertabrakan di udara. Di depanmu, Sun-Engine berdenyut retak, dan Arch-Mage Veyra berdiri di antara pipa-pipa Aether yang berdesis.',
+        [{label:'Hadapi Veyra.',action:closeDialogue}]);
+    }
+    oldSwitchMap(id, c, r);
+    if (id === 'capital' && ST.chapter >= 3 && !gameData.flags.ch4_intro) {
+      gameData.flags.ch4_intro = true;
+      setTimeout(()=> startDialogue('Aurelion — Ibu Kota Kerajaan','Kontras dengan Lembah Vaelen','#ffd966',
+        'Aurelion hangat, terang, dan megah. Di luar tembok, desa-desa membeku. Di sinilah sumber musim dingin abadi itu bermula.',
+        [{label:'Selidiki kota ini.',action:closeDialogue}]), 120);
+    }
+  };
+
+  const oldCheckTransition = checkMapTransition;
+  checkMapTransition = function () {
+    const cc = Math.floor((player.x + 16) / T);
+    const cr = Math.floor((player.y + 20) / T);
+
+    // Jalan Setapak: tidak bisa lewat gerbang Malthus sebelum Ujian Penebusan selesai
+    if (currentMapId === 'elf_road' && !gameData.flags.shadowDefeated && cc >= 62) {
+      player.x = 61 * T; updateCamera();
+      const now = Date.now();
+      if (now - (ST.gateMsgAt || 0) > 1800) {
+        ST.gateMsgAt = now;
+        startDialogue('Gerbang Rahasia','Jalan Setapak Hutan Kuno','#9ef0ff',
+          'Ilusi orang-orang yang pernah kau usir menutup jalan. Roh Malthus menjaga gerbang ini — hadapi ujiannya lebih dulu.',
+          [{label:'Kembali.',action:closeDialogue}]);
+      }
+      return;
+    }
+
+    if (currentMapId === 'oakhaven' && cr >= 26 && cc >= 12 && cc <= 15)
+      return switchMap('forest', 13.5, 2.4);
+
+    if (currentMapId === 'forest') {
+      if (cr <= 0 && cc >= 12 && cc <= 15) return switchMap('oakhaven', 13, 23.2);
+      if (cr >= 26 && cc >= 6 && cc <= 9) return switchMap('dwarf_hold', 7.5, 1.5);
+      if (cc >= 38 && cr >= 16 && cr <= 19) {
+        if (!gameData.flags.hearthstone) {
+          player.x = 36.5 * T; player.y = 17.5 * T; updateCamera();
+          const now = Date.now();
+          if (now - (ST.gateMsgAt || 0) > 1800) {
+            ST.gateMsgAt = now;
+            startDialogue('Badai Es Jalan Setapak','Gerbang Timur Hutan Elf','#9ef0ff',
+              'Badai es yang tidak wajar menutup Jalan Setapak. Tanpa Hearthstone, tubuhmu akan membeku. Satukan Setengah Kunci Zamrud dan Setengah Kunci Baja terlebih dahulu.',
+              [{label:'Aku akan kembali.',action:closeDialogue}]);
+          }
+          return;
+        }
+        return switchMap('elf_road', 1.8, storyPathRow(1) + 0.4);
+      }
+      return;
+    }
+    if (currentMapId === 'dwarf_hold' && cr <= 0 && (cc === 7 || cc === 8))
+      return switchMap('forest', 7.5, 23.5);   // di atas baris gerbang (baris 26+) agar tidak terpental balik ke Dwarf
+    if (currentMapId === 'elf_road' && cc <= 0)
+      return switchMap('forest', 37.2, 17.5);
+    if (currentMapId === 'sun_engine' && cr >= 20 && (cc === 14 || cc === 15))
+      return switchMap('capital', 128, 58);
+    oldCheckTransition();
+  };
+
+  /* ==========================================================================
+     11. WRAPPER JURNAL, HUD, RENDER
+     ========================================================================== */
+  const oldRenderQuestLog = renderQuestLog;
+  renderQuestLog = function () {
+    oldRenderQuestLog();
+    const box = document.getElementById('quest-status'); if (!box) return;
+    const REMOVE = ['Gerobak Pasokan Oakhaven','Teka-Teki Prasasti Orin','Kalibrasi Uap Tilda','Racikan Bir Bramwell','Mediasi Pasar Gretta','Jalur Tambang Thane Durgan','Penjaga Suaka Thalorien'];
+    box.querySelectorAll('.quest-item').forEach(it => { const t = it.textContent || ''; if (REMOVE.some(x => t.indexOf(x) >= 0)) it.remove(); });
+    // Perbaiki koordinat setelah peta Elf 2x
+    let html = box.innerHTML;
+    html = html.replace(/Caelen \(\d+,\s*\d+\)/g, 'Caelen (16, 8)');
+    html = html.replace(/bunga \(\d+,\s*\d+\)/g, 'bunga (16, 20)');
+    box.innerHTML = html;
+    const o = getStoryObjective();
+    const li = ST.step === 'done'
+      ? `<div class="quest-item"><strong class="q-done">✔ [Utama] ${o.title}</strong><br><span style="color:#98c379;">${o.text}</span></div>`
+      : `<div class="quest-item"><strong class="q-active">◈ [Utama] ${o.title}</strong><br><span style="color:#ffd966;">${o.text}</span></div>`;
+    box.insertAdjacentHTML('afterbegin', li);
+    const cnt = document.getElementById('quest-counter');
+    if (cnt) {
+      const items = box.querySelectorAll('.quest-item'); let done = 0, total = 0;
+      items.forEach(it => { if (it.querySelector('.q-done')) done++; if (it.querySelector('.q-active,.q-done')) total++; });
+      cnt.textContent = done + '/' + total + ' Selesai';
+    }
+  };
+
+  const oldRender = render;
+  render = function () {
+    oldRender();
+    if (currentState !== STATE.COMBAT) {
+      const list = npcsByMap[currentMapId] || [];
+      const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 260);
+      for (const n of list) {
+        if (!isStoryNpc(n)) continue;
+        const sx = n.x + 16 - camera.x, sy = n.y - 12 - camera.y;
+        if (sx < -30 || sx > canvas.width + 30 || sy < -30 || sy > canvas.height + 30) continue;
+        ctx.save(); ctx.translate(sx, sy - 4 - pulse * 2); ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = '#0b2b33'; ctx.fillRect(-4, -4, 8, 8);
+        ctx.strokeStyle = '#80ffdb'; ctx.lineWidth = 1.5; ctx.strokeRect(-4, -4, 8, 8);
+        ctx.fillStyle = 'rgba(128,255,219,' + (0.55 + 0.35 * pulse).toFixed(2) + ')';
+        ctx.fillRect(-2.5, -2.5, 5, 5);
+        ctx.restore();
+      }
+    }
+    if (currentMapId === 'forest' && !gameData.flags.hearthstone) {
+      const gx = 38 * T - camera.x, gy = 16 * T - camera.y, gw = 2 * T, gh = 4 * T;
+      if (gx < canvas.width && gx + gw > 0 && gy < canvas.height && gy + gh > 0) {
+        const p = 0.5 + 0.5 * Math.sin(Date.now() / 300);
+        ctx.save(); ctx.globalAlpha = 0.28 + 0.18 * p;
+        const g = ctx.createLinearGradient(gx, gy, gx, gy + gh);
+        g.addColorStop(0, 'rgba(158,240,255,0.15)');
+        g.addColorStop(0.5, 'rgba(158,240,255,0.75)');
+        g.addColorStop(1, 'rgba(158,240,255,0.15)');
+        ctx.fillStyle = g; ctx.fillRect(gx, gy, gw, gh);
+        ctx.globalAlpha = 0.9; ctx.strokeStyle = '#9ef0ff'; ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+          const yy = gy + (i + 0.5) * gh / 4 + Math.sin(Date.now() / 200 + i) * 3;
+          ctx.beginPath(); ctx.moveTo(gx, yy); ctx.lineTo(gx + gw, yy + 2); ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+  };
+
+  /* ==========================================================================
+     12. WRAPPER UPDATE
+     ========================================================================== */
+  const oldUpdate = update;
+  let storyFrame = 0;
+  update = function () {
+    oldUpdate();
+    if (++storyFrame % 20 === 0) refreshStoryStep();
+    if (ST.pendingCombine && currentState === STATE.EXPLORE) {
+      ST.pendingCombine = false;
+      startDialogue('Hearthstone Bersatu','Relik Penahan Suhu','#ffd966',
+        'Setengah Kunci Zamrud dan Setengah Kunci Baja menyatu. Hearthstone kembali menyala — badai es di Jalan Setapak Hutan Kuno kini dapat kau lewati. Kehangatan yang kau korbankan untuk Pohon Suci juga telah kembali.',
+        [{label:'Menuju Jalan Setapak.',action:closeDialogue}]);
+    }
+  };
+
+  /* ==========================================================================
+     13. FILTER NPC: VEYRA HILANG SETELAH TUMBANG
+     ========================================================================== */
+  const oldGetActiveNPCs = getActiveNPCs;
+  getActiveNPCs = function () {
+    const list = oldGetActiveNPCs();
+    if (!gameData.flags.finalBattleDone) return list;
+    return list.filter(n => n.id !== 'veyra_boss');
+  };
+
+  /* ==========================================================================
+     14. WRAPPER LOAD
+     ========================================================================== */
+  const oldLoadGame = window.loadGame;
+  window.loadGame = function (saved) {
+    const res = oldLoadGame.apply(this, arguments);
+    ensureStory(); ST = gameData.story;
+    if (saved && saved.currentMapId === 'forest' && !(saved.gameData && saved.gameData.flags && saved.gameData.flags.forestV2)) {
+      player.x *= 2; player.y *= 2; gameData.flags.forestV2 = true;
+      const p = findWalkable('forest', Math.floor(player.x / T), Math.floor(player.y / T), 8);
+      player.x = p.c * T; player.y = p.r * T;
+      if (currentMapId === 'forest') WORLD_MAP = MAPS.forest.grid;
+    }
+    if (currentMapId === 'forest') WORLD_MAP = MAPS.forest.grid;
+    if (currentMapId === 'sun_engine') WORLD_MAP = MAPS.sun_engine.grid;
+    refreshStoryStep(); updateUI();
+    return res;
+  };
+
+  /* ==========================================================================
+     15. PEMANGKASAN MISI IBU KOTA
+     ========================================================================== */
+  try {
+    const FV6 = window.FV6;
+    if (FV6 && FV6.CAP && FV6.CAPD) {
+      const keep = new Set(['nella','board','guard1','guard2']);
+      FV6.CAP.forEach(a => {
+        if (!keep.has(a[0])) { a[8] = null; if (FV6.CAPD['cap_'+a[0]]) FV6.CAPD['cap_'+a[0]].q = null; }
+      });
+    }
+  } catch (e) {}
+
+  /* ==========================================================================
+     16. MINIMAP: TANDA NPC CERITA
+     ========================================================================== */
+  function setupStoryMinimap() {
+    const mini = document.getElementById('mmMini');
+    const large = document.getElementById('mmLarge');
+    if (!mini || !large) return;
+    const mkOv = p => { const c = document.createElement('canvas'); c.className = 'story-mm-overlay'; p.appendChild(c); return c; };
+    const miniOv = mkOv(mini);
+    const body = large.querySelector('.mm-body'); if (body) body.style.position = 'relative';
+    const largeOv = body ? mkOv(body) : null;
+    const legend = large.querySelector('.mm-legend');
+    if (legend) { const s = document.createElement('span'); s.innerHTML = '<i style="background:#80ffdb;box-shadow:0 0 0 1px #d4af37;"></i>NPC Cerita Utama'; legend.appendChild(s); }
+
+    function diamond(ctx2, x, y, r, label) {
+      const p = 0.5 + 0.5 * Math.sin(Date.now() / 240);
+      ctx2.save(); ctx2.translate(x, y);
+      ctx2.strokeStyle = 'rgba(255,217,102,' + (0.35 + 0.4 * p).toFixed(2) + ')'; ctx2.lineWidth = 2;
+      ctx2.beginPath(); ctx2.arc(0, 0, r * 1.9 + p * 2, 0, 6.283); ctx2.stroke();      // cincin emas berdenyut
+      ctx2.rotate(Math.PI / 4);
+      ctx2.fillStyle = '#d4af37'; ctx2.fillRect(-r - 1.5, -r - 1.5, r * 2 + 3, r * 2 + 3);
+      ctx2.fillStyle = '#80ffdb'; ctx2.fillRect(-r, -r, r * 2, r * 2);
+      ctx2.fillStyle = '#fff'; ctx2.fillRect(-r * 0.35, -r * 0.35, r * 0.7, r * 0.7);
+      ctx2.restore();
+      if (label) { ctx2.save(); ctx2.font = 'bold 10px sans-serif'; ctx2.textAlign = 'center';
+        ctx2.lineWidth = 3; ctx2.strokeStyle = '#000'; ctx2.strokeText(label, x, y - r * 2.2);
+        ctx2.fillStyle = '#80ffdb'; ctx2.fillText(label, x, y - r * 2.2); ctx2.restore(); }
+    }
+    function draw(ctx2, W, H, mode) {
+      ctx2.clearRect(0, 0, W, H);
+      const list = npcsByMap[currentMapId] || [];
+      const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 240);
+      if (mode === 'mini') {
+        if (!mini.classList.contains('show')) return;
+        const VW = 25, VH = 17;
+        const pcx = (player.x + 16) / T, pcy = (player.y + 16) / T;
+        const x0 = pcx - VW / 2, y0 = pcy - VH / 2;
+        const sx = W / VW, sy = H / VH;
+        for (const n of list) {
+          if (!window.__isStoryNpc(n) || !window.__npcOnScreen(n, 3 * T)) continue;
+          const ex = ((n.x + 16) / T - x0) * sx, ey = ((n.y + 16) / T - y0) * sy;
+          if (ex < -8 || ey < -8 || ex > W + 8 || ey > H + 8) continue;
+          diamond(ctx2, ex, ey, 3.2);
+        }
+      } else {
+        if (!large.classList.contains('show')) return;
+        const cols = WORLD_MAP[0].length, rows = WORLD_MAP.length;
+        const k = Math.max(2, Math.floor(Math.min(900 / cols, 620 / rows)));
+        const bw = cols * k, bh = rows * k;
+        const sc = Math.min(W / bw, H / bh);
+        const ox = (W - bw * sc) / 2, oy = (H - bh * sc) / 2;
+        for (const n of list) {
+          if (!window.__isStoryNpc(n) || !window.__npcOnScreen(n)) continue;
+          diamond(ctx2, ox + ((n.x + 16) / T) * k * sc, oy + ((n.y + 16) / T) * k * sc, 5, String(n.name || '').replace(/\s*\(.*$/, '').replace(/^(Vogt|Thane|Roh|Arch-Mage|Kapten|Juru Tulis|Master|Penyihir)\s+/, '').split(',')[0].slice(0, 16));
+        }
+      }
+    }
+    let last = 0;
+    (function loop(t) {
+      if (t - last > 80) {
+        last = t;
+        if (miniOv) { const W = mini.clientWidth, H = mini.clientHeight;
+          if (miniOv.width !== W) miniOv.width = W;
+          if (miniOv.height !== H) miniOv.height = H;
+          draw(miniOv.getContext('2d'), W, H, 'mini'); }
+        if (largeOv && body) { const W = body.clientWidth, H = body.clientHeight;
+          if (largeOv.width !== W) largeOv.width = W;
+          if (largeOv.height !== H) largeOv.height = H;
+          draw(largeOv.getContext('2d'), W, H, 'large'); }
+      }
+      requestAnimationFrame(loop);
+    })(0);
+  }
+  setupStoryMinimap();
+
+  /* ==========================================================================
+     17. ENDING
+     ========================================================================== */
+  let endingEl = null;
+  function ensureEndingUI() {
+    if (endingEl) return;
+    endingEl = document.createElement('div');
+    endingEl.id = 'storyEnding';
+    endingEl.innerHTML =
+      '<div class="se-box"><h2 id="seTitle"></h2><div class="se-sub" id="seSub"></div>' +
+      '<div class="se-body" id="seBody"></div>' +
+      '<div class="se-btns"><button id="seContinue">Lanjutkan Menjelajah</button><button id="seMenu">Menu Utama</button></div></div>';
+    document.body.appendChild(endingEl);
+    document.getElementById('seContinue').onclick = () => endingEl.classList.remove('open');
+    document.getElementById('seMenu').onclick = () => { endingEl.classList.remove('open'); if (typeof window.openMainMenu === 'function') window.openMainMenu(); };
+  }
+  function showEnding(type) {
+    ensureEndingUI();
+    ST.ending = type; ST.step = 'done'; gameData.flags.ending = type; updateUI();
+    const title = document.getElementById('seTitle');
+    const sub = document.getElementById('seSub');
+    const body = document.getElementById('seBody');
+    if (type === 'good') {
+      title.textContent = 'Ash & Rime — Epilog: Kehangatan dari Abu';
+      sub.textContent = 'Good Ending — Pengorbanan Penuh';
+      body.innerHTML =
+        '<p>Aldric memeluk Sun-Engine. Seluruh Rime-rot di darahnya mengalir keluar, menyerap panas yang tak terbatas. Kristal es di pembuluh darahnya retak, menguap, dan menghanguskan tubuhnya dari dalam.</p>' +
+        '<p>Ledakan kehangatan menyapu Lembah Vaelen. Oakhaven mencair. Pohon Suci Aethel kembali bersemi. Pipa magma Khaz-Karst berdenyut hangat. Aurelion kehilangan mesinnya, tetapi tidak kehilangan rakyatnya.</p>' +
+        '<p><b>Aldric Vane</b> dikenang bukan sebagai Juru Sita yang membekukan desa, melainkan sebagai <em>Pahlawan dari Abu</em> — lelaki yang menebus dosa dengan mengembalikan kehangatan yang pernah ia rampas.</p>';
+    } else if (type === 'neutral') {
+      title.textContent = 'Ash & Rime — Epilog: Musim Semi Tanpa Sihir';
+      sub.textContent = 'Neutral Ending — Penghancuran Paksa';
+      body.innerHTML =
+        '<p>Aldric menghancurkan Sun-Engine dengan pedangnya. Ledakan sihir melontarkannya ke luar istana. Langit Aurelion pecah, dan untuk pertama kalinya dalam puluhan tahun, salju berhenti turun di Lembah Vaelen.</p>' +
+        '<p>Dunia kembali hangat. Namun kekuatan sihir lenyap selamanya. Kaum Elf kehilangan keabadian mereka; kaum Dwarf kehilangan mesin uap dan tambang ajaib mereka. Aldric hidup, tetapi lengannya tak lagi mampu mengangkat pedang.</p>' +
+        '<p>Ia menatap matahari terbit di atas Oakhaven, dan berharap kehangatan ini cukup untuk menutup semua luka yang pernah ia buat.</p>';
+    } else {
+      title.textContent = 'Ash & Rime — Epilog: Tahta Es';
+      sub.textContent = 'Dark Ending — Pengganti Veyra';
+      body.innerHTML =
+        '<p>Aldric membunuh Veyra dan meletakkan tangannya di atas Sun-Engine yang retak. Ia berjanji akan mendistribusikan kehangatan secara "adil" — tetapi Rime-rot telah merayapi hatinya.</p>' +
+        '<p>Ia menjadi penguasa baru Aurelion. Pasar gelap yang dulu ia bela kini menjadi hukum. Mereka yang menentangnya dibekukan di alun-alun istana, menjadi patung es sebagai peringatan.</p>' +
+        '<p>Lembah Vaelen tetap hangat — tetapi hanya bagi mereka yang bersedia tunduk pada <b>Raja Es</b> yang baru.</p>';
+    }
+    endingEl.classList.add('open');
+  }
+  function showEndingChoice() {
+    if (ST.ending) return;
+    startDialogue('Sun-Engine Retak','Pilihan Akhir — Rime & Ash','#ffd966',
+      'Mesin Surya retak. Untuk melepaskan kehangatan kembali ke seluruh Lembah Vaelen, mesin itu membutuhkan katalis absolut penyerap panas. Veyra telah tumbang. Apa yang akan kau lakukan, Aldric?',
+      [ { label:'Peluk Mesin Surya. Salurkan seluruh Rime-rot. (Pengorbanan Penuh)', action:()=> showEnding('good') },
+        { label:'Hancurkan mesin dengan pedangmu. (Penghancuran Paksa)', action:()=> showEnding('neutral') } ]
+      .concat(ST.selfish ? [{ label:'Ambil alih Sun-Engine. Janji distribusi "adil". (Tahta Es)', action:()=> showEnding('dark') }] : []));
+  }
+  if (gameData.flags.finalBattleDone && !ST.ending) {
+    setTimeout(()=>{ if (!ST.ending && currentState === STATE.EXPLORE) showEndingChoice(); }, 1200);
+  }
+
+  /* ==========================================================================
+     18. INIT
+     ========================================================================== */
+  refreshStoryStep();
+  updateUI();
+  window.__storyReady = true;
+})();
+</script>
+<!-- ▲▲▲ AKHIR PATCH CERITA UTAMA ▲▲▲ -->
   <!-- ===== MAIN MENU (Mulai / Muat / Pengaturan / Informasi) ===== -->
   <style>
     #mainMenu { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; overflow: hidden;
@@ -7902,6 +8793,161 @@
     if (!raw) return;
     try { window.loadGame(JSON.parse(raw)); }
     catch (e) { startDialogue('Gagal Memuat', 'Sistem', '#e06c75', 'Data impor rusak atau tidak kompatibel.', [{ label: 'Tutup', action: closeDialogue }]); }
+  })();
+  </script>
+  <style id="equipment-css">
+    /* Panel Perlengkapan terbuka: sembunyikan joystick & tombol aksi agar tidak menghalangi */
+    html.eq-open .touch-controls, html.eq-open #touchControls, html.eq-open #joyZone, html.eq-open #joystick,
+    html.eq-open #btnTouchAction { display: none !important; }
+  </style>
+  <script id="equipment-js">
+(function () {
+  'use strict';
+  const W = {
+    sword0:{n:'Pedang Sita Tumpul',atk:16}, sylvan_blessing:{n:'Pedang Berkah Sylvan',atk:21},
+    spear:{n:'Tombak Cahaya Sylvan',atk:26}, twin:{n:'Pedang Kembar Bintang Aethel',atk:34},
+    belati:{n:'Belati Pasar Bayangan',atk:21}, bilah:{n:'Bilah Baja Aurelion',atk:24}, kapak:{n:'Kapak Perang Karst',atk:28}
+  };
+  const A = {
+    coat0:{n:'Mantel Kulit Standar',def:0,hp:0}, zirah:{n:'Zirah Baja Karst',def:2,hp:25},
+    cloak:{n:'Jubah Tenun Perak',def:2,hp:30}, shield:{n:'Perisai Akar Zamrud',def:4,hp:55},
+    jubah:{n:'Jubah Bulu Rubah',def:0,hp:20}, sarung:{n:'Sarung Tangan Wol Domba',def:0,hp:10},
+    rompi:{n:'Rompi Kulit Berlapis',def:0,hp:30}, jimat:{n:'Jimat Perak Penghangat',def:0,hp:15}
+  };
+  const g = () => gameData;
+  const wObj = (id, x) => Object.assign({ id, n: (W[id] || {}).n || id, atk: (W[id] || {}).atk || 0 }, x || {});
+  const aObj = (id, x) => Object.assign({ id, n: (A[id] || {}).n || id, def: (A[id] || {}).def || 0, hp: (A[id] || {}).hp || 0 }, x || {});
+  let tab = 'weapon', msg = '';
+
+  function migrate() {
+    const d = g(), f = d.flags || {}, oldAtk = +d.weaponBonus || 16;
+    const e = d.equip = { v: 1, weapons: [wObj('sword0')], armors: [aObj('coat0')], w: 'sword0', a: 'coat0', sharpen: 0, hpApplied: 0 };
+    let sum = 16;
+    [['elfQuestRewarded','sylvan_blessing'],['elfSpearBought','spear'],['elfTwinbladeBought','twin'],['bg_belati','belati'],['bg_bilah','bilah'],['bg_kapak','kapak']]
+      .forEach(([k, id]) => { if (f[k]) { e.weapons.push(wObj(id)); sum += W[id].atk - 16; } });
+    let hp = 0;
+    [['hildeArmorBought','zirah'],['elfCloakBought','cloak'],['elfShieldBought','shield'],['bg_jubah','jubah'],['bg_sarung','sarung'],['bg_rompi','rompi'],['bg_jimat','jimat']]
+      .forEach(([k, id]) => { if (f[k]) { e.armors.push(aObj(id)); hp += A[id].hp; } });
+    e.sharpen = Math.max(0, oldAtk - sum);   // sisa bonus dari batu asah / tempa ulang
+    e.hpApplied = hp;                        // bonus HP lama yang sudah ada di maxHp
+    e.w = e.weapons.reduce((b, x) => x.atk > b.atk ? x : b).id;
+    e.a = e.armors.reduce((b, x) => (x.def * 100 + x.hp) > (b.def * 100 + b.hp) ? x : b).id;
+    apply();
+  }
+  function S() { const d = g(); if (!d.equip || !d.equip.v) migrate(); return d.equip; }
+  function apply() {
+    const d = g(), e = d.equip;
+    const w = e.weapons.find(x => x.id === e.w) || e.weapons[0], a = e.armors.find(x => x.id === e.a) || e.armors[0];
+    e.w = w.id; e.a = a.id;
+    const tot = w.atk + e.sharpen;
+    d.weaponBonus = tot; d.weaponName = w.n + ' (+' + tot + ')';
+    d.defenseReduction = a.def;
+    d.armorName = a.def > 0 ? a.n + ' (-' + a.def + ' Dmg)' : a.n + ' (+' + a.hp + ' HP)';
+    const dh = a.hp - e.hpApplied;
+    if (dh) { d.maxHp = Math.max(20, d.maxHp + dh); e.hpApplied = a.hp; }
+    d.hp = Math.min(d.hp, d.maxHp);
+  }
+  const refresh = () => { try { updateUI(); } catch (_) {} };
+
+  const EQ = window.EQ = {
+    add(kind, id, extra) {
+      const e = S(), list = kind === 'weapon' ? e.weapons : e.armors;
+      if (list.some(x => x.id === id)) return false;
+      list.push(kind === 'weapon' ? wObj(id, extra) : aObj(id, extra));
+      refresh(); return true;
+    },
+    sharpen(n) { const e = S(); e.sharpen += n; apply(); refresh(); },
+    equip(kind, id) {
+      const e = S();
+      if (typeof currentState !== 'undefined' && currentState === STATE.COMBAT) { msg = 'Tidak bisa berganti perlengkapan saat bertarung.'; return EQ.render(); }
+      const list = kind === 'weapon' ? e.weapons : e.armors;   // slot dipisah: senjata hanya dari daftar senjata, pertahanan dari daftar pertahanan
+      if (!list.some(x => x.id === id)) return;
+      if (kind === 'weapon') e.w = id; else e.a = id;
+      apply(); msg = ''; refresh();
+    },
+    tab(t) { tab = t; msg = ''; EQ.render(); },
+    render() {
+      const root = document.getElementById('eq-root'); if (!root) return;
+      const e = S(), d = g();
+      const w = e.weapons.find(x => x.id === e.w), a = e.armors.find(x => x.id === e.a);
+      const isW = tab === 'weapon', list = isW ? e.weapons : e.armors, cur = isW ? e.w : e.a;
+      const stat = x => isW ? 'Serangan +' + (x.atk + e.sharpen) : 'Redam ' + x.def + ' Dmg · Maks HP +' + x.hp;
+      root.innerHTML =
+        '<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">' +
+          '<canvas id="eq-fig" width="32" height="40" style="width:112px;height:140px;image-rendering:pixelated;background:rgba(0,0,0,.35);border:1px solid #735d46;border-radius:6px;flex:none;"></canvas>' +
+          '<div style="font-size:12px;line-height:1.7;">' +
+            '<div><span style="color:#8c8275;">Senjata</span><br><strong style="color:var(--gold-accent);">' + d.weaponName + '</strong></div>' +
+            '<div><span style="color:#8c8275;">Pertahanan</span><br><strong style="color:#98c379;">' + d.armorName + '</strong></div>' +
+            '<div style="color:#b8afa6;">HP Maks ' + d.maxHp + '</div>' +
+          '</div></div>' +
+        '<div class="eq-tabs" style="display:flex;gap:6px;margin-bottom:6px;">' +
+          ['weapon','armor'].map(k => '<button type="button" onclick="EQ.tab(\'' + k + '\')" style="flex:1;padding:6px;border:1px solid ' + (tab === k ? '#ffd966' : '#735d46') + ';background:' + (tab === k ? 'rgba(212,175,55,.85)' : 'rgba(56,46,36,.6)') + ';color:' + (tab === k ? '#1a1208' : '#e8dcc8') + ';border-radius:4px;cursor:pointer;font-weight:bold;">' + (k === 'weapon' ? '⚔ Senjata' : '🛡 Pertahanan') + '</button>').join('') +
+        '</div>' +
+        (msg ? '<div style="color:#e06c75;font-size:11px;margin-bottom:4px;">' + msg + '</div>' : '') +
+        '<div class="inventory-list" style="max-height:none;">' + list.map(x =>
+          '<div class="inv-item"><span><strong>' + x.n + '</strong><br><span style="font-size:10px;color:#b8afa6;">' + stat(x) + '</span></span>' +
+          (x.id === cur ? '<span style="color:#80ed99;font-size:11px;">✔ Terpasang</span>' : '<button type="button" onclick="EQ.equip(\'' + tab + '\',\'' + x.id + '\')">Pasang</button>') + '</div>').join('') + '</div>';
+      draw(document.getElementById('eq-fig'), w, a);
+    },
+    renderInvGear(box) {
+      const e = S();
+      const row = (kind, x, cur, label) => {
+        const div = document.createElement('div'); div.className = 'inv-item'; div.title = label;
+        div.innerHTML = '<span><strong>' + x.n + '</strong> <span style="font-size:10px;color:#8c8275;">(' + (kind === 'weapon' ? 'Senjata' : 'Pertahanan') + ')</span></span>' +
+          (cur ? '<span style="color:#80ed99;font-size:10px;">Terpasang</span>' : '<button type="button" onclick="EQ.equip(\'' + kind + '\',\'' + x.id + '\')">Pasang</button>');
+        box.appendChild(div);
+      };
+      e.weapons.forEach(x => row('weapon', x, x.id === e.w, 'Senjata'));
+      e.armors.forEach(x => row('armor', x, x.id === e.a, 'Pertahanan'));
+    }
+  };
+
+  // Potret karakter (pixel art) — tampilan berubah sesuai perlengkapan terpasang
+  function draw(cv, w, a) {
+    if (!cv) return; const x = cv.getContext('2d'); x.clearRect(0, 0, 32, 40);
+    const r = (px, py, pw, ph, c) => { x.fillStyle = c; x.fillRect(px, py, pw, ph); };
+    const body = { coat0:'#6b4a28', zirah:'#8e9aa3', cloak:'#b8c4d6', shield:'#5b7f4a', jubah:'#c2602d', sarung:'#6b4a28', rompi:'#7a5230', jimat:'#6b4a28' }[a.id] || '#6b4a28';
+    const hand = a.id === 'sarung' ? '#d9d2c4' : '#e0b48a';
+    r(11, 26, 4, 10, '#3b3b4a'); r(17, 26, 4, 10, '#3b3b4a'); r(11, 36, 4, 3, '#2a1d12'); r(17, 36, 4, 3, '#2a1d12');
+    r(10, 13, 12, 13, body); r(7, 13, 3, 11, body); r(22, 13, 3, 11, body); r(10, 24, 12, 2, '#3a2a1a');
+    if (a.id === 'cloak') { r(8, 13, 2, 17, '#8ea0bd'); r(22, 13, 2, 17, '#8ea0bd'); }
+    if (a.id === 'zirah') { r(12, 15, 8, 2, '#c5ced6'); r(12, 19, 8, 2, '#c5ced6'); }
+    if (a.id === 'rompi') { r(15, 13, 2, 11, '#4a3320'); }
+    if (a.id === 'jubah') { r(10, 13, 12, 3, '#f0e6d0'); }
+    if (a.id === 'jimat') { r(15, 16, 2, 3, '#d9e2ec'); }
+    r(7, 24, 3, 3, hand); r(22, 24, 3, 3, hand);
+    r(12, 4, 8, 8, '#e0b48a'); r(11, 3, 10, 3, '#c9d3dc'); r(11, 5, 1, 4, '#c9d3dc'); r(20, 5, 1, 4, '#c9d3dc');
+    r(14, 8, 1, 1, '#222'); r(17, 8, 1, 1, '#222');
+    if (a.id === 'shield') { r(1, 13, 7, 11, '#2f7a5a'); r(2, 14, 5, 9, '#4fae80'); r(4, 16, 1, 5, '#ffd966'); }
+    const id = w.id;
+    if (id === 'spear') { r(26, 2, 1, 34, '#7a5a30'); r(25, 0, 3, 4, '#cfe9d8'); }
+    else if (id === 'twin') { r(24, 8, 2, 17, '#9ee7ff'); r(27, 8, 2, 17, '#9ee7ff'); r(23, 24, 7, 2, '#8a6a2a'); }
+    else if (id === 'kapak') { r(26, 8, 1, 28, '#7a5a30'); r(27, 8, 5, 6, '#8a8f96'); }
+    else if (id === 'belati') { r(25, 17, 2, 8, '#c8d0d8'); r(24, 25, 4, 2, '#8a6a2a'); }
+    else if (id === 'bilah') { r(25, 8, 3, 16, '#aab4bc'); r(23, 24, 7, 2, '#8a6a2a'); }
+    else if (id === 'royal') { r(25, 6, 3, 18, '#ffd966'); r(23, 24, 7, 2, '#b8860b'); }
+    else { r(25, 6, 2, 18, id === 'sylvan_blessing' ? '#80ed99' : '#c8d0d8'); r(23, 24, 6, 2, '#8a6a2a'); }
+  }
+
+  const _lg = window.loadGame;
+  window.loadGame = function (saved) {
+    if (saved && saved.gameData && !saved.gameData.equip) delete gameData.equip;   // save lama: migrasi dari flag
+    const res = _lg.apply(this, arguments);
+    try { S(); apply(); refresh(); } catch (_) {}
+    return res;
+  };
+  try { S(); apply(); refresh(); } catch (_) {}
+})();
+
+  (function () {
+    const pop = document.getElementById('popEquip'); if (!pop) return;
+    const sync = () => {
+      const open = pop.classList.contains('open');
+      document.documentElement.classList.toggle('eq-open', open);
+      if (open && typeof clearAllMovementKeys === 'function') { try { clearAllMovementKeys(); } catch (_) {} }
+    };
+    new MutationObserver(sync).observe(pop, { attributes: true, attributeFilter: ['class'] });
+    sync();
   })();
   </script>
 </body>
