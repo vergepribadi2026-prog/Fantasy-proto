@@ -1129,17 +1129,20 @@
           <div class="combat-overlay" id="combatOverlay">
             <div class="combat-header">
               <h2 id="combat-title">⚔ Pertarungan Taktis ⚔</h2>
+              <div class="turn-strip"><span class="turn-count" id="turn-count">Giliran 1</span><span class="turn-banner" id="turn-banner">Giliranmu</span></div>
               <p style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">
-                Hukum Sihir: Merapal Aether menguras Suhu Tubuh & memicu Rime-rot!
+                Baca niat musuh, lalu pilih tindakan. Tebas & Tangkis mengisi Fokus; 3 Fokus membuka Jurus Pamungkas.
               </p>
             </div>
 
             <div class="combat-arena">
               <!-- Kartu Pemain -->
-              <div class="fighter-card">
+              <div class="fighter-card active" id="card-player">
+                <div class="fighter-portrait"><canvas id="combat-p-fig" width="64" height="80"></canvas></div>
                 <div class="fighter-name">Aldric Vane</div>
                 <div class="fighter-sub" id="combat-p-sub">Eks-Juru Sita</div>
                 <div class="bar-wrap">
+                  <div class="bar-ghost" id="combat-p-hp-ghost" style="width: 100%;"></div>
                   <div class="bar-fill bar-hp" id="combat-p-hp-bar" style="width: 100%;"></div>
                   <div class="bar-label" id="combat-p-hp-txt">HP: 100/100</div>
                 </div>
@@ -1147,21 +1150,25 @@
                   <div class="bar-fill bar-heat" id="combat-p-heat-bar" style="width: 100%;"></div>
                   <div class="bar-label" id="combat-p-heat-txt">Suhu: 100%</div>
                 </div>
+                <div class="focus-row"><span>Fokus</span><i class="pip"></i><i class="pip"></i><i class="pip"></i></div>
+                <div class="fx-layer"></div>
               </div>
 
               <div style="font-size: 15px; color: var(--gold-accent); font-weight: bold;">VS</div>
 
               <!-- Kartu Musuh -->
-              <div class="fighter-card">
+              <div class="fighter-card" id="card-enemy">
+                <div class="fighter-portrait"><div class="enemy-portrait" id="enemy-portrait">👹</div></div>
                 <div class="fighter-name" id="enemy-name">Monster</div>
                 <div class="fighter-sub" id="enemy-sub">Lembah Vaelen</div>
                 <div class="bar-wrap">
+                  <div class="bar-ghost" id="combat-e-hp-ghost" style="width: 100%;"></div>
                   <div class="bar-fill bar-hp" id="combat-e-hp-bar" style="width: 100%;"></div>
                   <div class="bar-label" id="combat-e-hp-txt">HP: 95/95</div>
                 </div>
-                <div style="font-size: 10px; color: #c7956d; margin-top: 4px;" id="enemy-intent">
-                  Sikap: Siaga Menyerang
-                </div>
+                <div style="font-size: 10px; color: #c7956d; margin-top: 3px;" id="enemy-flavor"></div>
+                <div class="intent-box atk" id="enemy-intent"><span class="i-ico">⚔️</span><span><strong>Menyerang</strong>Siaga menyerang</span></div>
+                <div class="fx-layer"></div>
               </div>
             </div>
 
@@ -1169,23 +1176,12 @@
               Musuh menghadangmu! Pilih tindakan taktis di bawah ini.
             </div>
 
-            <div class="combat-actions">
-              <button class="btn-medieval" id="btn-atk-sword" onclick="combatAction('sword')">
-                <strong>1. Tebasan Senjata Utama</strong><br>
-                <span style="font-size:10px; color:var(--text-muted);">Serangan fisik stabil (0 Biaya Suhu)</span>
-              </button>
-              <button class="btn-medieval" id="btn-atk-aether" onclick="combatAction('aether')">
-                <strong>2. Sihir Bara Aether</strong><br>
-                <span style="font-size:10px; color:#6ec4db;">Kerusakan tinggi (-12% s/d -28% Suhu)</span>
-              </button>
-              <button class="btn-medieval" id="btn-defend" onclick="combatAction('defend')">
-                <strong>3. Tangkis & Atur Napas</strong><br>
-                <span style="font-size:10px; color:var(--text-muted);">Kurangi 60% serangan & +15% Suhu</span>
-              </button>
-              <button class="btn-medieval" id="btn-use-herb" onclick="combatAction('herb')">
-                <strong>4. Gunakan Ramuan / Salep</strong><br>
-                <span style="font-size:10px; color:#8ec07c;">Pulihkan HP & Suhu Tubuh di Pertarungan</span>
-              </button>
+            <div class="combat-actions" id="combatActions">
+              <button class="btn-medieval" id="btn-atk-sword" onclick="combatAction('sword')"></button>
+              <button class="btn-medieval" id="btn-atk-aether" onclick="combatAction('aether')"></button>
+              <button class="btn-medieval" id="btn-defend" onclick="combatAction('defend')"></button>
+              <button class="btn-medieval" id="btn-use-herb" onclick="combatAction('herb')"></button>
+              <button class="btn-medieval" id="btn-ultimate" onclick="combatAction('ultimate')"></button>
             </div>
           </div>
           <!-- SHORTCUT: tombol info di dalam layar permainan (pengganti panel samping kanan) -->
@@ -2442,7 +2438,7 @@
         "....hssssssh....",".....ssssss.....","...iiiiiiiiii...","..icccccccccci..",
         "..icccccccccci..","..icccbbbbccci..","...cccccccccc...","...cccccccccc...",
         "....bbbbbbbb....","....bbb..bbb....","....lll..lll....","....lll..lll...."
-      ], { h: "#2b221a", s: "#d9b396", e: "#1a1a1a", i: "#7a848c", c: "#284664", b: "#3d2b1f", l: "#1c1612" });
+      ], { h: "#cfd8e0", s: "#d9b396", e: "#1a1a1a", i: "#7a848c", c: "#284664", b: "#3d2b1f", l: "#1c1612" });
 
       sprites.henrik = createCharSprite([
         "....ffffffff....","...ffffffffff...","....ssssssss....","....seeeees.....",
@@ -4849,7 +4845,59 @@
       lootDesc: null
     };
 
+    const ENEMY_ICON = { korin: '⛏️', wolf: '🐺', treant: '🌳', beetle: '🪲', golem: '🤖', wf_wolf: '🐺', wf_bear: '🐻', wf_spider: '🕷️', wf_stag: '🦌', wf_tiger: '🐯', wf_wendigo: '👹' };
+    const INTENT_INFO = {
+      attack: { icon: '⚔️', cls: 'atk', title: 'Menyerang', hint: () => 'Bersiap ' + enemy.attackDesc },
+      heavy: { icon: '💥', cls: 'heavy', title: 'Serangan Dahsyat!', hint: () => 'Mengumpulkan tenaga — Tangkis untuk menahan & membalas!' },
+      guard: { icon: '🛡️', cls: 'guard', title: 'Bersiap Bertahan', hint: () => 'Tidak menyerang. Serangan fisik −50% (Sihir & Pamungkas menembus)' }
+    };
+    const cs = { token: 0, turn: 1, focus: 0, busy: false, intent: 'attack', lastIntent: null };
     let playerDefending = false;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const $c = id => document.getElementById(id);
+    const rnd = n => Math.floor(Math.random() * n);
+    const aetherCost = () => gameData.runicWarmth ? 12 : (gameData.aetherCharm ? 20 : 28);
+
+    function rollIntent() {
+      const low = enemy.hp / enemy.maxHp < 0.35, r = Math.random();
+      let k = 'attack';
+      if (cs.lastIntent === 'heavy') { if (r < 0.15) k = 'guard'; }
+      else if (cs.lastIntent === 'guard') { if (r < (low ? 0.34 : 0.22)) k = 'heavy'; }
+      else if (r < (low ? 0.34 : 0.2)) k = 'heavy';
+      else if (r < (low ? 0.42 : 0.38)) k = 'guard';
+      cs.lastIntent = k;
+      return k;
+    }
+
+    function logAdd(html, cls) {
+      Array.from(combatLog.children).forEach(c => c.classList.add('old'));
+      const d = document.createElement('div');
+      d.className = 'log-line' + (cls ? ' ' + cls : '');
+      d.innerHTML = html;
+      combatLog.appendChild(d);
+      while (combatLog.children.length > 8) combatLog.removeChild(combatLog.firstChild);
+      combatLog.scrollTop = combatLog.scrollHeight;
+    }
+    function floatText(cardId, text, cls) {
+      const layer = document.querySelector('#' + cardId + ' .fx-layer'); if (!layer) return;
+      const s = document.createElement('span');
+      s.className = 'fx ' + cls; s.textContent = text; s.style.left = (30 + Math.random() * 40) + '%';
+      layer.appendChild(s); setTimeout(() => s.remove(), 1050);
+    }
+    function anim(cardId, cls) {
+      const c = $c(cardId); if (!c) return;
+      c.classList.remove(cls); void c.offsetWidth; c.classList.add(cls);
+      setTimeout(() => c.classList.remove(cls), 600);
+    }
+    function setBanner(side) {
+      const b = $c('turn-banner');
+      b.textContent = side === 'player' ? 'Giliranmu' : 'Giliran Musuh';
+      b.classList.toggle('enemy', side !== 'player');
+      $c('card-player').classList.toggle('active', side === 'player');
+      $c('card-enemy').classList.toggle('active', side !== 'player');
+    }
+    function setBusy(v) { cs.busy = v; $c('combatActions').classList.toggle('busy', v); }
+    const btnHtml = (ico, title, sub, key) => '<span class="btn-ico">' + ico + '</span><span class="btn-txt"><strong>' + title + '</strong><small>' + sub + '</small></span><span class="key-tag">' + key + '</span>';
 
     function startCombat(enemyKey = 'korin', spawnFlagId = null) {
       clearAllMovementKeys();
@@ -4868,20 +4916,29 @@
       enemy.lootName = cfg.lootName || null;
       enemy.lootDesc = cfg.lootDesc || null;
 
-      document.getElementById('combat-title').textContent = cfg.title;
-      document.getElementById('enemy-name').textContent = cfg.name;
-      document.getElementById('enemy-sub').textContent = cfg.sub;
-      document.getElementById('enemy-intent').textContent = cfg.intent;
-      document.getElementById('combat-p-sub').textContent = gameData.armorName;
-
+      cs.token++; cs.turn = 1; cs.focus = 0; cs.lastIntent = 'attack'; cs.intent = 'attack';
       playerDefending = false;
+      setBusy(false);
+
+      $c('combat-title').textContent = cfg.title;
+      $c('enemy-name').textContent = cfg.name;
+      $c('enemy-sub').textContent = cfg.sub;
+      $c('enemy-flavor').textContent = cfg.intent || '';
+      $c('enemy-portrait').textContent = ENEMY_ICON[cfg.id] || '👹';
+      $c('combat-p-sub').textContent = gameData.armorName;
+      if (window.EQ && EQ.portrait) EQ.portrait($c('combat-p-fig'));
+      ['combat-p-hp-ghost', 'combat-e-hp-ghost'].forEach(id => { const g = $c(id); g.style.transition = 'none'; g.style.width = '100%'; void g.offsetWidth; g.style.transition = ''; });
+
       combatOverlay.classList.add('active');
       canvasContainer.classList.add('combat-mode-mobile');
-      combatLog.innerHTML = `<strong>${enemy.name}</strong> menghadangmu! Pilih tindakan taktis di bawah ini.`;
+      combatLog.innerHTML = '';
+      setBanner('player');
+      logAdd(`<strong>${enemy.name}</strong> menghadangmu! Baca niatnya, lalu pilih tindakan.`);
       updateCombatUI();
     }
 
     function endCombatOverlay() {
+      cs.token++;
       combatOverlay.classList.remove('active');
       canvasContainer.classList.remove('combat-mode-mobile');
     }
@@ -4899,75 +4956,45 @@
     }
 
     function updateCombatUI() {
-      document.getElementById('combat-p-hp-bar').style.width = `${(gameData.hp / gameData.maxHp) * 100}%`;
-      document.getElementById('combat-p-hp-txt').textContent = `HP: ${gameData.hp}/${gameData.maxHp}`;
+      const pPct = Math.max(0, gameData.hp / gameData.maxHp * 100), ePct = Math.max(0, enemy.hp / enemy.maxHp * 100);
+      $c('combat-p-hp-bar').style.width = pPct + '%'; $c('combat-p-hp-ghost').style.width = pPct + '%';
+      $c('combat-p-hp-txt').textContent = `HP: ${gameData.hp}/${gameData.maxHp}`;
+      $c('combat-p-heat-bar').style.width = `${gameData.heat}%`;
+      $c('combat-p-heat-txt').textContent = `Suhu: ${gameData.heat}%`;
+      $c('combat-e-hp-bar').style.width = ePct + '%'; $c('combat-e-hp-ghost').style.width = ePct + '%';
+      $c('combat-e-hp-txt').textContent = `HP: ${Math.max(0, enemy.hp)}/${enemy.maxHp}`;
+      $c('turn-count').textContent = 'Giliran ' + cs.turn;
+      document.querySelectorAll('#card-player .pip').forEach((p, i) => p.classList.toggle('on', i < cs.focus));
 
-      document.getElementById('combat-p-heat-bar').style.width = `${gameData.heat}%`;
-      document.getElementById('combat-p-heat-txt').textContent = `Suhu: ${gameData.heat}%`;
+      const info = INTENT_INFO[cs.intent] || INTENT_INFO.attack, ib = $c('enemy-intent');
+      ib.className = 'intent-box ' + info.cls;
+      ib.innerHTML = '<span class="i-ico">' + info.icon + '</span><span><strong>' + info.title + '</strong>' + info.hint() + '</span>';
 
-      document.getElementById('combat-e-hp-bar').style.width = `${Math.max(0, (enemy.hp / enemy.maxHp) * 100)}%`;
-      document.getElementById('combat-e-hp-txt').textContent = `HP: ${Math.max(0, enemy.hp)}/${enemy.maxHp}`;
-
-      const bestPot = getBestCombatPotion();
-      const herbBtn = document.getElementById('btn-use-herb');
-      if (bestPot) {
-        herbBtn.innerHTML = `<strong>4. Gunakan ${bestPot.item.name} (${bestPot.item.qty})</strong><br><span style="font-size:10px; color:#8ec07c;">${bestPot.item.desc}</span>`;
-        herbBtn.disabled = false;
-      } else {
-        herbBtn.innerHTML = `<strong>4. Ramuan Habis (0)</strong><br><span style="font-size:10px; color:var(--text-muted);">Beli Potion di Vaelen (Hutan Belantara)</span>`;
-        herbBtn.disabled = true;
-      }
-
+      const guarded = cs.intent === 'guard', heavy = cs.intent === 'heavy', cost = aetherCost();
+      $c('btn-atk-sword').innerHTML = btnHtml('⚔️', 'Tebasan Senjata', guarded ? 'Musuh bertahan: dmg −50% · +1 Fokus' : 'Serangan stabil · 0 Suhu · +1 Fokus', '1');
+      const ae = $c('btn-atk-aether');
+      ae.innerHTML = btnHtml('🔥', 'Sihir Bara Aether', gameData.heat < cost ? 'Suhu kurang (butuh ' + cost + '%)' : `Dmg tinggi · −${cost}% Suhu · menembus Guard`, '2');
+      ae.disabled = gameData.heat < cost;
+      $c('btn-defend').innerHTML = btnHtml('🛡️', heavy ? 'Tangkis Sempurna!' : 'Tangkis & Atur Napas', heavy ? 'Redam 75% & balas serang · +15% Suhu · +1 Fokus' : 'Redam 60% · +15% Suhu · +1 Fokus', '3');
+      const bestPot = getBestCombatPotion(), hb = $c('btn-use-herb');
+      if (bestPot) { hb.innerHTML = btnHtml('🧪', `Gunakan ${bestPot.item.name} (${bestPot.item.qty})`, bestPot.item.desc, '4'); hb.disabled = false; }
+      else { hb.innerHTML = btnHtml('🧪', 'Ramuan Habis (0)', 'Beli Potion di Vaelen (Hutan Belantara)', '4'); hb.disabled = true; }
+      const ub = $c('btn-ultimate');
+      ub.innerHTML = btnHtml('✨', 'Jurus Pamungkas', cs.focus >= 3 ? 'Tebasan dahsyat tanpa biaya Suhu · menembus Guard' : `Butuh 3 Fokus (${cs.focus}/3) — isi lewat Tebas & Tangkis`, '5');
+      ub.disabled = cs.focus < 3;
       updateUI();
     }
 
-    window.combatAction = function(actionType) {
-      if (currentState !== STATE.COMBAT) return;
+    function enemyDamage(kind) {
+      const raw = enemy.minDmg + rnd(enemy.maxDmg - enemy.minDmg + 1);
+      let dmg = Math.max(2, raw - gameData.defenseReduction);
+      if (kind === 'heavy') dmg = Math.round(dmg * 1.7);
+      if (playerDefending) dmg = Math.floor(dmg * (kind === 'heavy' ? 0.25 : 0.4));
+      return Math.max(1, dmg);
+    }
 
-      playerDefending = false;
-      let logMsg = '';
-
-      if (actionType === 'sword') {
-        const dmg = gameData.weaponBonus + Math.floor(Math.random() * 7);
-        enemy.hp -= dmg;
-        logMsg = `Kau mengayunkan <strong>${gameData.weaponName}</strong> dan melukai ${enemy.name} sebesar <strong>${dmg} kerusakan</strong>!`;
-      } else if (actionType === 'aether') {
-        const heatCost = gameData.runicWarmth ? 12 : (gameData.aetherCharm ? 20 : 28);
-        if (gameData.heat < heatCost) {
-          combatLog.innerHTML = '<span style="color:#5ca4b8;">Suhu tubuhmu terlalu beku untuk merapal Sihir Aether! Gunakan Potion/Salep atau Atur Napas terlebih dahulu.</span>';
-          return;
-        }
-        gameData.heat = Math.max(0, gameData.heat - heatCost);
-        const dmg = 31 + Math.floor(Math.random() * 10);
-        enemy.hp -= dmg;
-        logMsg = `Darahmu terkuras (-${heatCost}% Suhu Tubuh) saat kau melepaskan <strong>Gelombang Bara Aether</strong>! ${enemy.name} terbakar menerima <strong>${dmg} kerusakan sihir</strong>!`;
-
-        if (gameData.heat <= 25) {
-          gameData.hp = Math.max(1, gameData.hp - 8);
-          logMsg += ` <span style="color:#e06c75;">[Gejala Rime-rot: Pembuluh darahmu membeku, -8 HP!]</span>`;
-        }
-      } else if (actionType === 'defend') {
-        playerDefending = true;
-        gameData.heat = Math.min(100, gameData.heat + 15);
-        logMsg = 'Kau memasang kuda-kuda tangkisan dan mengatur napas hangat (+15% Suhu Tubuh).';
-      } else if (actionType === 'herb') {
-        const bestPot = getBestCombatPotion();
-        if (!bestPot) return;
-        bestPot.item.qty--;
-        gameData.hp = Math.min(gameData.maxHp, gameData.hp + bestPot.hpHeal);
-        gameData.heat = Math.min(100, gameData.heat + bestPot.heatHeal);
-        logMsg = `Kau meminum/menggunakan <strong>${bestPot.item.name}</strong>! Tubuhmu kembali pulih dan hangat.`;
-      }
-
-      updateCombatUI();
-
-      if (enemy.hp <= 0) {
-        enemy.hp = 0;
-        updateCombatUI();
-        combatLog.innerHTML = `${logMsg}<br><strong style="color:#98c379;">${enemy.name} berhasil ditumbangkan! Pertarungan selesai.</strong>`;
-
-        setTimeout(() => {
-          endCombatOverlay();
+    function onVictory() {
+      endCombatOverlay();
           if (enemy.id === 'korin') {
             gameData.flags.combatWon = true;
             presentMoralDilemma();
@@ -5027,36 +5054,136 @@
               [{ label: 'Simpan Loot & Lanjutkan Berburu', action: closeDialogue }]
             );
           }
-        }, 1200);
+    }
+
+    window.combatAction = async function (actionType) {
+      if (currentState !== STATE.COMBAT || cs.busy) return;
+      const tok = cs.token, alive = () => cs.token === tok && currentState === STATE.COMBAT;
+      const guarded = cs.intent === 'guard', heavyIn = cs.intent === 'heavy';
+
+      // validasi (tidak menghabiskan giliran)
+      if (actionType === 'aether' && gameData.heat < aetherCost()) {
+        logAdd('<span style="color:#5ca4b8;">Suhu tubuhmu terlalu beku untuk merapal Sihir Aether! Gunakan Potion/Salep atau Atur Napas terlebih dahulu.</span>'); return;
+      }
+      if (actionType === 'ultimate' && cs.focus < 3) { logAdd('<span style="color:#d4af37;">Jurus Pamungkas butuh 3 Fokus. Isi lewat Tebasan atau Tangkisan.</span>'); return; }
+      if (actionType === 'herb' && !getBestCombatPotion()) return;
+
+      setBusy(true);
+      playerDefending = false;
+      let logMsg = '', hitDmg = 0, crit = false;
+
+      if (actionType === 'sword') {
+        let dmg = gameData.weaponBonus + rnd(7);
+        crit = Math.random() < 0.12; if (crit) dmg = Math.round(dmg * 1.5);
+        if (guarded) dmg = Math.max(1, Math.floor(dmg * 0.5));
+        hitDmg = dmg; cs.focus = Math.min(3, cs.focus + 1);
+        logMsg = `${crit ? '<span style="color:#ffd966;">KRITIKAL!</span> ' : ''}Kau mengayunkan <strong>${gameData.weaponName}</strong> dan melukai ${enemy.name} sebesar <strong>${dmg} kerusakan</strong>${guarded ? ' (ditahan Guard)' : ''}! <span style="color:#d4af37;">+1 Fokus</span>`;
+      } else if (actionType === 'aether') {
+        const heatCost = aetherCost();
+        gameData.heat = Math.max(0, gameData.heat - heatCost);
+        let dmg = 31 + rnd(10);
+        crit = Math.random() < 0.12; if (crit) dmg = Math.round(dmg * 1.5);
+        hitDmg = dmg;
+        logMsg = `${crit ? '<span style="color:#ffd966;">KRITIKAL!</span> ' : ''}Darahmu terkuras (-${heatCost}% Suhu Tubuh) saat kau melepaskan <strong>Gelombang Bara Aether</strong>! ${enemy.name} terbakar menerima <strong>${dmg} kerusakan sihir</strong>!`;
+        floatText('card-player', '−' + heatCost + '% Suhu', 'heat');
+        if (gameData.heat <= 25) {
+          gameData.hp = Math.max(1, gameData.hp - 8);
+          logMsg += ` <span style="color:#e06c75;">[Gejala Rime-rot: Pembuluh darahmu membeku, -8 HP!]</span>`;
+          floatText('card-player', '−8', 'dmg');
+        }
+      } else if (actionType === 'ultimate') {
+        const dmg = Math.round(gameData.weaponBonus * 1.6) + 14 + rnd(9);
+        hitDmg = dmg; crit = true; cs.focus = 0;
+        logMsg = `<span style="color:#ffd966;">✨ JURUS PAMUNGKAS!</span> Kau menyatukan seluruh Fokus dalam satu tebasan — ${enemy.name} menerima <strong>${dmg} kerusakan</strong>!`;
+      } else if (actionType === 'defend') {
+        playerDefending = true;
+        gameData.heat = Math.min(100, gameData.heat + 15);
+        cs.focus = Math.min(3, cs.focus + 1);
+        logMsg = (heavyIn ? 'Kau membaca gerakannya dan memasang <strong>tangkisan sempurna</strong>' : 'Kau memasang kuda-kuda tangkisan') + ' sambil mengatur napas hangat (+15% Suhu Tubuh). <span style="color:#d4af37;">+1 Fokus</span>';
+        floatText('card-player', '+15% Suhu', 'heat');
+      } else if (actionType === 'herb') {
+        const bestPot = getBestCombatPotion();
+        bestPot.item.qty--;
+        const before = gameData.hp;
+        gameData.hp = Math.min(gameData.maxHp, gameData.hp + bestPot.hpHeal);
+        gameData.heat = Math.min(100, gameData.heat + bestPot.heatHeal);
+        logMsg = `Kau meminum/menggunakan <strong>${bestPot.item.name}</strong>! Tubuhmu kembali pulih dan hangat.`;
+        floatText('card-player', '+' + (gameData.hp - before) + ' HP', 'heal');
+      }
+
+      if (hitDmg > 0) {
+        enemy.hp -= hitDmg;
+        anim('card-player', 'lunge-p');
+        await wait(220); if (!alive()) return;
+        anim('card-enemy', 'hit');
+        floatText('card-enemy', (crit ? '💥 ' : '−') + hitDmg, crit ? 'crit' : 'dmg');
+      }
+      logAdd(logMsg);
+      updateCombatUI();
+      await wait(650); if (!alive()) return;
+
+      // ---------- musuh tumbang ----------
+      if (enemy.hp <= 0) {
+        enemy.hp = 0; updateCombatUI();
+        logAdd(`<strong style="color:#98c379;">${enemy.name} berhasil ditumbangkan! Pertarungan selesai.</strong>`);
+        await wait(1100); if (!alive()) return;
+        onVictory();
         return;
       }
 
-      setTimeout(() => {
-        let rawDmg = enemy.minDmg + Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1));
-        let enemyDmg = Math.max(2, rawDmg - gameData.defenseReduction);
-        if (playerDefending) {
-          enemyDmg = Math.floor(enemyDmg * 0.4);
+      // ---------- giliran musuh ----------
+      setBanner('enemy');
+      await wait(450); if (!alive()) return;
+      const kind = cs.intent;
+      if (kind === 'guard') {
+        logAdd(`<strong>Giliran ${enemy.name}:</strong> Ia berjaga rapat dan tidak menyerang.`);
+        floatText('card-enemy', '🛡️', 'guard');
+      } else {
+        const dmg = enemyDamage(kind);
+        const perfect = playerDefending && kind === 'heavy';
+        anim('card-enemy', 'lunge-e');
+        await wait(220); if (!alive()) return;
+        gameData.hp = Math.max(0, gameData.hp - dmg);
+        anim('card-player', 'hit'); anim('card-player', 'flash');
+        floatText('card-player', '−' + dmg, playerDefending ? 'guard' : 'dmg');
+        logAdd(`<strong>Giliran ${enemy.name}:</strong> Ia ${enemy.attackDesc}${kind === 'heavy' ? ' dengan <strong>tenaga penuh</strong>' : ''} dan memberikan <strong>${dmg} kerusakan</strong>${playerDefending ? ' (Tertangkis!)' : ''}!`);
+        if (perfect && gameData.hp > 0) {
+          const counter = Math.round(gameData.weaponBonus * 0.7) + rnd(5);
+          enemy.hp -= counter;
+          await wait(350); if (!alive()) return;
+          anim('card-enemy', 'hit'); floatText('card-enemy', '↩ ' + counter, 'crit');
+          logAdd(`<span style="color:#ffd966;">⚡ Tangkisan Sempurna!</span> Kau membalas dan melukai ${enemy.name} sebesar <strong>${counter} kerusakan</strong>!`);
         }
-        gameData.hp = Math.max(0, gameData.hp - enemyDmg);
+      }
+      updateCombatUI();
+      await wait(600); if (!alive()) return;
 
-        let enemyReply = `<br><strong>Giliran ${enemy.name}:</strong> Ia ${enemy.attackDesc} dan memberikan <strong>${enemyDmg} kerusakan</strong>${playerDefending ? ' (Tertangkis!)' : ''}!`;
+      if (gameData.hp <= 0) {
+        gameData.hp = 45;
+        gameData.heat = 75;
+        endCombatOverlay();
+        currentState = STATE.EXPLORE;
+        startDialogue('Aldric Terdesak Mundur', 'Pertarungan Gagal', '#e06c75',
+          `Serangan ${enemy.name} membuatmu terhuyung. Kau mundur sejenak untuk memulihkan napas sebelum mencoba lagi.`,
+          [{ label: 'Atur strategi kembali', action: closeDialogue }]
+        );
+        updateUI();
+        return;
+      }
+      if (enemy.hp <= 0) {   // tewas oleh balasan tangkisan
+        enemy.hp = 0; updateCombatUI();
+        logAdd(`<strong style="color:#98c379;">${enemy.name} berhasil ditumbangkan! Pertarungan selesai.</strong>`);
+        await wait(1100); if (!alive()) return;
+        onVictory();
+        return;
+      }
 
-        if (gameData.hp <= 0) {
-          gameData.hp = 45;
-          gameData.heat = 75;
-          endCombatOverlay();
-          currentState = STATE.EXPLORE;
-          startDialogue('Aldric Terdesak Mundur', 'Pertarungan Gagal', '#e06c75',
-            `Serangan ${enemy.name} membuatmu terhuyung. Kau mundur sejenak untuk memulihkan napas sebelum mencoba lagi.`,
-            [{ label: 'Atur strategi kembali', action: closeDialogue }]
-          );
-          updateUI();
-          return;
-        }
-
-        combatLog.innerHTML = logMsg + enemyReply;
-        updateCombatUI();
-      }, 450);
+      // ---------- giliran baru ----------
+      cs.turn++; playerDefending = false;
+      cs.intent = rollIntent();
+      setBanner('player');
+      setBusy(false);
+      updateCombatUI();
     };
 
     // ==========================================================================
@@ -5269,6 +5396,7 @@
         else if (num === 2) combatAction('aether');
         else if (num === 3) combatAction('defend');
         else if (num === 4) combatAction('herb');
+        else if (num === 5) combatAction('ultimate');
       }
     };
 
@@ -7704,7 +7832,7 @@
     elfKey: false, elfSacrifice: false, elfRestored: false,
     elf_botanical: false, elf_memoryShard: false,
     dwarfKey: false, varekProof: false,
-    hearthstone: false, shadowDefeated: false,
+    hearthstone: false, shadowDefeated: false, malthusGone: false,
     ch4_intro: false, ch4_truth: false, finalBattleDone: false,
     forestV2: true, ending: null
   };
@@ -7863,6 +7991,7 @@
 
   function refreshStoryStep() {
     const f = gameData.flags;
+    if (f.caelenQuestDone) f.elf_botanical = true;
     if (f.supplyOutcome === 'blackmarket') ST.selfish = true;
     if (ST.step === 'supply' && f.supplyOutcome) ST.step = 'henrik';
     if (ST.step === 'henrik' && f.ch1_henrikBriefed) ST.step = 'kaelen';
@@ -7936,6 +8065,7 @@
     if (gameData.flags.elfKey) return startDialogue('Elara, Penenun Memori','Kaum Aethel','#c792ea', '"Setengah Kunci Zamrud telah kau pegang."', [{label:'Terima kasih, Elara.',action:closeDialogue}]);
     if (!hasItem('black_aether')) return startDialogue('Elara, Penenun Memori','Kaum Aethel','#c792ea', '"Bawa pecahan memori itu padaku — pecahan Aether Hitam dari Wendigo."', [{label:'Aku akan mencarinya.',action:closeDialogue}]);
     const f = gameData.flags;
+    if (f.caelenQuestDone) f.elf_botanical = true;
     if (!f.elf_botanical) return startDialogue('Elara, Penenun Memori','Kaum Aethel','#c792ea',
       '"Sebelum aku menyerahkan kunci padamu, aku harus tahu apakah kau benar-benar peduli pada hutan kami, atau hanya ingin memakai kekuatannya." Elara menusukkan jarum penenunnya ke alat tenun. "Dua hal yang harus kau lakukan. Pertama: Cendekiawan Caelen di utara sedang meneliti Bunga Embun Perak. Ia butuh sampel segar dari selatan. Bantu dia — jangan cabut akarnya, potong dengan lembut. Kedua: di dasar danau kecil dekat pohon tua di tengah hutan, ada pecahan memori yang terlepas ketika Wendigo mengamuk. Ambil pecahan itu, dan bawa padaku. Setelah keduanya selesai, baru kita bicara tentang kunci."',
       [{label:'Aku akan membantu Caelen dan mencari pecahan memori.',action:closeDialogue}]);
@@ -7991,26 +8121,344 @@
     startDialogue('Thane Durgan Ironmantle','Raja Dwarf','#ffd966', '"Bantu Varek membersihkan sabotase di sektor tenggara dulu."', [{label:'Aku akan membantu Varek.',action:closeDialogue}]);
   }
 
-  function shadowTrial() {
-    const n = ST.shadowDefends || 0;
-    startDialogue('Roh Malthus','Gerbang Rahasia — Ujian Penebusan','#9ef0ff',
-      n === 0
-        ? '"Aldric Vane. Kau sudah sampai sejauh ini, tapi gerbang ini bukan gerbang biasa." Roh Malthus melayang di antara dua pilar batu yang ditumbuhi lumut. "Di depammu, bayanganmu akan berdiri. Semua rumah yang kau sita, semua keluarga yang kau usir, semua desa yang kau bekukan — mereka akan menjadi satu bayangan. Untuk melewati gerbang ini, jangan menyerang. Bertahan. Lepaskan Hearthstone, dan biarkan bayangan itu menyerapnya. Tiga kali kau harus bertahan. Tiga kali kau harus melihat wajah mereka. Jika kau menyerang balik, kau gagal, dan kau harus mengulanginya dari awal."'
-        : `"Kau bertahan (${n}/3). Jangan angkat pedang. Ingat: bukan kekuatan yang membuka gerbang ini, tapi penyesalan yang kau terima."`,
-      [ { label:'Bertahan dan lepaskan Hearthstone.', action:()=>{
-            ST.shadowDefends = n + 1;
-            if (ST.shadowDefends >= 3) {
-              gameData.flags.shadowDefeated = true; ST.step = 'capital'; updateUI();
-              startDialogue('Roh Malthus','Gerbang Rahasia','#9ef0ff',
-                '"Bayangan itu menyerap Hearthstone-mu... dan tidak menghancurkannya. Rime-rot bukan penyakit, Aldric. Itu rasa bersalahmu yang membeku di pembuluh darahmu. Jalan ke Aurelion terbuka."',
-                [{label:'Aku akan menghadapinya.',action:closeDialogue}]);
-            } else shadowTrial();
-        } },
-        { label:'Serang bayangan itu.', action:()=>{ ST.shadowDefends = 0; startDialogue('Bayangan Aldric','Cermin Rime-rot','#5ca4b8', 'Kau mengayunkan pedangmu, dan bayangan itu tersenyum. "Kau tidak bisa membunuh dirimu sendiri, Aldric," bisik bayangan itu. "Hanya bisa menerima." Ujian dimulai lagi dari awal.', [{label:'Coba lagi.',action:shadowTrial}]); } } ]);
+  // =====================================================================
+  // UJIAN PENEBUSAN ROH MALTHUS — 3 SESI DENGAN MEKANIK BERBEDA
+  //   Sesi I   : Menghindar  (bayangan orang-orang yang terusir)
+  //   Sesi II  : Mengingat   (urutan rumah yang pernah disita)
+  //   Sesi III : Menyeimbangkan (kehangatan Hearthstone)
+  // Tekad 3 — habis = Hearthstone padam, ujian diulang dari Sesi I.
+  // =====================================================================
+  const TR = { active: false, tekad: 3, stage: 0, stop: null, onAct: null, onNum: null, held: false };
+  let farewellLast = false;
+  const trId = id => document.getElementById(id);
+  const trRand = (a, b) => a + Math.random() * (b - a);
+  const trClamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  (function trCss() {
+    if (document.getElementById('trial-css')) return;
+    const s = document.createElement('style'); s.id = 'trial-css';
+    s.textContent = `
+#trialOverlay{position:absolute;inset:0;z-index:40;display:none;flex-direction:column;align-items:center;gap:6px;padding:10px 12px;background:radial-gradient(ellipse at 50% 15%,rgba(30,80,100,.55),rgba(6,10,14,.98) 70%),#070a0e;border:2px solid #5ca4b8;overflow-y:auto;font-family:"Courier New",monospace;color:#d8f4ff;touch-action:manipulation}
+#trialOverlay.on{display:flex}
+#trialOverlay.hit{animation:trShake .4s}
+@keyframes trShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+#trialOverlay .tr-head{width:100%;max-width:480px;display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid #2f5866;padding-bottom:4px}
+#trialOverlay .tr-title{font-size:13px;font-weight:bold;color:#9ef0ff;letter-spacing:.5px}
+#trialOverlay .tr-tekad{font-size:15px;letter-spacing:2px;white-space:nowrap}
+#trialOverlay .tr-tekad small{font-size:10px;color:#8fb3c0;letter-spacing:0;margin-right:4px}
+#trialOverlay .tr-cap{width:100%;max-width:480px;min-height:34px;font-size:12px;line-height:1.35;color:#b9e6f2;font-style:italic}
+#trialOverlay .tr-stage{width:100%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:8px}
+#trialOverlay canvas{width:100%;max-width:480px;aspect-ratio:8/5;background:#05080c;border:1px solid #2f5866;image-rendering:pixelated;touch-action:none;display:block}
+#trialOverlay .tr-hint{font-size:11px;color:#9bbcc7;text-align:center;line-height:1.35}
+#trialOverlay .tr-card{width:100%;border:1px solid #3d7487;background:rgba(10,24,32,.85);padding:12px;display:flex;flex-direction:column;gap:10px}
+#trialOverlay .tr-card h3{margin:0;font-size:14px;color:#ffd966}
+#trialOverlay .tr-card p{margin:0;font-size:12px;line-height:1.5;color:#d8f4ff}
+#trialOverlay .tr-btn{background:#12303b;color:#e8fbff;border:1px solid #5ca4b8;padding:10px 12px;font:bold 13px "Courier New",monospace;cursor:pointer;text-align:left}
+#trialOverlay .tr-btn:hover,#trialOverlay .tr-btn:active{background:#1b4758}
+#trialOverlay .tr-btn.big{text-align:center;padding:16px 10px;font-size:14px;user-select:none;-webkit-user-select:none;touch-action:none}
+#trialOverlay .tr-runes{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+#trialOverlay .tr-rune{display:flex;flex-direction:column;align-items:center;gap:2px;background:#0d222b;border:2px solid #315d6d;color:#cfeaf2;padding:12px 4px;cursor:pointer;font-family:"Courier New",monospace;transition:background .1s,border-color .1s,transform .1s}
+#trialOverlay .tr-rune span{font-size:34px;line-height:1.1}
+#trialOverlay .tr-rune small{font-size:11px}
+#trialOverlay .tr-rune.lit{background:#2c6f87;border-color:#ffd966;transform:scale(1.04);box-shadow:0 0 14px rgba(255,217,102,.6)}
+#trialOverlay .tr-dots{font-size:18px;letter-spacing:4px;color:#ffd966;min-height:22px}
+#trialFlash{position:absolute;inset:0;z-index:60;pointer-events:none;background:radial-gradient(circle at 50% 55%,rgba(200,250,255,.95),rgba(120,220,255,.55) 40%,rgba(0,0,0,0) 75%);opacity:0;animation:trFlash 1.8s ease-in-out forwards}
+@keyframes trFlash{0%{opacity:0}30%{opacity:1}55%{opacity:1}100%{opacity:0}}`;
+    document.head.appendChild(s);
+  })();
+
+  function trRoot() {
+    let r = trId('trialOverlay'); if (r) return r;
+    const host = trId('combatOverlay').parentElement;
+    r = document.createElement('div'); r.id = 'trialOverlay';
+    r.innerHTML = '<div class="tr-head"><div class="tr-title" id="trTitle"></div><div class="tr-tekad" id="trTekad"></div></div><div class="tr-cap" id="trCap"></div><div class="tr-stage" id="trStage"></div>';
+    host.appendChild(r);
+    return r;
+  }
+  function trHearts() { trId('trTekad').innerHTML = '<small>TEKAD</small>' + '❤'.repeat(Math.max(0, TR.tekad)) + '<span style="opacity:.25">' + '❤'.repeat(Math.max(0, 3 - TR.tekad)) + '</span>'; }
+  function trCap(t) { trId('trCap').textContent = t || ''; }
+
+  // Kartu informasi + tombol (tombol pertama = E/Spasi/angka 1, dst.)
+  function trCard(title, text, buttons, cap) {
+    const st = trId('trStage'); st.innerHTML = '';
+    const card = document.createElement('div'); card.className = 'tr-card';
+    const h = document.createElement('h3'); h.textContent = title;
+    const p = document.createElement('p'); p.textContent = text;
+    card.appendChild(h); card.appendChild(p);
+    buttons.forEach((b, i) => { const el = document.createElement('button'); el.className = 'tr-btn'; el.textContent = '[' + (i + 1) + '] ' + b.label; el.onclick = () => b.fn(); card.appendChild(el); });
+    st.appendChild(card);
+    TR.onAct = buttons[0].fn; TR.onNum = n => { if (buttons[n - 1]) buttons[n - 1].fn(); };
+    trCap(cap || '');
   }
 
+  window.addEventListener('keydown', e => {
+    if (!TR.active) return;
+    const k = e.key.toLowerCase();
+    if (k === ' ' || k === 'e' || k === 'escape' || ['1', '2', '3', '4'].indexOf(k) >= 0) {
+      e.stopImmediatePropagation(); e.preventDefault();
+      if (e.repeat) return;
+      if (k === ' ' || k === 'e') { TR.held = true; if (TR.onAct) TR.onAct(); }
+      else if (k !== 'escape' && TR.onNum) TR.onNum(+k);
+    }
+  }, true);
+  window.addEventListener('keyup', e => { const k = e.key.toLowerCase(); if (k === ' ' || k === 'e') TR.held = false; }, true);
+
+  // ---------------------------------------------------------------- SESI I: MENGHINDAR
+  function stageDodge(A) {
+    const st = trId('trStage');
+    st.innerHTML = '<canvas id="trCv" width="320" height="200"></canvas><div class="tr-hint">Joystick / WASD / seret jari untuk bergerak. Jangan melawan — hindari bayangan sampai fajar: <b id="trTime">24</b> detik.</div>';
+    TR.onAct = null; TR.onNum = null;
+    const cv = trId('trCv'), g = cv.getContext('2d'), W = 320, H = 200, DUR = 24;
+    const p = { x: W / 2, y: H / 2, r: 4.5, inv: 0 };
+    let orbs = [], warns = [], t = 0, spawn = 1.0, wave = 4.5, dead = false, raf = 0, last = performance.now(), ptr = null;
+    const snow = Array.from({ length: 30 }, () => ({ x: Math.random() * W, y: Math.random() * H, s: 8 + Math.random() * 14 }));
+    const loc = e => ({ x: e.offsetX * W / cv.clientWidth, y: e.offsetY * H / cv.clientHeight });
+    cv.onpointerdown = e => { ptr = loc(e); try { cv.setPointerCapture(e.pointerId); } catch (x) {} };
+    cv.onpointermove = e => { if (ptr) ptr = loc(e); };
+    cv.onpointerup = cv.onpointercancel = () => { ptr = null; };
+    function shoot() {
+      const side = Math.floor(Math.random() * 4); let x, y;
+      if (side === 0) { x = trRand(0, W); y = -8; } else if (side === 1) { x = W + 8; y = trRand(0, H); } else if (side === 2) { x = trRand(0, W); y = H + 8; } else { x = -8; y = trRand(0, H); }
+      const tx = p.x + trRand(-28, 28), ty = p.y + trRand(-28, 28), d = Math.hypot(tx - x, ty - y) || 1, sp = 62 + t * 1.6 + trRand(0, 22);
+      orbs.push({ x, y, vx: (tx - x) / d * sp, vy: (ty - y) / d * sp, r: trRand(6, 9) });
+    }
+    function update(dt) {
+      t += dt; p.inv = Math.max(0, p.inv - dt);
+      let mx = 0, my = 0;
+      if (keys['a'] || keys['arrowleft']) mx -= 1; if (keys['d'] || keys['arrowright']) mx += 1;
+      if (keys['w'] || keys['arrowup']) my -= 1; if (keys['s'] || keys['arrowdown']) my += 1;
+      if (!mx && !my) { mx = analog.x; my = analog.y; }
+      if (!mx && !my && ptr) { const dx = ptr.x - p.x, dy = ptr.y - p.y, d = Math.hypot(dx, dy); if (d > 3) { mx = dx / d; my = dy / d; } }
+      const l = Math.hypot(mx, my); if (l > 1) { mx /= l; my /= l; }
+      p.x = trClamp(p.x + mx * 105 * dt, 6, W - 6); p.y = trClamp(p.y + my * 105 * dt, 6, H - 6);
+      spawn -= dt; if (spawn <= 0) { spawn = Math.max(0.28, 0.62 - t * 0.012); shoot(); }
+      wave -= dt;
+      if (wave <= 0) { wave = 5.5; let cx, cy, n = 0; do { cx = trRand(40, W - 40); cy = trRand(30, H - 30); n++; } while (Math.hypot(cx - p.x, cy - p.y) < 75 && n < 20); warns.push({ x: cx, y: cy, t: 0.9 }); }
+      for (const w of warns) { w.t -= dt; if (w.t <= 0) { for (let i = 0; i < 10; i++) { const a = i / 10 * 6.283 + 0.3; orbs.push({ x: w.x, y: w.y, vx: Math.cos(a) * 52, vy: Math.sin(a) * 52, r: 5.5 }); } } }
+      warns = warns.filter(w => w.t > 0);
+      for (const o of orbs) { o.x += o.vx * dt; o.y += o.vy * dt; }
+      orbs = orbs.filter(o => o.x > -24 && o.x < W + 24 && o.y > -24 && o.y < H + 24);
+      for (let i = 0; i < orbs.length; i++) {
+        const o = orbs[i];
+        if (p.inv <= 0 && Math.hypot(o.x - p.x, o.y - p.y) < p.r + o.r * 0.8) {
+          orbs.splice(i, 1); p.inv = 1.4;
+          if (!A.hit('Sebuah bayangan menyentuhmu. Wajah-wajah itu tidak melupakan.')) { dead = true; return; }
+          break;
+        }
+      }
+      for (const s of snow) { s.y += s.s * dt; if (s.y > H) { s.y = 0; s.x = Math.random() * W; } }
+      trId('trTime').textContent = Math.max(0, Math.ceil(DUR - t));
+      if (t >= DUR) { dead = true; A.win(); }
+    }
+    function draw() {
+      g.fillStyle = '#05080c'; g.fillRect(0, 0, W, H);
+      g.fillStyle = 'rgba(190,230,255,.45)'; for (const s of snow) g.fillRect(s.x, s.y, 1.5, 1.5);
+      for (const w of warns) { g.strokeStyle = 'rgba(255,120,120,' + (0.35 + 0.4 * Math.sin(w.t * 25)) + ')'; g.lineWidth = 2; g.beginPath(); g.arc(w.x, w.y, 12 + (0.9 - w.t) * 8, 0, 6.283); g.stroke(); }
+      for (const o of orbs) {
+        g.fillStyle = '#2b1838'; g.beginPath(); g.arc(o.x, o.y, o.r, 0, 6.283); g.fill();
+        g.strokeStyle = '#8a5ab0'; g.lineWidth = 1; g.stroke();
+        g.fillStyle = '#e8f6ff'; g.fillRect(o.x - o.r * 0.5, o.y - o.r * 0.25, 1.8, 1.8); g.fillRect(o.x + o.r * 0.2, o.y - o.r * 0.25, 1.8, 1.8);
+      }
+      if (!(p.inv > 0 && Math.floor(t * 14) % 2 === 0)) {
+        const gr = g.createRadialGradient(p.x, p.y, 1, p.x, p.y, 15); gr.addColorStop(0, 'rgba(255,230,160,.95)'); gr.addColorStop(1, 'rgba(255,200,100,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, 15, 0, 6.283); g.fill();
+        g.fillStyle = '#fff6d8'; g.beginPath(); g.arc(p.x, p.y, p.r, 0, 6.283); g.fill();
+      }
+      g.fillStyle = '#12303b'; g.fillRect(0, 0, W, 4); g.fillStyle = '#ffd966'; g.fillRect(0, 0, W * Math.min(1, t / DUR), 4);
+    }
+    function frame(now) { if (dead) return; const dt = Math.min(0.05, (now - last) / 1000); last = now; update(dt); if (dead) return; draw(); raf = requestAnimationFrame(frame); }
+    raf = requestAnimationFrame(frame);
+    return () => { dead = true; cancelAnimationFrame(raf); };
+  }
+
+  // ---------------------------------------------------------------- SESI II: MENGINGAT
+  function stageMemory(A) {
+    const RUNES = [{ ic: '🏠', n: 'Pondok' }, { ic: '🔥', n: 'Tungku' }, { ic: '🌾', n: 'Ladang' }, { ic: '🔔', n: 'Lonceng' }];
+    const LEN = [4, 5, 6];
+    const st = trId('trStage');
+    st.innerHTML = '<div class="tr-dots" id="trDots"></div><div class="tr-runes">' + RUNES.map((r, i) => '<button class="tr-rune" data-i="' + i + '"><span>' + r.ic + '</span><small>[' + (i + 1) + '] ' + r.n + '</small></button>').join('') + '</div><div class="tr-hint" id="trMsg"></div>';
+    const btns = Array.from(st.querySelectorAll('.tr-rune'));
+    let round = 0, seq = [], pos = 0, phase = 'wait', dead = false, timers = [], inTimer = 0;
+    const later = (fn, ms) => { const id = setTimeout(() => { if (!dead) fn(); }, ms); timers.push(id); return id; };
+    const msg = t => { trId('trMsg').textContent = t; };
+    const dots = () => { trId('trDots').textContent = phase === 'input' ? '●'.repeat(pos) + '○'.repeat(seq.length - pos) : '· · ·'; };
+    function flash(i, ms) { btns[i].classList.add('lit'); setTimeout(() => btns[i].classList.remove('lit'), ms); }
+    function mistake(text) {
+      phase = 'wait'; clearTimeout(inTimer); dots();
+      if (!A.hit(text)) { dead = true; return; }
+      msg('Bayangan itu mengulang ingatannya dari awal…'); later(startRound, 1400);
+    }
+    function armTimeout() { clearTimeout(inTimer); inTimer = setTimeout(() => { if (!dead && phase === 'input') mistake('Kau ragu terlalu lama. Ingatan itu memudar.'); }, 7000); timers.push(inTimer); }
+    function startRound() {
+      phase = 'show'; pos = 0; seq = [];
+      for (let i = 0; i < LEN[round]; i++) { let v; do { v = Math.floor(Math.random() * 4); } while (i > 0 && v === seq[i - 1]); seq.push(v); }
+      trCap('"Rumah ke-' + (round + 1) + ' dari 3 ingatan. Lihat, jangan hanya menatap."');
+      msg('Perhatikan urutannya…'); dots();
+      const step = 780 - round * 110;
+      seq.forEach((v, i) => later(() => flash(v, step * 0.6), 900 + i * step));
+      later(() => { phase = 'input'; dots(); msg('Ulangi urutannya. [1-4] atau ketuk. Satu kesalahan = kehilangan Tekad.'); armTimeout(); }, 900 + seq.length * step + 200);
+    }
+    function press(i) {
+      if (phase !== 'input' || dead) return;
+      flash(i, 180);
+      if (i !== seq[pos]) return mistake('Salah. Rumah itu bukan yang kau ambil lebih dulu.');
+      pos++; dots(); armTimeout();
+      if (pos >= seq.length) {
+        clearTimeout(inTimer); phase = 'wait'; round++;
+        if (round >= LEN.length) { dead = true; A.win(); return; }
+        msg('Benar. Satu ingatan lagi muncul…'); setTimeout(() => { if (!dead) startRound(); }, 1200);
+      }
+    }
+    btns.forEach((b, i) => { b.onclick = () => press(i); });
+    TR.onAct = null; TR.onNum = n => press(n - 1);
+    startRound();
+    return () => { dead = true; timers.forEach(clearTimeout); clearTimeout(inTimer); TR.onNum = null; };
+  }
+
+  // ---------------------------------------------------------------- SESI III: MENYEIMBANGKAN
+  function stageHeat(A) {
+    const st = trId('trStage');
+    st.innerHTML = '<canvas id="trCv" width="320" height="200"></canvas><button class="tr-btn big" id="trHold">TAHAN — nyalakan Hearthstone (atau tahan E / Spasi)</button><div class="tr-hint">Lepas = api mendingin. Jaga penanda api di dalam pita emas. Terlalu lama di luar pita = Hearthstone padam.</div>';
+    const cv = trId('trCv'), g = cv.getContext('2d'), W = 320, H = 200, NEED = 16;
+    let v = 50, vel = 0, t = 0, prog = 0, outT = 0, gust = 2.5, gustFx = 0, dead = false, raf = 0, last = performance.now(), btnDown = false;
+    const hb = trId('trHold');
+    hb.onpointerdown = e => { btnDown = true; try { hb.setPointerCapture(e.pointerId); } catch (x) {} };
+    hb.onpointerup = hb.onpointercancel = hb.onpointerleave = () => { btnDown = false; };
+    TR.onAct = null; TR.onNum = null;
+    const GY = 12, GH = 176, yOf = val => GY + GH * (1 - val / 100);
+    const center = tt => trClamp(50 + 24 * Math.sin(tt * 0.55) + 10 * Math.sin(tt * 1.3 + 1), 22, 78);
+    function update(dt) {
+      t += dt;
+      const hold = btnDown || TR.held;
+      vel += (hold ? 60 : -45) * dt; vel *= Math.pow(0.2, dt);
+      gust -= dt; if (gust <= 0) { gust = trRand(2.2, 3.8); const s = Math.random() < 0.5 ? -1 : 1; vel += s * 14; gustFx = 0.8 * s; }
+      gustFx *= Math.pow(0.1, dt);
+      v += vel * dt; if (v < 0) { v = 0; vel = 0; } if (v > 100) { v = 100; vel = 0; }
+      const c = center(t), hw = 13 - Math.min(3, prog / NEED * 3), inZone = Math.abs(v - c) <= hw;
+      if (inZone) { prog += dt; outT = Math.max(0, outT - dt * 2); } else { prog = Math.max(0, prog - dt * 0.6); outT += dt; }
+      if (outT > 2.2) {
+        outT = 0; v = c; vel = 0; prog *= 0.5;
+        if (!A.hit('Hearthstone-mu padam sesaat. Dingin merayap ke pembuluh darahmu.')) { dead = true; return; }
+      }
+      if (prog >= NEED) { dead = true; A.win(); }
+    }
+    function draw() {
+      const c = center(t), hw = 13 - Math.min(3, prog / NEED * 3);
+      g.fillStyle = '#05080c'; g.fillRect(0, 0, W, H);
+      const gr = g.createLinearGradient(0, GY, 0, GY + GH); gr.addColorStop(0, '#5a1f12'); gr.addColorStop(0.5, '#1a2a36'); gr.addColorStop(1, '#1c4f7a');
+      g.fillStyle = gr; g.fillRect(110, GY, 44, GH);
+      g.fillStyle = 'rgba(255,217,102,.55)'; g.fillRect(110, yOf(c + hw), 44, (hw * 2) * GH / 100);
+      g.strokeStyle = '#ffd966'; g.lineWidth = 1; g.strokeRect(110.5, yOf(c + hw), 43, (hw * 2) * GH / 100);
+      g.strokeStyle = '#3d7487'; g.strokeRect(110.5, GY + 0.5, 43, GH - 1);
+      const my = yOf(v), fg = g.createRadialGradient(132, my, 1, 132, my, 18); fg.addColorStop(0, 'rgba(255,240,200,1)'); fg.addColorStop(1, 'rgba(255,140,60,0)');
+      g.fillStyle = fg; g.beginPath(); g.arc(132, my, 18, 0, 6.283); g.fill();
+      g.fillStyle = '#fff6d8'; g.beginPath(); g.arc(132, my, 6, 0, 6.283); g.fill();
+      if (Math.abs(gustFx) > 0.15) { g.fillStyle = 'rgba(160,220,255,' + Math.min(1, Math.abs(gustFx)) + ')'; g.font = 'bold 14px monospace'; g.fillText(gustFx > 0 ? '▲ hembusan' : '▼ angin dingin', 168, my); }
+      g.fillStyle = '#12303b'; g.fillRect(200, GY, 16, GH); g.fillStyle = '#ff9f43'; const ph = GH * Math.min(1, prog / NEED); g.fillRect(200, GY + GH - ph, 16, ph);
+      g.strokeStyle = '#3d7487'; g.strokeRect(200.5, GY + 0.5, 15, GH - 1);
+      g.fillStyle = '#9bbcc7'; g.font = '10px monospace'; g.fillText('hangat', 222, GY + 10); g.fillText(Math.floor(prog / NEED * 100) + '%', 222, GY + 24);
+      g.fillStyle = '#12303b'; g.fillRect(84, GY, 10, GH); g.fillStyle = outT > 1.3 ? '#ff5c5c' : '#c66'; const oh = GH * Math.min(1, outT / 2.2); g.fillRect(84, GY + GH - oh, 10, oh);
+      g.fillStyle = '#9bbcc7'; g.fillText('bahaya', 40, GY + 10);
+    }
+    function frame(now) { if (dead) return; const dt = Math.min(0.05, (now - last) / 1000); last = now; update(dt); if (dead) return; draw(); raf = requestAnimationFrame(frame); }
+    raf = requestAnimationFrame(frame);
+    return () => { dead = true; cancelAnimationFrame(raf); };
+  }
+
+  // ---------------------------------------------------------------- KONTROLER UJIAN
+  const TR_STAGES = [
+    { title: 'Sesi I — Bayangan yang Terusir', run: stageDodge,
+      intro: 'Orang-orang yang pernah kau usir keluar dari rumah mereka berdiri di hadapanmu. Kau tidak bisa melukai mereka dan tidak boleh melawan. Hindari semua bayangan sampai fajar tiba. Bayangan bergerak makin cepat, dan sesekali sebuah cincin kenangan meledak dari satu titik — waspadai lingkaran merah.',
+      cap: '"Jangan angkat pedangmu. Mereka hanya ingin kau melihat mereka."' },
+    { title: 'Sesi II — Rumah yang Disita', run: stageMemory,
+      intro: 'Bayangan menunjukkan rumah-rumah yang kau segel satu demi satu. Perhatikan urutan yang menyala, lalu ulangi tanpa satu pun kesalahan. Tiga ingatan, makin panjang dan makin cepat. Kesalahan atau keraguan terlalu lama menghabiskan Tekad.',
+      cap: '"Kau menandatangani semuanya tanpa membaca nama. Sekarang ingatlah."' },
+    { title: 'Sesi III — Api yang Hampir Padam', run: stageHeat,
+      intro: 'Hearthstone di tanganmu goyah. Tahan untuk menaikkan panasnya, lepas agar mendingin. Jaga penanda api tetap di dalam pita emas yang bergeser, sementara angin dingin mendorongnya. Kendalimu terasa berat dan lambat — jangan panik, atur tarikannya.',
+      cap: '"Terlalu panas membakar, terlalu dingin membekukan. Carilah tengahnya."' }
+  ];
+
+  function trHit(text) {
+    TR.tekad--; trHearts();
+    const r = trId('trialOverlay'); r.classList.remove('hit'); void r.offsetWidth; r.classList.add('hit');
+    if (TR.tekad <= 0) { trFail(); return false; }
+    trCap(text); return true;
+  }
+  function trStopStage() { if (TR.stop) { TR.stop(); TR.stop = null; } }
+  function trFail() {
+    trStopStage();
+    trCard('Hearthstone Padam',
+      'Tekadmu habis. Cahaya di tanganmu meredup, dan wajah-wajah itu menghilang ke dalam kabut. Roh Malthus menatapmu tanpa marah. Ujian harus diulang dari Sesi I.',
+      [{ label: 'Ulangi dari awal.', fn: () => { TR.tekad = 3; TR.stage = 0; trHearts(); trRunStage(); } },
+       { label: 'Mundur dulu.', fn: trQuit }],
+      '"Penyesalan yang dihindari akan kembali dengan wajah yang lebih keras."');
+  }
+  function trQuit() { trStopStage(); TR.active = false; TR.onAct = TR.onNum = null; trId('trialOverlay').classList.remove('on'); currentState = STATE.EXPLORE; updateUI(); }
+  function trRunStage() {
+    const s = TR_STAGES[TR.stage];
+    trId('trTitle').textContent = s.title;
+    trCard(s.title, s.intro, [{ label: 'Mulai.', fn: () => { TR.onAct = null; TR.onNum = null; trCap(s.cap); TR.stop = s.run({ hit: trHit, win: trWin }); } }], s.cap);
+  }
+  function trWin() {
+    trStopStage();
+    TR.stage++;
+    if (TR.stage >= TR_STAGES.length) return trClear();
+    TR.tekad = Math.min(3, TR.tekad + 1); trHearts();
+    const done = ['', 'Fajar menyentuh salju. Bayangan-bayangan itu menunduk dan memudar satu per satu. Kau merasakan satu Tekad pulih.', 'Semua rumah kau ingat. Tidak satu pun terlewat. Kau merasakan satu Tekad pulih.'][TR.stage];
+    trCard('Sesi Selesai', done, [{ label: 'Lanjut ke sesi berikutnya.', fn: trRunStage }], '');
+  }
+  function trClear() {
+    TR.active = false; TR.onAct = TR.onNum = null;
+    trId('trialOverlay').classList.remove('on');
+    currentState = STATE.EXPLORE;
+    malthusFarewell();
+  }
+  function trialStart() {
+    trRoot(); TR.active = true; TR.tekad = 3; TR.stage = 0; TR.held = false;
+    clearAllMovementKeys(); currentState = STATE.COMBAT;
+    trId('trialOverlay').classList.add('on'); trHearts(); trRunStage();
+  }
+
+  function shadowTrial() {
+    startDialogue('Roh Malthus', 'Gerbang Rahasia — Ujian Penebusan', '#9ef0ff',
+      '"Aldric Vane. Gerbang ini tidak dibuka oleh pedang." Roh Malthus melayang di antara dua pilar batu yang ditumbuhi lumut. "Ada tiga ujian, tiga wajah penyesalanmu. Pertama, bayangan orang-orang yang kau usir: kau hanya boleh menghindar sampai fajar. Kedua, rumah-rumah yang kau sita: ingat urutannya tanpa salah. Ketiga, api Hearthstone: jaga ia tetap menyala di antara terlalu panas dan terlalu dingin. Kau punya tiga Tekad. Jika habis, Hearthstone padam dan kau mengulang dari awal."',
+      [{ label: 'Aku siap menghadapi ketiganya.', action: () => { closeDialogue(); trialStart(); } },
+       { label: 'Beri aku waktu.', action: closeDialogue }]);
+  }
+
+  // ---------------------------------------------------------------- KATA TERAKHIR & MENGHILANGNYA MALTHUS
+  function malthusFarewell() {
+    gameData.flags.shadowDefeated = true; ST.step = 'capital'; farewellLast = false; updateUI();
+    const who = ['Roh Malthus', 'Mentor Aldric yang Tumbang', '#9ef0ff'];
+    startDialogue(who[0], who[1], who[2],
+      '"Tiga wajah telah kau hadapi, Aldric: mereka yang kau usir, rumah yang kau segel, dan api yang nyaris padam di tanganmu. Kau tidak menang atas mereka. Kau hanya berhenti lari. Bayangan itu menyerap Hearthstone-mu dan tidak menghancurkannya. Rime-rot bukan penyakit; itu rasa bersalahmu yang membeku di pembuluh darah."',
+      [{ label: '...', action: () => {
+        startDialogue(who[0], who[1], who[2],
+          '"Dulu aku mengajarimu menegakkan hukum tanpa bertanya siapa yang dirugikannya. Itu kegagalanku sebelum menjadi kegagalanmu. Di Aurelion ada orang yang jauh lebih pandai bersembunyi di balik alasan yang baik. Dengarkan dulu sebelum kau menghakimi, dan jangan ulangi kesalahan kita."',
+          [{ label: '...', action: () => {
+            farewellLast = true;
+            startDialogue(who[0], who[1], who[2],
+              '"Jalan ke timur terbuka. Bawalah rasa bersalah itu sebagai kompas, bukan beban. Waktuku di sini sudah habis. Selamat tinggal, muridku."',
+              [{ label: 'Selamat jalan, Guru.', action: closeDialogue }]);
+          } }]);
+      } }]);
+  }
+  function vanishMalthus() {
+    farewellLast = false; gameData.flags.malthusGone = true;
+    const host = trId('combatOverlay').parentElement, fl = document.createElement('div'); fl.id = 'trialFlash'; host.appendChild(fl);
+    setTimeout(() => { const arr = npcsByMap.elf_road, i = arr.findIndex(n => n.id === 'malthus'); if (i >= 0) arr.splice(i, 1); updateUI(); }, 650);
+    setTimeout(() => fl.remove(), 1900);
+  }
+  const _closeDlgM = closeDialogue;
+  closeDialogue = function () {
+    _closeDlgM.apply(this, arguments);
+    if (farewellLast && !gameData.flags.malthusGone) vanishMalthus();
+  };
+
   function malthusStory() {
-    if (ST.step !== 'road') return startDialogue('Roh Malthus','Mentor Aldric','#9ef0ff', gameData.flags.shadowDefeated ? '"Jalan telah kau lewati."' : '"Badai es belum reda."', [{label:'Aku akan kembali.',action:closeDialogue}]);
+    if (gameData.flags.malthusGone) return;
+    if (gameData.flags.shadowDefeated) return malthusFarewell();
+    if (ST.step !== 'road') return startDialogue('Roh Malthus', 'Mentor Aldric', '#9ef0ff', '"Badai es belum reda."', [{ label: 'Aku akan kembali.', action: closeDialogue }]);
     shadowTrial();
   }
 
@@ -8193,6 +8641,7 @@
     box.innerHTML = html;
 
     const o = getStoryObjective(); const f = gameData.flags;
+    if (f.caelenQuestDone) f.elf_botanical = true;
     let li = '';
     if (ST.step === 'done') li = `<div class="quest-item"><strong class="q-done">✔ [Utama] ${o.title}</strong><br><span style="color:#98c379;">${o.text}</span></div>`;
     else {
@@ -8203,19 +8652,20 @@
         li += `<br><span style="color:${f.ch1_killBear ? '#98c379' : '#e0d8cc'};">${f.ch1_killBear ? '☑' : '☐'} Bunuh Beruang Gua</span>`;
         li += `<br><span style="color:${f.ch1_killSpider ? '#98c379' : '#e0d8cc'};">${f.ch1_killSpider ? '☑' : '☐'} Bunuh Laba-Laba Kabut</span>`;
       }
-      if (ST.step === 'keys' && !f.elfKey) {
+      if (ST.step === 'keys') {
         li += `<br><span style="color:#b8afa6;">Setengah Kunci Zamrud (Elara):</span>`;
         li += `<br><span style="color:${f.elf_botanical ? '#98c379' : '#e0d8cc'};">${f.elf_botanical ? '☑' : '☐'} Bantu Caelen memanen Bunga Embun Perak</span>`;
         li += `<br><span style="color:${f.elf_memoryShard ? '#98c379' : '#e0d8cc'};">${f.elf_memoryShard ? '☑' : '☐'} Ambil pecahan memori di danau tua</span>`;
+        li += `<br><span style="color:${f.elfKey ? '#98c379' : '#e0d8cc'};">${f.elfKey ? '☑' : '☐'} Terima Kunci Zamrud dari Elara</span>`;
       }
-      if (ST.step === 'keys' && !f.dwarfKey) {
+      if (ST.step === 'keys') {
         li += `<br><span style="color:#b8afa6;">Setengah Kunci Baja (Varek/Durgan):</span>`;
-        li += `<br><span style="color:${f.varekProof ? '#98c379' : '#e0d8cc'};">${f.varekProof ? '☑' : '☐'} Hancurkan Automaton Besi</span>`;
+        li += `<br><span style="color:${(f.varekProof || f.golemDefeated) ? '#98c379' : '#e0d8cc'};">${(f.varekProof || f.golemDefeated) ? '☑' : '☐'} Hancurkan Automaton Besi</span>`;
         li += `<br><span style="color:${f.dwarfKey ? '#98c379' : '#e0d8cc'};">${f.dwarfKey ? '☑' : '☐'} Terima kunci dari Raja Durgan</span>`;
       }
       if (ST.step === 'road') {
         li += `<br><span style="color:#b8afa6;">Ujian Penebusan (Roh Malthus):</span>`;
-        li += `<br><span style="color:${f.shadowDefeated ? '#98c379' : '#e0d8cc'};">${f.shadowDefeated ? '☑' : '☐'} Bertahan 3 kali dari Bayangan Aldric</span>`;
+        li += `<br><span style="color:${f.shadowDefeated ? '#98c379' : '#e0d8cc'};">${f.shadowDefeated ? '☑' : '☐'} Lulus 3 Ujian Penebusan (Menghindar, Mengingat, Menyeimbangkan)</span>`;
       }
       li += `</div>`;
     }
@@ -8260,7 +8710,7 @@
 
   // ===== FILTER NPC =====
   const oldGetActiveNPCs = getActiveNPCs;
-  getActiveNPCs = function () { const list = oldGetActiveNPCs(); if (!gameData.flags.finalBattleDone) return list; return list.filter(n => n.id !== 'veyra_boss'); };
+  getActiveNPCs = function () { let list = oldGetActiveNPCs(); if (gameData.flags.malthusGone) list = list.filter(n => n.id !== 'malthus'); if (!gameData.flags.finalBattleDone) return list; return list.filter(n => n.id !== 'veyra_boss'); };
 
   // ===== LOAD WRAPPER =====
   const oldLoadGame = window.loadGame;
@@ -8622,10 +9072,169 @@
     catch (e) { startDialogue('Gagal Memuat', 'Sistem', '#e06c75', 'Data impor rusak atau tidak kompatibel.', [{ label: 'Tutup', action: closeDialogue }]); }
   })();
   </script>
+  <style id="combat-v2-css">
+    /* ===== Pertarungan giliran v2 ===== */
+    #combatOverlay { background: radial-gradient(ellipse at 50% 25%, rgba(70,30,24,.5), rgba(10,12,15,.97) 68%), #0a0c0f; gap: 6px; }
+    #combatOverlay .combat-header { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    #combatOverlay .turn-strip { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+    #combatOverlay .turn-count { color: var(--text-muted); letter-spacing: .5px; }
+    #combatOverlay .turn-banner { padding: 2px 12px; border-radius: 10px; font-weight: bold; letter-spacing: .6px; background: #25401f; color: #b8f0a8; border: 1px solid #5a8f4c; transition: all .2s; }
+    #combatOverlay .turn-banner.enemy { background: #4a2020; color: #ffc0b8; border-color: #a63434; }
+    #combatOverlay .combat-arena { align-items: stretch; }
+    #combatOverlay .fighter-card { position: relative; background: linear-gradient(#1d1814, #121010); transition: box-shadow .2s, border-color .2s; }
+    #combatOverlay .fighter-card.active { border-color: var(--gold-accent); box-shadow: 0 0 14px rgba(212,175,55,.35); }
+    #combatOverlay .fighter-card.hit { animation: cShake .38s; }
+    #combatOverlay .fighter-card.lunge-p { animation: cLungeR .45s; }
+    #combatOverlay .fighter-card.lunge-e { animation: cLungeL .45s; }
+    #combatOverlay .fighter-card.flash::after { content: ''; position: absolute; inset: 0; background: rgba(255,80,60,.35); animation: cFlash .4s forwards; pointer-events: none; }
+    @keyframes cShake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+    @keyframes cLungeR { 0%,100% { transform: translateX(0); } 40% { transform: translateX(16px); } }
+    @keyframes cLungeL { 0%,100% { transform: translateX(0); } 40% { transform: translateX(-16px); } }
+    @keyframes cFlash { from { opacity: 1; } to { opacity: 0; } }
+    #combatOverlay .fighter-portrait { display: flex; justify-content: center; align-items: flex-end; height: 84px; margin-bottom: 4px; }
+    #combatOverlay .fighter-portrait canvas { width: 64px; height: 80px; image-rendering: pixelated; image-rendering: crisp-edges; }
+    #combatOverlay .enemy-portrait { font-size: 54px; line-height: 80px; filter: drop-shadow(0 4px 0 rgba(0,0,0,.55)); animation: cIdle 2.2s ease-in-out infinite; }
+    @keyframes cIdle { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    #combatOverlay .bar-wrap { overflow: hidden; }
+    #combatOverlay .bar-ghost { position: absolute; top: 0; left: 0; height: 100%; background: rgba(255,255,255,.55); transition: width .7s ease .35s; }
+    #combatOverlay .bar-fill { position: relative; z-index: 1; }
+    #combatOverlay .bar-label { z-index: 2; }
+    #combatOverlay .focus-row { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 4px 0 2px; font-size: 9.5px; color: var(--text-muted); }
+    #combatOverlay .pip { width: 11px; height: 11px; transform: rotate(45deg); border: 1px solid #735d46; background: #0c0a09; transition: all .2s; }
+    #combatOverlay .pip.on { background: #ffd966; border-color: #fff3b0; box-shadow: 0 0 7px #ffd966; }
+    #combatOverlay .intent-box { margin-top: 6px; padding: 5px 7px; border: 1px solid; border-radius: 3px; font-size: 10.5px; text-align: left; display: flex; gap: 7px; align-items: center; line-height: 1.25; }
+    #combatOverlay .intent-box .i-ico { font-size: 20px; flex: none; }
+    #combatOverlay .intent-box strong { display: block; font-size: 11px; }
+    #combatOverlay .intent-box.atk { background: rgba(120,60,30,.25); border-color: #a8693a; color: #f0c9a0; }
+    #combatOverlay .intent-box.heavy { background: rgba(140,30,30,.35); border-color: #e05a47; color: #ffc0b8; }
+    #combatOverlay .intent-box.heavy .i-ico { animation: cPulse .6s infinite alternate; }
+    #combatOverlay .intent-box.guard { background: rgba(60,80,110,.3); border-color: #6a8ab8; color: #c3d4ee; }
+    @keyframes cPulse { to { transform: scale(1.25); } }
+    #combatOverlay .fx-layer { position: absolute; inset: 0; pointer-events: none; overflow: visible; z-index: 5; }
+    #combatOverlay .fx { position: absolute; top: 28%; transform: translate(-50%, 0); font-weight: bold; font-size: 18px; white-space: nowrap; text-shadow: 0 2px 0 #000, 0 0 6px #000; animation: cFloat 1s ease-out forwards; }
+    #combatOverlay .fx.dmg { color: #ff6b5b; } #combatOverlay .fx.crit { color: #ffd966; font-size: 24px; } #combatOverlay .fx.heal { color: #8be28b; }
+    #combatOverlay .fx.heat { color: #7fd6f2; font-size: 14px; } #combatOverlay .fx.guard { color: #b8c4d6; font-size: 15px; } #combatOverlay .fx.miss { color: #ddd; font-size: 14px; }
+    @keyframes cFloat { 0% { opacity: 0; margin-top: 8px; } 15% { opacity: 1; margin-top: -4px; } 100% { opacity: 0; margin-top: -42px; } }
+    #combatOverlay .combat-log-box { min-height: 52px; max-height: 96px; overflow-y: auto; margin-bottom: 0; }
+    #combatOverlay .log-line { padding: 1px 0; border-bottom: 1px dotted rgba(255,255,255,.06); animation: cLogIn .25s; }
+    #combatOverlay .log-line.old { opacity: .55; }
+    @keyframes cLogIn { from { opacity: 0; transform: translateY(4px); } }
+    #combatOverlay .combat-actions { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    #combatOverlay .btn-medieval { display: flex; align-items: center; gap: 8px; padding: 7px 9px; position: relative; }
+    #combatOverlay .btn-ico { font-size: 20px; flex: none; width: 26px; text-align: center; }
+    #combatOverlay .btn-txt { min-width: 0; line-height: 1.25; }
+    #combatOverlay .btn-txt strong { font-size: 12px; }
+    #combatOverlay .btn-txt small { display: block; font-size: 10px; color: var(--text-muted); }
+    #combatOverlay .key-tag { position: absolute; top: 2px; right: 4px; font-size: 9px; color: #6f6455; }
+    #combatOverlay #btn-ultimate { grid-column: 1 / -1; border-color: #b8860b; background: linear-gradient(90deg, #2f2412, #473514); }
+    #combatOverlay #btn-ultimate:not(:disabled) { animation: cUlt 1s infinite alternate; }
+    @keyframes cUlt { to { box-shadow: 0 0 12px rgba(255,217,102,.55); border-color: #ffd966; } }
+    #combatOverlay .combat-actions.busy .btn-medieval { pointer-events: none; opacity: .5; }
+    @media (prefers-reduced-motion: reduce) { #combatOverlay * { animation: none !important; transition: none !important; } }
+    @media (min-width: 900px) and (min-height: 700px) { #combatOverlay .fighter-portrait canvas { width: 128px; height: 160px; } #combatOverlay .fighter-portrait { height: 164px; } #combatOverlay .enemy-portrait { font-size: 96px; line-height: 160px; } }
+    html.m-land #combatOverlay .fighter-portrait, html.m-land #combatOverlay .btn-txt small, html.m-land #combatOverlay #enemy-flavor { display: none; }
+    html.m-land #combatOverlay .intent-box { margin-top: 3px; padding: 3px 5px; } html.m-land #combatOverlay .intent-box .i-ico { font-size: 15px; }
+    html.m-land #combatOverlay #btn-ultimate { grid-column: auto; }
+    html.m-land #combatOverlay .combat-actions { grid-template-columns: repeat(5, 1fr); }
+    html.m-land #combatOverlay .key-tag { display: none; }
+    @media (max-width: 700px) {
+      .canvas-container.combat-mode-mobile { min-height: 720px; }
+      #combatOverlay .combat-header p, #combatOverlay #enemy-flavor { display: none; }
+      #combatOverlay .combat-header h2 { font-size: 13px; }
+    }
+    #combatOverlay > * { flex-shrink: 0; }
+  </style>
+  <style id="combat-v3-css">
+    /* ===== v3: semua tombol aksi muat di layar tanpa digeser; ikon di tengah atas, info di bawah ===== */
+    #combatOverlay { overflow: hidden; }
+    #combatOverlay > * { flex-shrink: 1; min-height: 0; }
+    #combatOverlay .combat-header { flex-shrink: 0; }
+    #combatOverlay .combat-arena { flex: 0 0 auto; align-items: flex-start; margin: 4px 0; }
+    #combatOverlay .fighter-card { overflow: visible; }
+    #combatOverlay .combat-log-box { flex: 1 1 0; min-height: 70px; max-height: none; overflow-y: auto; font-size: 13px; line-height: 1.45; padding: 6px 10px; }
+    #combatOverlay .fighter-card { align-self: flex-start; padding: 6px 8px; }
+    #combatOverlay .fighter-sub { margin-bottom: 4px; }
+    #combatOverlay .fighter-portrait { display: none; }
+    #combatOverlay .combat-actions { flex: 0 0 auto; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+    #combatOverlay #btn-ultimate { grid-column: auto; }
+    #combatOverlay .btn-medieval { flex-direction: column; justify-content: flex-start; align-items: center; gap: 2px; padding: 6px 3px 5px; text-align: center; min-width: 0; }
+    #combatOverlay .btn-ico { width: auto; font-size: 22px; line-height: 1; }
+    #combatOverlay .btn-txt { width: 100%; text-align: center; line-height: 1.2; }
+    #combatOverlay .btn-txt strong { display: block; font-size: 11px; overflow-wrap: anywhere; }
+    #combatOverlay .btn-txt small { display: block; font-size: 9px; overflow-wrap: anywhere; }
+    #combatOverlay .key-tag { top: 1px; right: 3px; }
+    html.m-land #combatOverlay .btn-txt small { display: block; font-size: 8px; line-height: 1.15; }
+    html.m-land #combatOverlay .btn-txt strong { font-size: 9.5px; }
+    html.m-land #combatOverlay .btn-ico { font-size: 17px; }
+    html.m-land #combatOverlay .btn-medieval { padding: 3px 2px; }
+    html.m-land #combatOverlay .combat-actions { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+    html.m-land #combatOverlay .combat-log-box { min-height: 44px; font-size: 12px; }
+    @media (max-width: 700px) {
+      .canvas-container.combat-mode-mobile { min-height: 0; }
+      #combatOverlay .btn-txt strong { font-size: 9.5px; }
+      #combatOverlay .btn-txt small { font-size: 8px; }
+    }
+  </style>
   <style id="equipment-css">
     /* Panel Perlengkapan terbuka: sembunyikan joystick & tombol aksi agar tidak menghalangi */
     html.eq-open .touch-controls, html.eq-open #touchControls, html.eq-open #joyZone, html.eq-open #joystick,
     html.eq-open #btnTouchAction { display: none !important; }
+    /* ===== Tab Perlengkapan: tampilan karakter baru ===== */
+    #eq-root .eq-hero { display: flex; flex-wrap: wrap; gap: 12px; align-items: stretch; margin-bottom: 10px; }
+    #eq-root .eq-stage { flex: none; margin: 0 auto; position: relative; border: 2px solid #735d46; border-radius: 8px; overflow: hidden;
+      background: #0d0a08; box-shadow: inset 0 0 22px rgba(0,0,0,.9), 0 0 0 1px #000, 0 0 16px rgba(212,175,55,.15); }
+    #eq-root #eq-fig { display: block; width: 128px; height: 160px; image-rendering: pixelated; image-rendering: crisp-edges; }
+    #eq-root .eq-plate { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 6px 5px; text-align: center;
+      background: linear-gradient(transparent, rgba(0,0,0,.85)); line-height: 1.15; pointer-events: none; }
+    #eq-root .eq-plate strong { display: block; color: #ffd966; font-size: 12px; text-shadow: 0 1px 0 #000; letter-spacing: .5px; }
+    #eq-root .eq-plate small { color: #b8afa6; font-size: 9.5px; }
+    #eq-root .eq-side { flex: 1 1 170px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+    #eq-root .eq-slot { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: linear-gradient(90deg, rgba(255,255,255,.06), rgba(0,0,0,.25));
+      border: 1px solid var(--rc, #735d46); border-left-width: 4px; border-radius: 4px; }
+    #eq-root .eq-slot-ico { font-size: 22px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex: none;
+      background: rgba(0,0,0,.45); border: 1px solid var(--rc, #735d46); border-radius: 4px; }
+    #eq-root .eq-slot-txt { min-width: 0; line-height: 1.25; }
+    #eq-root .eq-slot-lbl { display: block; font-size: 9px; letter-spacing: 1.2px; color: #8c8275; }
+    #eq-root .eq-slot-txt strong { font-size: 12px; color: #f2e8d2; word-break: break-word; }
+    #eq-root .eq-stats { display: flex; flex-direction: column; gap: 5px; margin-top: 2px; padding: 6px 8px; background: rgba(0,0,0,.3); border: 1px solid #3d3227; border-radius: 4px; }
+    #eq-root .eq-stat { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+    #eq-root .eq-stat-l { width: 78px; flex: none; color: #b8afa6; }
+    #eq-root .eq-stat-bar { flex: 1; height: 8px; background: #0c0a09; border: 1px solid #44382c; border-radius: 2px; overflow: hidden; }
+    #eq-root .eq-stat-bar i { display: block; height: 100%; transition: width .4s ease; }
+    #eq-root .eq-stat b { width: 34px; text-align: right; color: #fff; font-size: 11px; }
+    #eq-root .rar-com { --rc: #6e665c; } #eq-root .rar-unc { --rc: #5aa860; } #eq-root .rar-rare { --rc: #4a90d9; } #eq-root .rar-epic { --rc: #b06be0; }
+    #eq-root .eq-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+    #eq-root .eq-tabs button { flex: 1; padding: 7px 6px; border: 1px solid #735d46; background: rgba(56,46,36,.6); color: #e8dcc8; border-radius: 4px; cursor: pointer;
+      font-family: inherit; font-weight: bold; font-size: 12px; touch-action: manipulation; }
+    #eq-root .eq-tabs button.on { border-color: #ffd966; background: rgba(212,175,55,.88); color: #1a1208; }
+    #eq-root .eq-msg { color: #e06c75; font-size: 11px; margin-bottom: 6px; }
+    #eq-root .eq-list { display: flex; flex-direction: column; gap: 6px; }
+    #eq-root .eq-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: #161310; border: 1px solid #3d3227; border-left: 4px solid var(--rc, #6e665c); border-radius: 4px; }
+    #eq-root .eq-item.on { background: linear-gradient(90deg, rgba(128,237,153,.10), #161310); border-color: #5a8f4c; border-left-color: #80ed99; }
+    #eq-root .eq-ico { font-size: 20px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex: none; background: rgba(0,0,0,.4); border-radius: 4px; }
+    #eq-root .eq-info { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; line-height: 1.3; }
+    #eq-root .eq-info strong { font-size: 12px; color: #f2e8d2; }
+    #eq-root .eq-rar { font-size: 9px; padding: 0 5px; border-radius: 8px; border: 1px solid var(--rc); color: var(--rc); }
+    #eq-root .eq-sub { flex-basis: 100%; font-size: 10.5px; color: #b8afa6; }
+    #eq-root .eq-delta { font-size: 10px; font-weight: bold; }
+    #eq-root .eq-delta.up { color: #80ed99; } #eq-root .eq-delta.down { color: #e06c75; }
+    #eq-root .eq-on { color: #80ed99; font-size: 11px; font-weight: bold; white-space: nowrap; }
+    #eq-root .eq-item button { background: #2e251d; color: var(--gold-accent); border: 1px solid var(--gold-accent); font-family: inherit; font-size: 11px; padding: 5px 9px; cursor: pointer; touch-action: manipulation; border-radius: 3px; }
+    #eq-root .eq-item button:hover, #eq-root .eq-item button:active { background: var(--gold-accent); color: #000; }
+    @media (min-width: 1101px) { #eq-root #eq-fig { width: 192px; height: 240px; } }
+    @media (max-width: 700px) {
+      #eq-root #eq-fig { width: 96px; height: 120px; }
+      #eq-root .eq-hero { flex-wrap: nowrap; gap: 8px; margin-bottom: 8px; }
+      #eq-root .eq-stage { margin: 0; align-self: flex-start; }
+      #eq-root .eq-plate { padding: 10px 2px 3px; } #eq-root .eq-plate strong { font-size: 10px; } #eq-root .eq-plate small { font-size: 8.5px; }
+      #eq-root .eq-side { flex: 1 1 0; gap: 4px; }
+      #eq-root .eq-slot { padding: 3px 5px; gap: 5px; }
+      #eq-root .eq-slot-ico { width: 24px; height: 24px; font-size: 15px; }
+      #eq-root .eq-slot-txt strong { font-size: 10.5px; } #eq-root .eq-slot-lbl { font-size: 8px; }
+      #eq-root .eq-stats { padding: 4px 6px; gap: 3px; }
+      #eq-root .eq-stat { font-size: 9.5px; gap: 4px; } #eq-root .eq-stat-l { width: 56px; } #eq-root .eq-stat b { width: 26px; font-size: 10px; }
+      #eq-root .eq-stat-bar { height: 6px; }
+    }
   </style>
   <script id="equipment-js">
 (function () {
@@ -8644,6 +9253,11 @@
   const g = () => gameData;
   const wObj = (id, x) => Object.assign({ id, n: (W[id] || {}).n || id, atk: (W[id] || {}).atk || 0 }, x || {});
   const aObj = (id, x) => Object.assign({ id, n: (A[id] || {}).n || id, def: (A[id] || {}).def || 0, hp: (A[id] || {}).hp || 0 }, x || {});
+  const ICON = { sword0: '🗡️', sylvan_blessing: '🌿', spear: '🔱', twin: '⚔️', belati: '🔪', bilah: '🗡️', kapak: '🪓', royal: '👑',
+    coat0: '🧥', zirah: '🛡️', cloak: '🧣', shield: '🛡️', jubah: '🦊', sarung: '🧤', rompi: '🦺', jimat: '📿' };
+  const ico = (kind, id) => ICON[id] || (kind === 'weapon' ? '⚔️' : '🛡️');
+  const rarW = x => { const v = x.atk; return v >= 30 ? 'epic' : v >= 24 ? 'rare' : v >= 20 ? 'unc' : 'com'; };
+  const rarA = x => { const v = x.def * 15 + x.hp; return v >= 80 ? 'epic' : v >= 50 ? 'rare' : v >= 25 ? 'unc' : 'com'; };
   let tab = 'weapon', msg = '';
 
   function migrate() {
@@ -8696,25 +9310,52 @@
     render() {
       const root = document.getElementById('eq-root'); if (!root) return;
       const e = S(), d = g();
-      const w = e.weapons.find(x => x.id === e.w), a = e.armors.find(x => x.id === e.a);
-      const isW = tab === 'weapon', list = isW ? e.weapons : e.armors, cur = isW ? e.w : e.a;
+      const w = e.weapons.find(x => x.id === e.w) || e.weapons[0], a = e.armors.find(x => x.id === e.a) || e.armors[0];
+      const isW = tab === 'weapon', list = isW ? e.weapons : e.armors, cur = isW ? w : a;
+      const inCombat = typeof currentState !== 'undefined' && currentState === STATE.COMBAT;
+      const sig = [tab, msg, e.w, e.a, e.sharpen, d.maxHp, d.weaponBonus, e.weapons.length, e.armors.length, inCombat ? 1 : 0].join('|');
+      if (root.dataset.sig === sig && document.getElementById('eq-fig')) { EQ.paint(); return; }
+      root.dataset.sig = sig;
+      const atk = w.atk + e.sharpen;
+      const bar = (lbl, val, txt, max, col) => '<div class="eq-stat"><span class="eq-stat-l">' + lbl + '</span>' +
+        '<div class="eq-stat-bar"><i style="width:' + Math.max(4, Math.min(100, val / max * 100)) + '%;background:' + col + ';"></i></div><b>' + txt + '</b></div>';
+      const delta = x => {
+        if (isW) { const dv = (x.atk) - (cur.atk); return dv === 0 ? '' : '<span class="eq-delta ' + (dv > 0 ? 'up' : 'down') + '">' + (dv > 0 ? '▲ +' : '▼ ') + dv + ' Serangan</span>'; }
+        const dd = x.def - cur.def, dh = x.hp - cur.hp, p = [];
+        if (dd) p.push('<span class="eq-delta ' + (dd > 0 ? 'up' : 'down') + '">' + (dd > 0 ? '▲ +' : '▼ ') + dd + ' Redam</span>');
+        if (dh) p.push('<span class="eq-delta ' + (dh > 0 ? 'up' : 'down') + '">' + (dh > 0 ? '▲ +' : '▼ ') + dh + ' HP</span>');
+        return p.join(' ');
+      };
       const stat = x => isW ? 'Serangan +' + (x.atk + e.sharpen) : 'Redam ' + x.def + ' Dmg · Maks HP +' + x.hp;
+      const rar = x => isW ? rarW(x) : rarA(x);
+      const RN = { com: 'Biasa', unc: 'Bagus', rare: 'Langka', epic: 'Epik' };
       root.innerHTML =
-        '<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">' +
-          '<canvas id="eq-fig" width="32" height="40" style="width:112px;height:140px;image-rendering:pixelated;background:rgba(0,0,0,.35);border:1px solid #735d46;border-radius:6px;flex:none;"></canvas>' +
-          '<div style="font-size:12px;line-height:1.7;">' +
-            '<div><span style="color:#8c8275;">Senjata</span><br><strong style="color:var(--gold-accent);">' + d.weaponName + '</strong></div>' +
-            '<div><span style="color:#8c8275;">Pertahanan</span><br><strong style="color:#98c379;">' + d.armorName + '</strong></div>' +
-            '<div style="color:#b8afa6;">HP Maks ' + d.maxHp + '</div>' +
-          '</div></div>' +
-        '<div class="eq-tabs" style="display:flex;gap:6px;margin-bottom:6px;">' +
-          ['weapon','armor'].map(k => '<button type="button" onclick="EQ.tab(\'' + k + '\')" style="flex:1;padding:6px;border:1px solid ' + (tab === k ? '#ffd966' : '#735d46') + ';background:' + (tab === k ? 'rgba(212,175,55,.85)' : 'rgba(56,46,36,.6)') + ';color:' + (tab === k ? '#1a1208' : '#e8dcc8') + ';border-radius:4px;cursor:pointer;font-weight:bold;">' + (k === 'weapon' ? '⚔ Senjata' : '🛡 Pertahanan') + '</button>').join('') +
+        '<div class="eq-hero">' +
+          '<div class="eq-stage"><canvas id="eq-fig" width="64" height="80"></canvas>' +
+            '<div class="eq-plate"><strong>Aldric Vane</strong><small>Eks-Juru Sita</small></div></div>' +
+          '<div class="eq-side">' +
+            '<div class="eq-slot rar-' + rarW(w) + '"><div class="eq-slot-ico">' + ico('weapon', w.id) + '</div><div class="eq-slot-txt"><span class="eq-slot-lbl">SENJATA</span><strong>' + d.weaponName + '</strong></div></div>' +
+            '<div class="eq-slot rar-' + rarA(a) + '"><div class="eq-slot-ico">' + ico('armor', a.id) + '</div><div class="eq-slot-txt"><span class="eq-slot-lbl">PERTAHANAN</span><strong>' + d.armorName + '</strong></div></div>' +
+            '<div class="eq-stats">' +
+              bar('⚔ Serangan', atk, atk, 60, 'linear-gradient(90deg,#8a5a1a,#ffd966)') +
+              bar('🛡 Redaman', a.def, '-' + a.def, 8, 'linear-gradient(90deg,#3a5a7a,#7fd6f2)') +
+              bar('❤ Maks HP', d.maxHp, d.maxHp, 250, 'linear-gradient(90deg,#7a1f1f,#e05a5a)') +
+            '</div>' +
+          '</div>' +
         '</div>' +
-        (msg ? '<div style="color:#e06c75;font-size:11px;margin-bottom:4px;">' + msg + '</div>' : '') +
-        '<div class="inventory-list" style="max-height:none;">' + list.map(x =>
-          '<div class="inv-item"><span><strong>' + x.n + '</strong><br><span style="font-size:10px;color:#b8afa6;">' + stat(x) + '</span></span>' +
-          (x.id === cur ? '<span style="color:#80ed99;font-size:11px;">✔ Terpasang</span>' : '<button type="button" onclick="EQ.equip(\'' + tab + '\',\'' + x.id + '\')">Pasang</button>') + '</div>').join('') + '</div>';
-      draw(document.getElementById('eq-fig'), w, a);
+        '<div class="eq-tabs">' +
+          ['weapon', 'armor'].map(k => '<button type="button" class="' + (tab === k ? 'on' : '') + '" onclick="EQ.tab(\'' + k + '\')">' + (k === 'weapon' ? '⚔ Senjata (' + e.weapons.length + ')' : '🛡 Pertahanan (' + e.armors.length + ')') + '</button>').join('') +
+        '</div>' +
+        (msg ? '<div class="eq-msg">' + msg + '</div>' : '') +
+        '<div class="eq-list">' + list.map(x => {
+          const on = x.id === cur.id;
+          return '<div class="eq-item rar-' + rar(x) + (on ? ' on' : '') + '">' +
+            '<div class="eq-ico">' + ico(tab, x.id) + '</div>' +
+            '<div class="eq-info"><strong>' + x.n + '</strong><span class="eq-rar">' + RN[rar(x)] + '</span>' +
+              '<span class="eq-sub">' + stat(x) + '</span>' + (on ? '' : delta(x)) + '</div>' +
+            (on ? '<span class="eq-on">✔ Terpasang</span>' : '<button type="button" onclick="EQ.equip(\'' + tab + '\',\'' + x.id + '\')">Pasang</button>') + '</div>';
+        }).join('') + '</div>';
+      EQ.paint();
     },
     renderInvGear(box) {
       const e = S();
@@ -8729,32 +9370,226 @@
     }
   };
 
-  // Potret karakter (pixel art) — tampilan berubah sesuai perlengkapan terpasang
-  function draw(cv, w, a) {
-    if (!cv) return; const x = cv.getContext('2d'); x.clearRect(0, 0, 32, 40);
-    const r = (px, py, pw, ph, c) => { x.fillStyle = c; x.fillRect(px, py, pw, ph); };
-    const body = { coat0:'#6b4a28', zirah:'#8e9aa3', cloak:'#b8c4d6', shield:'#5b7f4a', jubah:'#c2602d', sarung:'#6b4a28', rompi:'#7a5230', jimat:'#6b4a28' }[a.id] || '#6b4a28';
-    const hand = a.id === 'sarung' ? '#d9d2c4' : '#e0b48a';
-    r(11, 26, 4, 10, '#3b3b4a'); r(17, 26, 4, 10, '#3b3b4a'); r(11, 36, 4, 3, '#2a1d12'); r(17, 36, 4, 3, '#2a1d12');
-    r(10, 13, 12, 13, body); r(7, 13, 3, 11, body); r(22, 13, 3, 11, body); r(10, 24, 12, 2, '#3a2a1a');
-    if (a.id === 'cloak') { r(8, 13, 2, 17, '#8ea0bd'); r(22, 13, 2, 17, '#8ea0bd'); }
-    if (a.id === 'zirah') { r(12, 15, 8, 2, '#c5ced6'); r(12, 19, 8, 2, '#c5ced6'); }
-    if (a.id === 'rompi') { r(15, 13, 2, 11, '#4a3320'); }
-    if (a.id === 'jubah') { r(10, 13, 12, 3, '#f0e6d0'); }
-    if (a.id === 'jimat') { r(15, 16, 2, 3, '#d9e2ec'); }
-    r(7, 24, 3, 3, hand); r(22, 24, 3, 3, hand);
-    r(12, 4, 8, 8, '#e0b48a'); r(11, 3, 10, 3, '#c9d3dc'); r(11, 5, 1, 4, '#c9d3dc'); r(20, 5, 1, 4, '#c9d3dc');
-    r(14, 8, 1, 1, '#222'); r(17, 8, 1, 1, '#222');
-    if (a.id === 'shield') { r(1, 13, 7, 11, '#2f7a5a'); r(2, 14, 5, 9, '#4fae80'); r(4, 16, 1, 5, '#ffd966'); }
-    const id = w.id;
-    if (id === 'spear') { r(26, 2, 1, 34, '#7a5a30'); r(25, 0, 3, 4, '#cfe9d8'); }
-    else if (id === 'twin') { r(24, 8, 2, 17, '#9ee7ff'); r(27, 8, 2, 17, '#9ee7ff'); r(23, 24, 7, 2, '#8a6a2a'); }
-    else if (id === 'kapak') { r(26, 8, 1, 28, '#7a5a30'); r(27, 8, 5, 6, '#8a8f96'); }
-    else if (id === 'belati') { r(25, 17, 2, 8, '#c8d0d8'); r(24, 25, 4, 2, '#8a6a2a'); }
-    else if (id === 'bilah') { r(25, 8, 3, 16, '#aab4bc'); r(23, 24, 7, 2, '#8a6a2a'); }
-    else if (id === 'royal') { r(25, 6, 3, 18, '#ffd966'); r(23, 24, 7, 2, '#b8860b'); }
-    else { r(25, 6, 2, 18, id === 'sylvan_blessing' ? '#80ed99' : '#c8d0d8'); r(23, 24, 6, 2, '#8a6a2a'); }
+  // ======================= POTRET KARAKTER (pixel art 64x80) =======================
+  // Tampilan berubah sesuai senjata & pertahanan yang terpasang. Dilengkapi outline,
+  // bayangan warna, napas halus (idle), lingkaran runik & percikan bara di panggung.
+  const oc = document.createElement('canvas'); oc.width = 64; oc.height = 80;
+  const ox = oc.getContext('2d', { willReadFrequently: true });
+  const mk = c => (px, py, pw, ph, col, al) => {
+    if (al != null) c.globalAlpha = al;
+    c.fillStyle = col; c.fillRect(px, py, pw, ph);
+    if (al != null) c.globalAlpha = 1;
+  };
+  const SKIN = '#e8b98f', SKIN_S = '#c98f68', HAIR = '#cfd8e0', HAIR_S = '#9aa8b4';
+  const AP = {
+    coat0:  { b: '#6b4a28', s: '#4d3419', h: '#8a6238' },
+    zirah:  { b: '#5a6670', s: '#434d56', h: '#7a8792' },
+    cloak:  { b: '#5f6f8a', s: '#46536b', h: '#8ea0bd' },
+    shield: { b: '#4d6b3e', s: '#37512c', h: '#6f9a58' },
+    jubah:  { b: '#b4531f', s: '#8a3d14', h: '#d9772f' },
+    sarung: { b: '#6b4a28', s: '#4d3419', h: '#8a6238' },
+    rompi:  { b: '#c9b79c', s: '#a8967b', h: '#e0d2ba' },
+    jimat:  { b: '#6b4a28', s: '#4d3419', h: '#8a6238' }
+  };
+
+  function stage(x, R, T) {
+    const gr = x.createRadialGradient(32, 42, 4, 32, 42, 48);
+    gr.addColorStop(0, '#4a3a2b'); gr.addColorStop(0.55, '#241b14'); gr.addColorStop(1, '#0d0a08');
+    x.fillStyle = gr; x.fillRect(0, 0, 64, 80);
+    // lantai
+    x.fillStyle = 'rgba(0,0,0,.45)'; x.beginPath(); x.ellipse(32, 73, 17, 3.5, 0, 0, 7); x.fill();
+    // lingkaran runik (luar berputar searah, dalam berlawanan)
+    for (let i = 0; i < 30; i++) {
+      const an = i / 30 * Math.PI * 2 + T / 2600;
+      R(Math.round(32 + Math.cos(an) * 25), Math.round(73 + Math.sin(an) * 5.5), 1, 1, '#e7c35a', 0.2 + 0.55 * ((i % 5) / 5));
+    }
+    for (let i = 0; i < 20; i++) {
+      const an = i / 20 * Math.PI * 2 - T / 3200;
+      R(Math.round(32 + Math.cos(an) * 16), Math.round(73 + Math.sin(an) * 3.6), 1, 1, '#a8863a', 0.4);
+    }
+    // percikan bara
+    for (let i = 0; i < 9; i++) {
+      const ex = 6 + (i * 7) % 52 + Math.sin(T / 650 + i * 2) * 3;
+      const prog = ((T / 55 + i * 23) % 74) / 74;
+      R(Math.round(ex), Math.round(76 - prog * 74), 1, 1, i % 2 ? '#ffb347' : '#ff7a3d', 0.75 * (1 - prog) + 0.05);
+    }
   }
+
+  function figure(Q, c, w, a, bob) {
+    const P = AP[a.id] || AP.coat0, id = a.id, wid = w.id;
+    // ---------- jubah belakang ----------
+    if (id === 'cloak') {
+      Q(16, 29, 32, 40, '#6f82a3'); Q(16, 29, 3, 40, '#8ea0bd'); Q(44, 29, 4, 40, '#566683');
+      for (let i = 0; i < 8; i++) Q(16 + i * 4, 66 + (i % 2) * 2, 4, 3, i % 2 ? '#566683' : '#8ea0bd');
+      Q(24, 34, 1, 32, '#566683'); Q(39, 34, 1, 32, '#566683');
+    }
+    // ---------- kaki & sepatu ----------
+    Q(24, 52, 7, 16, '#3b3b4a'); Q(33, 52, 7, 16, '#3b3b4a'); Q(29, 52, 2, 16, '#2c2c38'); Q(38, 52, 2, 16, '#2c2c38');
+    if (id === 'zirah') { Q(24, 58, 7, 3, '#aab5be'); Q(33, 58, 7, 3, '#aab5be'); Q(24, 58, 7, 1, '#dfe6eb'); Q(33, 58, 7, 1, '#dfe6eb'); }
+    Q(22, 66, 9, 6, '#2a1d12'); Q(33, 66, 9, 6, '#2a1d12'); Q(22, 71, 9, 1, '#15100a'); Q(33, 71, 9, 1, '#15100a');
+    Q(23, 67, 4, 1, '#4a3322'); Q(34, 67, 4, 1, '#4a3322'); Q(23, 63, 8, 3, '#3a2a1a'); Q(33, 63, 8, 3, '#3a2a1a');
+
+    c.save(); c.translate(0, bob);
+    // ---------- badan ----------
+    Q(22, 28, 20, 24, P.b); Q(37, 28, 5, 24, P.s); Q(22, 28, 2, 24, P.h);
+    // lengan
+    Q(16, 29, 6, 21, P.b); Q(16, 29, 2, 21, P.h); Q(42, 29, 6, 21, P.b); Q(45, 29, 3, 21, P.s);
+    Q(16, 47, 6, 3, '#2f2218'); Q(42, 47, 6, 3, '#2f2218');
+    // tangan
+    const glove = id === 'sarung';
+    Q(16, 50, 6, 5, glove ? '#e9e1cf' : SKIN); Q(42, 50, 6, 5, glove ? '#e9e1cf' : SKIN);
+    if (glove) { Q(16, 47, 6, 3, '#d9cfb8'); Q(42, 47, 6, 3, '#d9cfb8'); Q(16, 49, 6, 1, '#bdb39c'); Q(42, 49, 6, 1, '#bdb39c'); Q(45, 50, 3, 5, '#cfc6b0'); }
+    else Q(45, 50, 3, 5, SKIN_S);
+    // ---------- detail pertahanan ----------
+    if (id === 'coat0' || id === 'jimat' || id === 'sarung') {
+      Q(26, 28, 12, 3, P.s); Q(24, 28, 3, 6, P.s); Q(37, 28, 3, 6, P.s); Q(31, 31, 2, 20, P.s);
+      Q(31, 34, 2, 1, '#c9a24a'); Q(31, 39, 2, 1, '#c9a24a'); Q(31, 44, 2, 1, '#c9a24a');
+    }
+    if (id === 'zirah') {
+      Q(24, 30, 16, 14, '#aab5be'); Q(35, 30, 5, 14, '#7c8891'); Q(25, 31, 2, 12, '#dfe6eb');
+      Q(24, 36, 16, 1, '#66727b'); Q(24, 41, 16, 1, '#66727b'); Q(31, 30, 2, 14, '#8e9aa3');
+      Q(26, 33, 1, 1, '#f0f4f7'); Q(37, 33, 1, 1, '#f0f4f7'); Q(26, 39, 1, 1, '#f0f4f7'); Q(37, 39, 1, 1, '#f0f4f7');
+      Q(24, 44, 16, 6, '#66727b'); Q(24, 47, 16, 1, '#4f5a63');
+      Q(27, 26, 10, 3, '#9aa6af');
+      Q(14, 26, 10, 7, '#9aa6af'); Q(14, 26, 10, 1, '#dfe6eb'); Q(14, 32, 10, 1, '#66727b');
+      Q(40, 26, 10, 7, '#7f8b94'); Q(40, 26, 10, 1, '#c5ced6'); Q(40, 32, 10, 1, '#5a656e');
+      Q(16, 40, 6, 7, '#8e9aa3'); Q(16, 40, 6, 1, '#dfe6eb'); Q(42, 40, 6, 7, '#7f8b94'); Q(42, 40, 6, 1, '#c5ced6');
+    }
+    if (id === 'cloak') {
+      Q(26, 28, 12, 3, P.s); Q(31, 31, 2, 20, P.s);
+      Q(14, 27, 10, 6, '#8ea0bd'); Q(14, 27, 10, 1, '#c3d0e6'); Q(40, 27, 10, 6, '#7285a6'); Q(40, 27, 10, 1, '#a8b8d4');
+      Q(28, 30, 8, 2, '#d4af37'); Q(30, 30, 4, 4, '#ffd966'); Q(31, 31, 2, 2, '#7fd6f2');
+    }
+    if (id === 'shield') {
+      Q(26, 28, 12, 3, P.s); Q(31, 31, 2, 20, P.s); Q(24, 33, 16, 1, P.s); Q(24, 40, 16, 1, P.s);
+      Q(16, 29, 6, 2, '#8a6a3a'); Q(42, 29, 6, 2, '#8a6a3a');
+    }
+    if (id === 'jubah') {
+      for (let i = 0; i < 12; i++) { Q(20 + i * 2, 26, 2, 6, '#d9772f'); Q(20 + i * 2, 32, 2, 1 + (i % 2), '#f0e6d0'); }
+      Q(20, 26, 24, 2, '#f0e6d0'); Q(20, 28, 24, 1, '#b4531f');
+      for (let i = 0; i < 3; i++) { Q(16 + i * 2, 47, 2, 3, '#f0e6d0'); Q(42 + i * 2, 47, 2, 3, '#f0e6d0'); }
+      Q(31, 33, 2, 18, P.s);
+    }
+    if (id === 'rompi') {
+      Q(22, 28, 7, 24, '#573a20'); Q(35, 28, 7, 24, '#46301a'); Q(22, 28, 2, 24, '#7a5230');
+      for (let i = 0; i < 5; i++) { Q(29, 31 + i * 4, 6, 1, '#d9c9a8'); }
+      Q(16, 29, 6, 2, '#a8967b'); Q(42, 29, 6, 2, '#a8967b');
+      Q(22, 41, 7, 1, '#8a6238'); Q(35, 41, 7, 1, '#8a6238');
+    }
+    if (id === 'jimat') { Q(30, 28, 1, 4, '#6b7a88'); Q(33, 28, 1, 4, '#6b7a88'); Q(31, 31, 2, 1, '#6b7a88'); Q(31, 32, 2, 3, '#d9f3ff'); Q(31, 32, 1, 1, '#ffffff'); }
+    // sabuk
+    Q(22, 50, 20, 3, '#2f2218'); Q(22, 50, 20, 1, '#4a3622'); Q(30, 50, 4, 3, '#d4af37'); Q(31, 51, 2, 1, '#2f2218');
+    // ---------- leher & kepala ----------
+    Q(29, 25, 6, 4, SKIN_S);
+    Q(25, 13, 14, 10, SKIN); Q(26, 23, 12, 2, SKIN); Q(37, 14, 2, 9, SKIN_S); Q(27, 24, 10, 1, SKIN_S);
+    Q(24, 17, 1, 3, SKIN); Q(39, 17, 1, 3, SKIN_S);
+    // rambut
+    Q(26, 7, 12, 1, HAIR); Q(24, 8, 16, 6, HAIR); Q(23, 10, 2, 9, HAIR); Q(39, 10, 2, 9, HAIR_S);
+    Q(25, 13, 5, 2, HAIR); Q(31, 13, 3, 1, HAIR); Q(36, 12, 3, 2, HAIR_S); Q(27, 8, 7, 1, '#f1f5f8'); Q(35, 11, 3, 1, HAIR_S);
+    Q(22, 15, 1, 3, HAIR_S); Q(41, 15, 1, 3, HAIR_S);
+    // wajah
+    Q(27, 16, 4, 1, '#8a98a4'); Q(34, 16, 4, 1, '#7a8794');
+    Q(28, 18, 2, 2, '#1d1d28'); Q(35, 18, 2, 2, '#1d1d28'); Q(28, 18, 1, 1, '#fff'); Q(35, 18, 1, 1, '#fff');
+    Q(32, 20, 1, 2, SKIN_S); Q(30, 23, 4, 1, '#a8604a');
+    // ---------- senjata & perisai ----------
+    const gx = 45, gy = 50;
+    const sword = (cx, len, wd, col, edge, shd, guard, leaf) => {
+      const bx = cx - (wd >> 1), top = gy - len;
+      Q(bx, top, wd, len, col); Q(bx, top, 1, len, edge); Q(bx + wd - 1, top, 1, len, shd);
+      if (wd > 3) Q(bx + 1, top + 3, 1, len - 6, shd);
+      Q(bx + 1, top - 1, Math.max(1, wd - 2), 1, edge); Q(cx, top - 2, 1, 1, edge);
+      Q(cx - 4, gy - 1, 9, 2, guard); Q(cx - 4, gy - 1, 9, 1, '#e8c86a');
+      if (leaf) { Q(cx - 6, gy - 2, 2, 3, leaf); Q(cx + 5, gy - 2, 2, 3, leaf); }
+      Q(cx - 1, gy + 1, 3, 5, '#4a2f18'); Q(cx - 1, gy + 6, 3, 2, guard);
+    };
+    const fist = cx => { Q(cx - 2, gy, 5, 4, glove ? '#e9e1cf' : SKIN); Q(cx - 2, gy + 3, 5, 1, glove ? '#bdb39c' : SKIN_S); };
+    if (wid === 'spear') {
+      Q(gx - 1, 4, 2, 70, '#7a5a30'); Q(gx - 1, 4, 1, 70, '#a07a44');
+      Q(gx - 1, 0, 2, 1, '#ffffff'); Q(gx - 2, 1, 4, 3, '#cfe9d8'); Q(gx - 3, 4, 6, 3, '#cfe9d8'); Q(gx - 2, 7, 4, 2, '#9cc3ad'); Q(gx - 1, 1, 1, 7, '#ffffff');
+      Q(gx - 2, 10, 4, 3, '#c0392b'); Q(gx - 2, 13, 1, 2, '#c0392b');
+    } else if (wid === 'kapak') {
+      Q(gx - 1, 20, 2, 52, '#7a5a30'); Q(gx - 1, 20, 1, 52, '#a07a44');
+      Q(gx + 1, 20, 9, 2, '#9aa1a8'); Q(gx + 1, 22, 10, 6, '#8a9199'); Q(gx + 1, 28, 9, 2, '#9aa1a8');
+      Q(gx + 9, 21, 2, 8, '#e3e8ec'); Q(gx + 2, 23, 3, 1, '#c8cfd5'); Q(gx - 4, 23, 3, 4, '#8a9199'); Q(gx - 4, 23, 3, 1, '#c8cfd5');
+      Q(gx - 2, 42, 4, 1, '#4a2f18'); Q(gx - 2, 46, 4, 1, '#4a2f18');
+    } else if (wid === 'twin') {
+      sword(gx, 30, 3, '#7fd6f2', '#d9f6ff', '#4aa3c4', '#8a6a2a');
+      if (id !== 'shield') sword(19, 30, 3, '#7fd6f2', '#d9f6ff', '#4aa3c4', '#8a6a2a');
+    } else if (wid === 'sylvan_blessing') {
+      sword(gx, 30, 3, '#6fdc8a', '#c9ffd6', '#3da45a', '#7a5a2a', '#4fae80');
+    } else if (wid === 'belati') {
+      sword(gx, 13, 2, '#c8d0d8', '#eef2f5', '#8b95a0', '#5a3a6a');
+    } else if (wid === 'bilah') {
+      sword(gx, 26, 4, '#aab4bc', '#e0e6eb', '#7d8891', '#8a6a2a');
+    } else if (wid === 'royal') {
+      sword(gx, 30, 4, '#ffd966', '#fff1b3', '#c9a227', '#b8860b'); Q(gx - 1, gy - 1, 2, 2, '#e0245e');
+    } else {
+      sword(gx, 28, 3, '#9aa5ae', '#c3ccd3', '#76808a', '#6d5628');
+      Q(gx - 1, gy - 12, 1, 1, '#5d666f'); Q(gx, gy - 20, 1, 1, '#5d666f'); Q(gx - 1, gy - 26, 1, 1, '#5d666f');
+    }
+    if (wid === 'twin' && id !== 'shield') fist(19);
+    fist(gx);
+    if (id === 'shield') {
+      const cx = 11, cy = 42, r = 10;
+      for (let dy = -r; dy <= r; dy++) {
+        const dx = Math.floor(Math.sqrt(r * r - dy * dy + 0.5));
+        Q(cx - dx, cy + dy, dx * 2 + 1, 1, '#c9a24a');
+        const ix = Math.floor(Math.sqrt(Math.max(0, (r - 1.5) * (r - 1.5) - dy * dy)));
+        if (ix > 0) { Q(cx - ix, cy + dy, ix * 2 + 1, 1, '#2f7a5a'); Q(cx - ix, cy + dy, Math.ceil(ix), 1, '#3f956c'); }
+      }
+      Q(cx, cy - 7, 1, 15, '#1f5a40'); Q(cx - 7, cy, 15, 1, '#1f5a40');
+      Q(cx - 2, cy - 2, 5, 5, '#ffd966'); Q(cx - 1, cy - 1, 3, 3, '#fff1b3');
+      Q(15, 48, 5, 5, SKIN);
+    }
+    c.restore();
+  }
+
+  function glow(R, w, a, T, bob) {
+    const pulse = 0.5 + 0.5 * Math.sin(T / 380), gx = 45, gy = 50 + bob, wid = w.id;
+    const aura = (px, py, pw, ph, col, k) => R(px, py, pw, ph, col, (0.10 + 0.14 * pulse) * (k || 1));
+    if (wid === 'sylvan_blessing') aura(gx - 3, gy - 33, 7, 36, '#80ed99');
+    else if (wid === 'twin') { aura(gx - 3, gy - 33, 7, 36, '#7fd6f2'); if (a.id !== 'shield') aura(16, gy - 33, 7, 36, '#7fd6f2'); }
+    else if (wid === 'spear') aura(gx - 5, 0, 11, 14, '#cfe9d8', 1.2);
+    else if (wid === 'royal') aura(gx - 3, gy - 33, 8, 36, '#ffd966');
+    if (a.id === 'jimat') R(29, 30 + bob, 6, 7, '#9ee7ff', 0.12 + 0.2 * pulse);
+    if (a.id === 'cloak') R(30, 29 + bob, 4, 5, '#7fd6f2', 0.08 + 0.12 * pulse);
+  }
+
+  function draw(cv, w, a, t, opt) {
+    if (!cv || !cv.getContext) return;
+    opt = opt || {};
+    const x = cv.getContext('2d'); x.clearRect(0, 0, 64, 80);
+    const T = t || 0, still = !!opt.still, bob = still ? 0 : (Math.sin(T / 450) > 0.25 ? 1 : 0);
+    const R = mk(x), Q = mk(ox);
+    if (!still) stage(x, R, T);
+    ox.clearRect(0, 0, 64, 80);
+    figure(Q, ox, w, a, bob);
+    // outline gelap 1px di sekeliling karakter
+    const d = ox.getImageData(0, 0, 64, 80).data;
+    const op = (i, j) => i >= 0 && j >= 0 && i < 64 && j < 80 && d[(j * 64 + i) * 4 + 3] > 120;
+    for (let j = 0; j < 80; j++) for (let i = 0; i < 64; i++)
+      if (!op(i, j) && (op(i - 1, j) || op(i + 1, j) || op(i, j - 1) || op(i, j + 1))) R(i, j, 1, 1, '#0e0a07');
+    x.drawImage(oc, 0, 0);
+    if (!still) glow(R, w, a, T, bob);
+  }
+
+  const curGear = () => { const e = S(); return [e.weapons.find(x => x.id === e.w) || e.weapons[0], e.armors.find(x => x.id === e.a) || e.armors[0]]; };
+  // potret statis (tanpa panggung) untuk layar pertarungan
+  EQ.portrait = function (cv) { try { const g2 = curGear(); draw(cv, g2[0], g2[1], 0, { still: true }); } catch (_) {} };
+
+  let raf = 0, lastT = 0;
+  function loop(ts) {
+    raf = 0;
+    const cv = document.getElementById('eq-fig'), pop = document.getElementById('popEquip');
+    if (!cv || !pop || !pop.classList.contains('open')) return;
+    if (ts - lastT > 70) { lastT = ts; const g2 = curGear(); draw(cv, g2[0], g2[1], ts); }
+    raf = requestAnimationFrame(loop);
+  }
+  EQ.paint = function () {
+    const cv = document.getElementById('eq-fig'); if (!cv) return;
+    const g2 = curGear(); draw(cv, g2[0], g2[1], performance.now());
+    if (!raf) raf = requestAnimationFrame(loop);
+  };
 
   const _lg = window.loadGame;
   window.loadGame = function (saved) {
@@ -8771,6 +9606,7 @@
     const sync = () => {
       const open = pop.classList.contains('open');
       document.documentElement.classList.toggle('eq-open', open);
+      if (open && window.EQ) { try { EQ.render(); } catch (_) {} }
       if (open && typeof clearAllMovementKeys === 'function') { try { clearAllMovementKeys(); } catch (_) {} }
     };
     new MutationObserver(sync).observe(pop, { attributes: true, attributeFilter: ['class'] });
