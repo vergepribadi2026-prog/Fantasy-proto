@@ -5765,14 +5765,14 @@
         ctx.fillText('[POS POTION & LOOT PEMBURU]', 34.5 * TILE_SIZE, 9.4 * TILE_SIZE + 10);
       } else if (currentMapId === 'forest') {
         ctx.fillStyle = 'rgba(15, 22, 18, 0.85)';
-        ctx.fillRect(7 * TILE_SIZE - 76, 4, 152, 14);
+        ctx.fillRect(14 * TILE_SIZE - 76, 4, 152, 14);
         ctx.fillStyle = '#ffd966';
-        ctx.fillText('▲ KEMBALI KE OAKHAVEN ▲', 7 * TILE_SIZE, 14);
+        ctx.fillText('▲ KEMBALI KE OAKHAVEN ▲', 14 * TILE_SIZE, 14);
 
         ctx.fillStyle = 'rgba(28, 18, 12, 0.9)';
-        ctx.fillRect(4 * TILE_SIZE - 88, 13 * TILE_SIZE + 14, 176, 14);
+        ctx.fillRect(8 * TILE_SIZE - 88, 26 * TILE_SIZE + 14, 176, 14);
         ctx.fillStyle = '#f2994a';
-        ctx.fillText('▼ GERBANG TAMBANG DWARF ▼', 4 * TILE_SIZE, 13 * TILE_SIZE + 24);
+        ctx.fillText('▼ GERBANG TAMBANG DWARF ▼', 8 * TILE_SIZE, 26 * TILE_SIZE + 24);
       } else if (currentMapId === 'dwarf_hold') {
         ctx.fillStyle = 'rgba(15, 22, 18, 0.88)';
         ctx.fillRect(8 * TILE_SIZE - 85, 4, 170, 14);
@@ -7532,7 +7532,7 @@
   })();
   </script>
   <!-- ==========================================================================
-       5. UPDATE V9 - ALTAR TELEPORTASI (HUTAN ELF <-> PASAR IBU KOTA), JALAN SETAPAK LEBIH TERANG
+       5. UPDATE V9 - JALAN SETAPAK LEBIH TERANG
        & AREA FARMING MONSTER. Lapisan terpisah; kode lama tidak dibongkar.
        ========================================================================== -->
   <script>
@@ -7609,76 +7609,6 @@
     npcsByMap.elf_road.push({ id: 'road_trader', name: 'Roan (Pengepul Loot)', race: 'Serikat Pemburu — Pos Api Unggun', color: '#ffd166', x: best[0] * T, y: best[1] * T, spriteKey: 'garruk' });
   })();
 
-  // ===== C. ALTAR TELEPORTASI =====
-  const AF = { c: 15, r: 10 }, AC = { c: 25, r: 48 };   // altar Hutan Elf & altar tengah Pasar Rakyat Barat (Aurelion)
-  const altarCv = document.createElement('canvas'); altarCv.width = altarCv.height = 32;
-  sprites.altar = altarCv;
-  function paintAltar(t) {
-    const x = altarCv.getContext('2d'), p = 0.5 + 0.5 * Math.sin(t * 0.08);
-    x.clearRect(0, 0, 32, 32);
-    const g = x.createRadialGradient(16, 22, 2, 16, 22, 16);
-    g.addColorStop(0, 'rgba(120,255,230,' + (0.30 + 0.25 * p).toFixed(2) + ')'); g.addColorStop(1, 'rgba(120,255,230,0)');
-    x.fillStyle = g; x.fillRect(0, 0, 32, 32);
-    x.fillStyle = '#22262c'; x.fillRect(3, 26, 26, 4);
-    x.fillStyle = '#3a3f47'; x.fillRect(3, 22, 26, 5);
-    x.fillStyle = '#5b6370'; x.fillRect(3, 22, 26, 2);
-    x.fillStyle = '#4a515c'; x.fillRect(5, 11, 4, 12); x.fillRect(23, 11, 4, 12);
-    x.fillStyle = '#9aa3af'; x.fillRect(5, 11, 4, 2); x.fillRect(23, 11, 4, 2);
-    x.fillStyle = 'rgba(128,255,219,' + (0.55 + 0.45 * p).toFixed(2) + ')';
-    x.fillRect(8, 24, 16, 1); x.fillRect(11, 22, 1, 2); x.fillRect(20, 22, 1, 2); x.fillRect(15, 25, 2, 2);
-    x.fillRect(6, 15, 2, 1); x.fillRect(24, 15, 2, 1);
-    const fy = 8 + Math.sin(t * 0.07) * 2;
-    x.fillStyle = '#9ef0ff'; x.beginPath(); x.moveTo(16, fy - 6); x.lineTo(21, fy); x.lineTo(16, fy + 6); x.lineTo(11, fy); x.closePath(); x.fill();
-    x.fillStyle = '#e8fffb'; x.beginPath(); x.moveTo(16, fy - 6); x.lineTo(18, fy - 1); x.lineTo(16, fy + 2); x.lineTo(14, fy - 1); x.closePath(); x.fill();
-  }
-  paintAltar(0);
-
-  npcsByMap.forest.push({ id: 'altar_forest', name: 'Altar Teleportasi Aethel', race: 'Altar Kuno — Gerbang ke Pasar Aurelion', color: '#9ef0ff', x: AF.c * T, y: AF.r * T, spriteKey: 'altar' });
-
-  // Area altar di pasar: bersihkan lapak/warga di sekitarnya, lalu pasang altar tepat di tengah pasar barat
-  const cg = MAPS.capital.grid;
-  for (let r = AC.r - 2; r <= AC.r + 2; r++) for (let c = AC.c - 2; c <= AC.c + 2; c++) if (SOLID_TILES.has(cg[r][c]) || cg[r][c] === 9) cg[r][c] = 1;
-  npcsByMap.capital = npcsByMap.capital.filter(n => !(n.id.indexOf('cap_z') === 0 && Math.abs(n.x / T - AC.c) <= 3 && Math.abs(n.y / T - AC.r) <= 3));
-  npcsByMap.capital.push({ id: 'altar_capital', name: 'Altar Teleportasi Pasar', race: 'Altar Kuno — Gerbang ke Hutan Elf', color: '#9ef0ff', x: AC.c * T, y: AC.r * T, spriteKey: 'altar' });
-
-  let fx = { t: 0, m: '' };
-  // Titik muncul aman di dekat altar Hutan Elf (posisi altar sudah diskalakan 2x oleh patch Hutan Elf, jadi dibaca dari NPC-nya langsung)
-  function forestAltarSpawn() {
-    const a = npcsByMap.forest.find(n => n.id === 'altar_forest');
-    const ac = a ? Math.round(a.x / T) : AF.c, ar = a ? Math.round(a.y / T) : AF.r;
-    const g = MAPS.forest.grid, rows = g.length, cols = g[0].length;
-    const blocked = (c, r) => r < 1 || c < 1 || r >= rows - 1 || c >= cols - 1 || SOLID_TILES.has(g[r][c]) || g[r][c] === 9 || g[r][c] === 5 || g[r][c] === 16
-      || npcsByMap.forest.some(n => Math.round(n.x / T) === c && Math.round(n.y / T) === r);
-    const offs = [[0, 1], [-1, 1], [1, 1], [0, 2], [-1, 0], [1, 0], [0, -1], [-1, -1], [1, -1]];
-    for (const [dc, dr] of offs) if (!blocked(ac + dc, ar + dr)) return { c: ac + dc, r: ar + dr };
-    return { c: ac, r: ar + 1 };
-  }
-  function teleport(map, c, r, msg) {
-    clearAllMovementKeys();
-    switchMap(map, c, r);
-    closeDialogue();            // buang dialog pengantar peta agar perpindahan terasa instan
-    fx = { t: 55, m: msg };
-  }
-  function altarMenu(where) {
-    if (where === 'forest') {
-      // Jalan Setapak (dan Ibu Kota) terkunci sampai Hearthstone terbentuk — altar tidak boleh jadi jalan pintas
-      if (!gameData.flags.hearthstone) {
-        return startDialogue('Altar Teleportasi Aethel', 'Hutan Elf — Altar Kuno Penghubung', '#9ef0ff',
-          'Rune di altar ini redup dan tak merespons. Gerbang kembarnya di Aurelion tersegel oleh badai es yang sama yang menutup Jalan Setapak. Mungkin ia baru akan menyala jika Hearthstone sudah terbentuk.',
-          [{ label: 'Aku akan kembali nanti', action: closeDialogue }]);
-      }
-      startDialogue('Altar Teleportasi Aethel', 'Hutan Elf — Altar Kuno Penghubung', '#9ef0ff',
-        'Lingkaran rune di altar ini berdenyut lembut. Para Elf Aethel membangunnya sebagai pintu kembar dengan altar di tengah Pasar Rakyat Barat, Aurelion. Melangkah lewatnya, perjalanan panjang di Jalan Setapak terlewati seketika.',
-        [{ label: '✨ Teleportasi ke Pasar Rakyat Barat, Aurelion', action: () => teleport('capital', AC.c, AC.r + 2, '✦ Tiba di tengah Pasar Rakyat Barat, Aurelion ✦') },
-         { label: 'Tetap di sini', action: closeDialogue }]);
-    } else {
-      startDialogue('Altar Teleportasi Pasar', 'Pasar Rakyat Barat, Aurelion — Altar Kuno Penghubung', '#9ef0ff',
-        'Di antara riuh lapak pedagang, sebuah altar rune berpendar tenang. Ia terhubung dengan altar kembar di Hutan Elf, dekat Suaka Aethel. Gunakan untuk pulang tanpa menyusuri Jalan Setapak.',
-        [{ label: '✨ Teleportasi ke Altar Hutan Elf', action: () => { const p = forestAltarSpawn(); teleport('forest', p.c, p.r, '✦ Tiba di Altar Hutan Elf ✦'); } },
-         { label: 'Tetap di sini', action: closeDialogue }]);
-    }
-  }
-
   // ===== D. Pengepul loot & monster Jalan Setapak =====
   function roadTrader() {
     const L = getSellableLootSummary();
@@ -7706,8 +7636,6 @@
 
   const _ia9 = interactWithNPC;
   interactWithNPC = function (n) {
-    if (n.id === 'altar_forest') return altarMenu('forest');
-    if (n.id === 'altar_capital') return altarMenu('capital');
     if (n.id === 'road_trader') return roadTrader();
     if (n.map === 'elf_road' && n.isMonster) return roadMonster(n);
     return _ia9(n);
@@ -7722,34 +7650,6 @@
     return _sd9(sp, fa, co, tx, ch);
   };
 
-  // ===== E. Render: animasi altar, cahaya, efek teleportasi =====
-  const _rd9 = render;
-  render = function () {
-    paintAltar(tick);
-    _rd9();
-    if (currentState === STATE.COMBAT) return;
-    const al = npcsByMap[currentMapId] && npcsByMap[currentMapId].find(n => n.id === 'altar_forest' || n.id === 'altar_capital');
-    if (al) {
-      const gx = Math.round(al.x + 16 - camera.x), gy = Math.round(al.y + 22 - camera.y);
-      if (gx > -80 && gx < canvas.width + 80 && gy > -80 && gy < canvas.height + 80) {
-        const p = 0.5 + 0.5 * Math.sin(tick * 0.08);
-        ctx.save(); ctx.globalCompositeOperation = 'lighter';
-        const g = ctx.createRadialGradient(gx, gy, 4, gx, gy, 58);
-        g.addColorStop(0, 'rgba(110,255,225,' + (0.16 + 0.12 * p).toFixed(2) + ')'); g.addColorStop(1, 'rgba(110,255,225,0)');
-        ctx.fillStyle = g; ctx.fillRect(gx - 60, gy - 60, 120, 120); ctx.restore();
-      }
-    }
-    if (fx.t > 0) {
-      const a = Math.min(1, fx.t / 30);
-      ctx.save();
-      ctx.fillStyle = 'rgba(170,255,240,' + (0.55 * a).toFixed(2) + ')'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.font = 'bold 13px "Courier New", monospace'; ctx.textAlign = 'center';
-      const w = ctx.measureText(fx.m).width + 24;
-      ctx.fillStyle = 'rgba(12,22,26,' + (0.85 * a).toFixed(2) + ')'; ctx.fillRect(canvas.width / 2 - w / 2, canvas.height / 2 - 14, w, 26);
-      ctx.fillStyle = 'rgba(158,240,255,' + a.toFixed(2) + ')'; ctx.fillText(fx.m, canvas.width / 2, canvas.height / 2 + 4);
-      ctx.restore(); fx.t--;
-    }
-  };
 })();
   </script>
   <!-- ==========================================================================
@@ -8723,7 +8623,6 @@
             <li>Pertarungan turn-based dengan serangan, bertahan, dan ramuan.</li>
             <li>Berburu monster, jual loot, beli potion &amp; perlengkapan.</li>
             <li>Misi bercabang, tugas aktif, dan Guild Adventurer.</li>
-            <li>Altar teleportasi antara Hutan Elf dan Aurelion (gratis).</li>
           </ul>
         </div>
         <div class="mm-page" data-page="4">
