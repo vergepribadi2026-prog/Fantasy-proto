@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>Ash & Rime: Chronicles of the Vaelen Vale (v10.0 - Extended Story + Floating Joystick)</title>
+  <title>Ash & Rime: Chronicles of the Vaelen Vale (v11.0 - Alur Utama Berbelit + Floating Joystick)</title>
   <style>
     /* ==========================================================================
        1. STYLE.CSS - DESAIN RESPONSIF PC & ANDROID + VIRTUAL GAMEPAD + SAVE BAR
@@ -7543,7 +7543,7 @@
       if (!root.classList.contains('m-land')) return;
       var t = e.target; if (t && t.nodeType !== 1) t = t.parentElement;
       if (!t) return;
-      if (t.closest('.popup-body, .dialogue-panel, .combat-overlay')) return;
+      if (t.closest('.popup-body, .dialogue-panel, .combat-overlay, .info-popup, #popMenu, #mmLarge')) return;
       // Izinkan geser/gulir pada elemen APA PUN yang memang bisa digulir (panel, menu, simpan/muat, ujian, epilog, dll.)
       for (var el = t; el && el !== document.body && el !== document.documentElement; el = el.parentElement) {
         var cs = getComputedStyle(el), oy = cs.overflowY, ox = cs.overflowX;
@@ -7905,7 +7905,7 @@
   for (const k in DEF_FLAGS) if (gameData.flags[k] === undefined) gameData.flags[k] = DEF_FLAGS[k];
 
   const DEF_STORY = { chapter: 1, step: 'supply', clues: {}, selfish: false, veyraPhase2: false, pendingCombine: false, shadowDefends: 0, gateMsgAt: 0, ending: null, _lastStep: '' };
-  function ensureStory() { if (!gameData.story || typeof gameData.story !== 'object') gameData.story = {}; gameData.story = Object.assign({}, DEF_STORY, gameData.story); if (!gameData.story.clues || typeof gameData.story.clues !== 'object') gameData.story.clues = {}; if (gameData.flags.supplyOutcome === 'blackmarket') gameData.story.selfish = true; }
+  function ensureStory() { if (!gameData.story || typeof gameData.story !== 'object') gameData.story = {}; gameData.story = Object.assign({}, DEF_STORY, gameData.story); if (!gameData.story.clues || typeof gameData.story.clues !== 'object') gameData.story.clues = {}; if (!gameData.story.frag || typeof gameData.story.frag !== 'object') gameData.story.frag = {}; if (gameData.flags.supplyOutcome === 'blackmarket') gameData.story.selfish = true; }
   ensureStory();
   let ST = gameData.story;
 
@@ -7989,17 +7989,422 @@
     wolf_fang:['Taring Serigala Pemburu','Bukti pemburuan untuk Kaelen.'],
     bear_claw_proof:['Cakar Beruang Purba','Bukti pemburuan untuk Kaelen.'],
     spider_silk:['Sutra Laba-Laba Bayangan','Bukti pemburuan untuk Kaelen.'],
-    memory_shard:['Pecahan Memori','Potongan kenangan yang tersebar di jalan setapak.']
+    memory_shard:['Pecahan Memori','Potongan kenangan yang tersebar di jalan setapak.'],
+    hunter_badge:['Lencana Pemburu','Lencana tempaan Brokk. Tanda bahwa pemegangnya layak didengar para pemburu Hutan Belantara.'],
+    trail_map:['Peta Jalan Pemburu','Peta lusuh dari Senna yang menunjukkan jalan menuju perkemahan di Hutan Belantara.'],
+    registry_writ:['Surat Izin Registri','Surat dari Juru Tulis Tobias, bercap Guild. Membuka mulut penjaga gudang.'],
+    corvin_key:['Kunci Segel Registri','Kunci kecil dari Bendahara Corvin untuk membuka segel manifes di Kantor Registri.'],
+    temple_blessing:['Surat Restu Kuil','Restu tertulis Uskup Seraphine, tanda pembawanya layak membaca arsip tertutup.'],
+    archive_pass:['Kartu Arsip Akademi','Kartu dari Arsiparis Delwyn, tanda pembawanya sudah membaca arsip Proyek Rime.'],
+    audience_scroll:['Surat Audiensi','Surat audiensi bercap lilin istana, ditandatangani Bastian dan Ratu Aurelia.'],
+    seal_crystal:['Kristal Penyelaras','Kristal buatan Oswin untuk membuka segel Aether tangga rahasia di sisi istana.']
   };
   const hasItem = id => { const it = gameData.inventory.find(i => i.id === id); return !!(it && it.qty > 0); };
   const removeItem = (id,q) => { const it = gameData.inventory.find(i => i.id === id); if (it) it.qty = Math.max(0, it.qty - (q||1)); };
   const addStoryItem = id => { const d = STORY_ITEMS[id]; if (d) addItem(id, d[0], 1, d[1], false); };
 
+  // =====================================================================
+  // V11 — MESIN QUEST UTAMA BERCABANG
+  // Prinsip: setiap NPC hanya memegang SATU potongan informasi. Potongan lain
+  // dipegang NPC lain dan baru terbuka lewat misi tersendiri.
+  // Status misi disimpan di flags['sq_<id>']: 0 belum, 1 aktif, 2 selesai.
+  // Petunjuk yang terkumpul disimpan di story.frag.
+  // =====================================================================
+  const STEP_ORDER = ['supply', 'henrik', 'lead', 'kaelen', 'kaelen_trials', 'wendigo', 'kaelen_return', 'keys', 'road', 'capital', 'palace', 'veyra', 'engine', 'final', 'done'];
+  const CH_OF = { supply: 1, henrik: 1, lead: 1, kaelen: 1, kaelen_trials: 1, wendigo: 1, kaelen_return: 1, keys: 2, road: 3, capital: 4, palace: 4, veyra: 4, engine: 5, final: 5, done: 5 };
+  const REPN2 = { human: 'Manusia', karst: 'Dwarf', aethel: 'Elf' };
+  const NM = { elandor: 'Elandor', lyraelle: 'Lyraelle', thalorien: 'Tetua Thalorien', balin: 'Mandor Balin', garruk_loot: 'Garruk' };
+  const itemQty = id => { const it = gameData.inventory.find(i => i.id === id); return it ? it.qty : 0; };
+  const SQ_ST = id => (gameData.flags['sq_' + id] | 0);
+  const sqSetState = (id, v) => { gameData.flags['sq_' + id] = v; };
+  const stepAt = s => STEP_ORDER.indexOf(s);
+
+  // ----- Petunjuk (fragmen informasi). Tiap petunjuk diberikan oleh SATU NPC saja. -----
+  const FRAG = {
+    key_split: ['Mengapa Kunci Dipecah', 'Hearthstone dipecah dua karena para pendiri tak percaya satu tangan boleh menguasai panas dan Aether sekaligus.'],
+    key_price: ['Harga Kunci Zamrud', 'Setengah Kunci Zamrud menagih kehangatan dari pemegangnya.'],
+    night_route: ['Rute Malam Karavan', 'Peti-peti hitam tidak sampai ke istana; diturunkan di Gudang Gandum Kerajaan lewat pintu belakang.'],
+    tunnel: ['Lorong di Bawah Gudang', 'Dari dua belas peti tiap malam, hanya tiga yang keluar esok paginya. Sisanya turun lewat lorong menuju sisi istana.'],
+    stair: ['Tangga Rahasia', 'Seorang penyihir berjubah ungu membawa pecahan hitam ke tangga rahasia di sisi istana.'],
+    manifest: ['Manifes Kargo', 'Kargo "kristal hitam" bertujuan ke "Ruang Mesin Surya". Penerima: Penyihir Istana.'],
+    wendigo_knight: ['Nama Sang Wendigo', 'Wendigo adalah Ser Edric Marwen, ksatria yang dikirim ke Lembah Beku.'],
+    project_rime: ['Arsip Proyek Rime', 'Delapan ksatria sukarelawan disuntik Aether Hitam untuk menguji penyaluran dingin.'],
+    engine_design: ['Skema Mesin Surya', 'Mesin menyedot panas Khaz-Karst dan Aether Hutan Elf untuk menghangatkan Aurelion.'],
+    decree: ['Dekret Musim Dingin', 'Penyitaan rumah warga luar kota ditandatangani Kepala Istana Bastian dan Veyra.']
+  };
+  const CAP_REQ = ['night_route', 'tunnel', 'stair', 'manifest', 'wendigo_knight', 'project_rime', 'engine_design', 'decree'];
+  const capFragCount = () => CAP_REQ.filter(k => ST.frag[k]).length;
+
+  // ----- NPC rujukan di peta ibu kota (dicari lewat nama; dibuat baru bila tak ditemukan) -----
+  const capByName = nm => (npcsByMap.capital || []).find(n => n.name === nm);
+  const REF = {};
+  const IDLE = {};
+  (function () {
+    const pell = capByName('Juru Gudang Pell');
+    if (pell) REF.pell = pell.id;
+    else { addStoryNpc('capital', { id: 'ns_pell', name: 'Juru Gudang Pell', race: 'Manusia — Penjaga Lumbung', color: '#c9a66b', spriteKey: 'garruk', c: 60, r: 85 }); REF.pell = 'ns_pell'; }
+    const gun = capByName('Gunnar si Bartender');
+    const dc = gun ? Math.round(gun.x / T) + 1 : 40, dr = gun ? Math.round(gun.y / T) : 50;
+    const NEWN = [
+      { id: 'ns_dorrin', name: 'Dorrin si Kusir Karavan', race: 'Manusia — Kusir Gudang Kerajaan', color: '#c9a66b', spriteKey: 'garruk', c: dc, r: dr, idle: '"Kalau mau bicara, bicaralah sambil membawa sesuatu yang hangat, Pengelana."' },
+      { id: 'ns_wynne', name: 'Juru Cap Wynne', race: 'Manusia — Kantor Registri Kota', color: '#d7c9a8', spriteKey: 'caelen', c: 62, r: 54, idle: '"Setiap dokumen punya tempatnya, setiap kunci punya penjaganya. Jangan tanyakan yang bukan urusanmu."' },
+      { id: 'ns_halden', name: 'Veteran Halden', race: 'Manusia — Mantan Ksatria, Guild Aurelion', color: '#c9ada7', spriteKey: 'hilde', c: 88, r: 62, idle: '"Aku kehilangan satu lengan dan banyak kawan. Itu cukup untuk satu umur."' },
+      { id: 'ns_odalys', name: 'Nenek Odalys', race: 'Manusia — Warga Distrik Barat', color: '#e5989b', spriteKey: 'mira', c: 64, r: 33, idle: '"Dingin... dingin sekali tahun ini."' },
+      { id: 'ns_mirelle', name: 'Sekretaris Mirelle', race: 'Manusia — Sekretaris Istana', color: '#f4acb7', spriteKey: 'senna', c: 130, r: 50, idle: '"Jadwal istana tersusun rapi. Jangan merusaknya."' },
+      { id: 'ns_sybil', name: 'Sybil Murid Akademi', race: 'Manusia — Murid Akademi Arkana', color: '#9d8df1', spriteKey: 'orin', c: 128, r: 30, idle: '"Akademi menyimpan banyak rahasia. Murid-muridnya menyimpan lebih banyak lagi."' }
+    ];
+    NEWN.forEach(d => { IDLE[d.id] = d.idle; addStoryNpc('capital', d); });
+  })();
+  const rid = x => (typeof x === 'string' && x.charAt(0) === '@') ? REF[x.slice(1)] : x;
+
+  // ----- Daftar misi utama (urutan definisi = urutan prioritas pada satu NPC) -----
+  const Q = {}, QLIST = [];
+  const addQ = q => { Q[q.id] = q; QLIST.push(q); return q; };
+
+  // ===== BAB 1 — mencari jejak Pemburu Buta =====
+  addQ({ id: 'b1_brokk', step: 'lead', giver: 'brokk', title: 'Lencana Pemburu',
+    pre: [['flag', 'ch1_henrikBriefed']],
+    offer: `"Pemburu tua yang bisa membaca hutan? Itu pasti Kaelen, mantan ksatria yang kini berkemah di barat. Ia tak mau bicara pada sembarang orang. Hanya pemegang Lencana Pemburu yang ia dengar, dan akulah yang menempanya. Besi aku punya; yang kurang taring sebagai kepingnya. Bawakan 2 Taring Serigala Embun dari Hutan Belantara dan 20 Perak untuk arangnya."`,
+    take: 'Aku akan membawakannya.',
+    need: [['item', 'fang', 2, 'Taring Serigala Embun'], ['coin', 20]],
+    remind: `"Lencananya belum bisa kutempa. Aku butuh 2 taring serigala dan 20 Perak. Serigala Embun berkeliaran di Hutan Belantara, di barat."`,
+    done: `"Taring ini bagus. Lencana Pemburu sudah jadi. Hanya itu yang kutahu dan kuberi. Soal siapa Kaelen sebenarnya, tanyakan sendiri padanya."`,
+    reward: { items: ['hunter_badge'], rep: { human: 1 } } });
+  addQ({ id: 'b1_senna', step: 'lead', giver: 'senna', title: 'Peta Jalan Pemburu',
+    pre: [['flag', 'ch1_henrikBriefed']],
+    offer: `"Pemburu tua itu sering membeli perban dan salep dariku lewat perantara. Jalan ke perkemahannya tertutup salju dan sulit dicari. Aku menyimpan peta pemburu lama, tapi tak kuberikan cuma-cuma. Aku sedang mengumpulkan uang untuk membeli persediaan para pengungsi. 30 Perak, dan peta ini milikmu."`,
+    take: 'Aku akan membayarnya.',
+    need: [['coin', 30]],
+    remind: `"Petanya masih kusimpan. 30 Perak, kalau kau sungguh ingin ke sana."`,
+    done: `"Terima kasih, uangmu akan jadi sup untuk para pengungsi. Ini petanya. Ikuti api unggun di Hutan Belantara; perkemahannya ada di tengah."`,
+    reward: { items: ['trail_map'], rep: { human: 1 } } });
+
+  // ===== BAB 2 — dua setengah kunci, kini dengan syarat berlapis =====
+  addQ({ id: 'b2_lyra', step: 'keys', giver: 'lyraelle', title: 'Kisah di Balik Kunci',
+    pre: [['flag', 'ch1_kaelenDone']],
+    offer: `"Hearthstone? Aku hanya tahu satu hal tentangnya, dan itu pun kuberikan bila kau bersedia membantu. Banyak pengungsi masuk ke Suaka kami dengan luka dingin. Bawakan 2 Salep Herbal Hutan untuk mereka."`,
+    take: 'Aku akan membawakan salepnya.',
+    need: [['item', 'herb', 2, 'Salep Herbal Hutan']],
+    remind: `"Para pengungsi masih menunggu 2 Salep Herbal Hutan."`,
+    done: `"Terima kasih. Inilah satu hal itu: Hearthstone dipecah menjadi dua karena para pendiri tak percaya satu tangan pun boleh menguasai panas dan Aether sekaligus. Untuk lebih jauh, tanyalah Elandor."`,
+    reward: { frag: ['key_split'], rep: { aethel: 2 } } });
+  addQ({ id: 'b2_elan', step: 'keys', giver: 'elandor', title: 'Harga Kunci Zamrud',
+    pre: [['quest', 'b2_lyra']],
+    offer: `"Lyraelle sudah bicara? Baik. Setengah Kunci Zamrud bukan sekadar logam; ia menagih sesuatu dari pemegangnya. Aku akan menjelaskannya setelah kau membantuku. Bilah upacara kami retak, dan aku butuh 1 Cakar Beruang Es untuk menempanya kembali."`,
+    take: 'Aku akan mencarikan cakarnya.',
+    need: [['item', 'bear_claw', 1, 'Cakar Beruang Es']],
+    remind: `"Bilah upacaranya masih retak. Bawakan 1 Cakar Beruang Es dari Hutan Belantara."`,
+    done: `"Cakar ini cukup. Dengarlah: Kunci Zamrud menagih kehangatan dari pemegangnya. Itu harga yang bisa kau tawar, bukan kau hindari. Restu untuk memegangnya hanya bisa diberikan Tetua Thalorien."`,
+    reward: { frag: ['key_price'], rep: { aethel: 2 } } });
+  addQ({ id: 'b2_thal', step: 'keys', giver: 'thalorien', title: 'Restu Sang Tetua',
+    pre: [['quest', 'b2_elan']],
+    offer: `"Kau sudah mendengar dari Lyraelle dan Elandor, dan kau tidak lari. Itu pertanda baik. Restu untuk mendekati Elara kuberikan, tapi Suaka butuh persembahan: 40 Perak untuk dupa dan pupuk Pohon Suci yang layu."`,
+    take: 'Aku akan mengumpulkannya.',
+    need: [['coin', 40]],
+    remind: `"Persembahannya 40 Perak. Pohon Suci tak bisa menunggu terlalu lama."`,
+    done: `"Pohon Suci menerima persembahanmu. Pergilah pada Elara si Penenun Memori dan katakan bahwa Thalorien telah merestuimu."`,
+    reward: { flags: { thal_blessing: true }, rep: { aethel: 3 } } });
+  addQ({ id: 'b2_balin', step: 'keys', giver: 'balin', title: 'Tanda Mandor',
+    pre: [['flag', 'ch1_kaelenDone']],
+    offer: `"Kau mau bertemu Thane Varek? Jangan harap ia mendengarmu dengan tangan kosong. Orang itu hanya percaya pada mereka yang pernah menolong penambang biasa. Selesaikan dulu urusan si Kael, penambang muda itu, baru kuberikan Tanda Mandor."`,
+    take: 'Aku akan membantu Kael.',
+    need: [['flag', 'kaelQuestDone', 'Misi Penambang Muda Kael selesai']],
+    remind: `"Kael masih butuh bantuanmu. Selesaikan itu dulu, baru Tanda Mandor kuberikan."`,
+    done: `"Kael sudah bercerita padaku. Tanda Mandor ini milikmu. Varek akan mendengarmu, meski belum tentu menyukaimu."`,
+    reward: { flags: { balin_vouch: true }, rep: { karst: 3 } } });
+
+  // ===== BAB 4 — AURELION: lima rangkaian penyelidikan yang saling mengunci =====
+  // -- Rangkaian Karavan --
+  addQ({ id: 'c_dorrin', step: 'capital', giver: 'cap_roderic', turn: 'ns_dorrin', title: 'Kusir yang Kehausan',
+    pre: [],
+    offer: `"Karavan istana melintas tiap malam dan tak seorang pun boleh memeriksanya. Itu perintah, dan hanya itu yang boleh kukatakan. Tapi kusir mereka, Dorrin, biasa melepas lelah di Kedai Beruang Mabuk, dan lidahnya licin kalau sudah hangat. Traktir dia 1 Anggur Hangat Rempah dari kedai itu, lalu lihat apa yang keluar dari mulutnya."`,
+    take: 'Aku akan menemuinya.',
+    need: [['item', 'anggur', 1, 'Anggur Hangat Rempah (beli di Kedai Beruang Mabuk)']],
+    remind: `"Dorrin belum kau temui? Ia di Kedai Beruang Mabuk. Jangan lupa anggurnya."`,
+    wait: `"Aku haus, Pengelana, tapi aku tak mau minum sembarang. Bawakan anggur rempah hangat, baru lidahku bergerak."`,
+    done: `"Ahh, hangat... Baiklah, satu hal saja. Peti-peti hitam itu tak pernah sampai ke istana. Kami menurunkannya di Gudang Gandum Kerajaan, lewat pintu belakang, jam kedua malam. Lebih dari itu aku tak tahu dan tak mau tahu."`,
+    reward: { c: 15, frag: ['night_route'] } });
+  addQ({ id: 'c_pell', step: 'capital', giver: '@pell', title: 'Pintu Belakang Gudang',
+    pre: [['frag', 'night_route']],
+    locked: `"Gudang ini bukan tempat bagi orang asing yang bertanya-tanya."`,
+    offer: `"Dorrin bicara? Dasar mulut bocor. Dengar, aku hanya mau membicarakan isi gudang ini dengan pembawa Surat Izin Registri dari Juru Tulis Tobias. Tanpa kertas itu, aku bisa dipecat, atau lebih buruk."`,
+    take: 'Aku akan mengurus suratnya.',
+    need: [['item', 'registry_writ', 1, 'Surat Izin Registri dari Juru Tulis Tobias']],
+    remind: `"Mana suratnya? Tanpa Surat Izin Registri, mulutku terkunci."`,
+    done: `"Surat ini asli. Baiklah. Dua belas peti hitam masuk tiap malam, dan paginya hanya tiga yang pergi dengan gerobak. Sisanya turun lewat lorong di bawah gudang ini, mengarah ke sisi istana. Aku tak pernah turun. Tak ada yang kembali dengan cerita."`,
+    reward: { c: 25, frag: ['tunnel'] } });
+  addQ({ id: 'c_pip', step: 'capital', giver: 'cap_pip', title: 'Perut Kosong Pip',
+    pre: [],
+    offer: `"Kau penyelidik, kan? Aku melihat sesuatu semalam, tapi perutku kosong dan mulutku malas. Bawakan 1 Roti Madu Hangat, nanti kuceritakan."`,
+    take: 'Akan kucarikan rotinya.',
+    need: [['item', 'roti', 1, 'Roti Madu Hangat']],
+    remind: `"Roti Madu Hangat, ingat! Nella si penjual roti punya yang paling enak."`,
+    done: `"Mmm, enak! Semalam seorang penyihir berjubah ungu membawa pecahan hitam ke tangga rahasia di sisi istana. Tangga itu biasanya terkunci, tapi semalam terbuka. Itu saja yang kulihat."`,
+    reward: { c: 10, frag: ['stair'] } });
+  // -- Rangkaian Catatan & Cap --
+  addQ({ id: 'c_tobias', step: 'capital', giver: 'cap_tobias', title: 'Surat dengan Cap Guild',
+    pre: [],
+    offer: `"Aku hanya mencatat pendatang, bukan kargo. Tapi bila kau ingin membuka urusan gudang, kau butuh surat izin dariku yang dicap Guild. Pergilah pada Master Alberic dan mintalah cap itu. Setelah itu baru kutuliskan suratnya."`,
+    take: 'Aku akan menemui Master Alberic.',
+    need: [['flag', 'guild_stamped', 'Cap Guild dari Master Alberic']],
+    remind: `"Cap Guild belum ada? Tanpa itu suratku tak berarti."`,
+    done: `"Cap yang bagus. Ini Surat Izin Registri. Dengan ini penjaga gudang dan Juru Cap Wynne akan lebih mau mendengarmu."`,
+    reward: { items: ['registry_writ'] } });
+  addQ({ id: 'c_alberic', step: 'capital', giver: 'cap_alberic', title: 'Cap untuk Sang Juru Tulis',
+    pre: [['qa', 'c_tobias']],
+    locked: `"Guild menaungi seribu pemburu. Hanya segelintir pulang dengan kepala tegak."`,
+    offer: `"Tobias mengirimmu? Cap Guild tidak kubagikan sembarangan. Tunjukkan bahwa kau bisa berburu: bawakan 2 Cakar Beruang Es."`,
+    take: 'Akan kubawakan.',
+    need: [['item', 'bear_claw', 2, 'Cakar Beruang Es']],
+    remind: `"Dua Cakar Beruang Es, lalu capnya kuberikan."`,
+    done: `"Cakar yang bagus. Capnya sudah kububuhkan. Satu hal kuberikan cuma-cuma: pernah ada permintaan dari istana untuk mengirim delapan pemburu terbaik kami ke Lembah Beku. Tak satu pun kembali."`,
+    reward: { flags: { guild_stamped: true }, rep: { human: 2 } } });
+  addQ({ id: 'c_wynne', step: 'capital', giver: 'ns_wynne', title: 'Segel Manifes',
+    pre: [['quest', 'c_pell']],
+    locked: `"Manifes? Tidak ada manifes yang bisa kau lihat, Pengelana."`,
+    offer: `"Kau yang membuka mulut Pell? Hm. Manifes kargo istana kusegel, dan kunci segelnya dipegang Bendahara Corvin di istana. Bawakan kunci itu, dan tunjukkan padaku cap Guild-mu, baru kubuka."`,
+    take: 'Aku akan mengurus kuncinya.',
+    need: [['item', 'corvin_key', 1, 'Kunci Segel Registri dari Bendahara Corvin'], ['flag', 'guild_stamped', 'Cap Guild']],
+    remind: `"Kunci segel dari Bendahara Corvin, itu syaratnya."`,
+    done: `"Baiklah. Kubuka segelnya. Kargo yang tercatat: kristal hitam. Tujuan: Ruang Mesin Surya. Penerima: Penyihir Istana. Aku tak tahu apa itu Mesin Surya dan aku tak mau tahu."`,
+    reward: { frag: ['manifest'], c: 20 } });
+  addQ({ id: 'c_corvin', step: 'capital', giver: 'cap_corvin', title: 'Kunci dari Bendahara',
+    pre: [['qa', 'c_wynne']],
+    locked: `"Setiap perak kerajaan tercatat rapi. Setiap kunci juga."`,
+    offer: `"Kunci segel Registri? Wynne tidak pernah memintanya kecuali ada urusan besar. Aku tak memberi apa pun tanpa catatan: sumbang 60 Perak untuk perbaikan menara penjaga, lalu kunci itu kuserahkan."`,
+    take: 'Aku akan menyumbang.',
+    need: [['coin', 60]],
+    remind: `"60 Perak untuk menara penjaga. Tak kurang."`,
+    done: `"Terima kasih atas sumbanganmu. Ini kuncinya. Kembalikan pada Wynne, dan jangan sebut namaku bila ada yang bertanya."`,
+    reward: { items: ['corvin_key'], rep: { human: 2 } } });
+  // -- Rangkaian Eksperimen --
+  addQ({ id: 'c_halden', step: 'capital', giver: 'ns_halden', title: 'Kristal di Baju Besi',
+    pre: [],
+    offer: `"Kau berbau salju dan darah. Dari mana? Hutan Belantara? Kalau kau membawa sesuatu yang menurutmu ada hubungannya dengan Lembah Beku, perlihatkan padaku. Aku mengenal barang-barang semacam itu."`,
+    take: 'Akan kuperlihatkan.',
+    need: [['show', 'black_aether', 'Perlihatkan Pecahan Aether Hitam']],
+    remind: `"Perlihatkan dulu apa yang kau bawa dari hutan itu."`,
+    done: `"Hitam begitu... Kristal yang sama menempel di baju besi sahabatku, Ser Edric Marwen, saat ia berangkat ke Lembah Beku. Wendigo yang kau kalahkan itu Edric. Itu saja yang bisa kukatakan. Sisanya bukan ceritaku."`,
+    reward: { frag: ['wendigo_knight'] } });
+  addQ({ id: 'c_delwyn', step: 'capital', giver: 'cap_delwyn', title: 'Arsip yang Disegel',
+    pre: [['frag', 'wendigo_knight']],
+    locked: `"Arsip Vaelen dahulu hangat. Hanya itu yang boleh kusebut pada orang tak dikenal."`,
+    offer: `"Edric Marwen... nama itu ada di arsip yang disegel. Hanya orang yang direkomendasikan Kuil yang boleh membacanya. Bicaralah pada Uskup Seraphine, lalu bawakan Surat Restunya padaku."`,
+    take: 'Aku akan menemui Uskup Seraphine.',
+    need: [['item', 'temple_blessing', 1, 'Surat Restu Kuil dari Uskup Seraphine']],
+    remind: `"Surat Restu Kuil dulu. Aturan arsip tidak bisa kulanggar."`,
+    done: `"Surat ini sah. Baca ini: Proyek Rime. Delapan ksatria sukarelawan, termasuk Edric Marwen, disuntik Aether Hitam untuk menguji penyaluran dingin dari bumi. Stempel penyetuju: Akademi Arkana. Bawa Kartu Arsip ini bila ingin bertanya lebih jauh di sana."`,
+    reward: { frag: ['project_rime'], items: ['archive_pass'] } });
+  addQ({ id: 'c_seraphine', step: 'capital', giver: 'cap_seraphine', title: 'Restu bagi yang Menghangatkan',
+    pre: [['qa', 'c_delwyn']],
+    locked: `"Cahaya suci Aurelion menyertai siapa pun yang menghangatkan sesama."`,
+    offer: `"Delwyn mengirimmu untuk restuku? Aku hanya memberi restu pada mereka yang telah menghangatkan sesama. Serambi kuil dipenuhi korban salju. Bawakan 3 Salep Herbal Hutan untuk mereka."`,
+    take: 'Aku akan membawakan salepnya.',
+    need: [['item', 'herb', 3, 'Salep Herbal Hutan']],
+    remind: `"Para korban masih menunggu 3 Salep Herbal Hutan."`,
+    done: `"Cahaya menyertaimu. Ini Surat Restu untuk Delwyn. Soal apa yang diteliti Akademi, aku tak tahu. Aku hanya menjaga api kuil."`,
+    reward: { items: ['temple_blessing'], rep: { human: 2 } } });
+  addQ({ id: 'c_sybil', step: 'capital', giver: 'ns_sybil', title: 'Pelarut Fokus Sybil',
+    pre: [['frag', 'project_rime']],
+    locked: `"Akademi sedang tertutup untuk tamu."`,
+    offer: `"Kau membawa Kartu Arsip? Guru Oswin sedang tak mau bertemu siapa pun, tapi aku bisa mengatur. Syaratnya: aku memecahkan fokus kristalnya dan butuh 1 Tanduk Rusa Kristal sebagai pengganti. Jangan bilang siapa-siapa."`,
+    take: 'Akan kucarikan tanduknya.',
+    need: [['item', 'stag_antler', 1, 'Tanduk Rusa Kristal'], ['show', 'archive_pass', 'Kartu Arsip Akademi']],
+    remind: `"Tanduk Rusa Kristal, dan jangan lupa Kartu Arsipnya."`,
+    done: `"Sempurna, fokusnya utuh lagi. Guru Oswin sekarang bersedia menerimamu. Katakan padanya Sybil yang mengirimmu."`,
+    reward: { rep: { human: 1 } } });
+  addQ({ id: 'c_oswin', step: 'capital', giver: 'cap_oswin', title: 'Skema Mesin Surya',
+    pre: [['quest', 'c_sybil']],
+    locked: `"Akademi tidak menerima kunjungan tanpa urusan."`,
+    offer: `"Sybil mengirimmu, dan kau membawa Kartu Arsip. Baik. Akan kutunjukkan skema dasar Mesin Surya, hanya skemanya. Alasannya bukan urusanku. Syaratnya kecil: bawakan 1 Kantung Bisa Kabut sebagai pelarut tinta pembaca."`,
+    take: 'Akan kubawakan.',
+    need: [['item', 'spider_venom', 1, 'Kantung Bisa Kabut']],
+    remind: `"Kantung Bisa Kabut, untuk pelarut tinta."`,
+    done: `"Ini skemanya. Mesin itu menyedot panas dari bumi Khaz-Karst dan Aether dari Hutan Elf, lalu menyalurkannya ke Aurelion. Yang tersisa di sana, tentu saja, adalah dingin."`,
+    reward: { frag: ['engine_design'], c: 30 } });
+  // -- Rangkaian Pribadi: dosa lama Aldric --
+  addQ({ id: 'c_odalys', step: 'capital', giver: 'ns_odalys', title: 'Atap yang Disegel',
+    pre: [],
+    offer: `"Kau... Juru Sita itu. Aldric Vane. Kau yang menyegel rumahku di luar tembok, tiga musim dingin lalu. Aku mengenali jubahmu. Apa yang kau mau dariku? Tidak, jangan jawab. Kalau kau sungguh menyesal, bawakan 2 Salep Herbal Hutan dan 30 Perak untuk cucu-cucuku, yang kini tidur di serambi kuil."`,
+    take: 'Biar kutebus.',
+    need: [['item', 'herb', 2, 'Salep Herbal Hutan'], ['coin', 30]],
+    remind: `"Salep dan uangnya untuk cucu-cucuku. Itu yang kuminta, tidak lebih."`,
+    done: `"Aku tidak memaafkanmu, tapi cucu-cucuku akan hangat malam ini. Satu hal kuberi: surat penyitaan itu bukan hanya tanganmu. Di bawahnya tertera Dekret Musim Dingin, ditandatangani dua orang: Kepala Istana Bastian dan Penyihir Veyra."`,
+    reward: { frag: ['decree'], rep: { human: 3 } } });
+
+  // ===== Bab 4 lanjutan — IZIN MENGHADAP =====
+  addQ({ id: 'p_bastian', step: 'capital', grp: 'palace', giver: 'cap_bastian', title: 'Tanda Tangan Kepala Istana',
+    pre: [['frag', 'decree']],
+    locked: `"Setiap tamu Yang Mulia harus melalui aku. Dan kau, tampaknya, belum punya alasan untuk lewat."`,
+    offer: `"Dekret itu... Dari siapa kau mendengarnya? Tak penting. Aku tak akan menyangkal: kami menandatanganinya demi menjaga kota. Audiensi dengan Penyihir Veyra kuberikan, tapi tak gratis. Bawakan 1 Kulit Harimau Abu sebagai bingkisan untuk Ratu, supaya kunjunganmu tercatat sebagai upeti, bukan penyelidikan."`,
+    take: 'Akan kubawakan.',
+    need: [['item', 'tiger_pelt', 1, 'Kulit Harimau Abu']],
+    remind: `"Kulit Harimau Abu, untuk bingkisan Ratu. Cepatlah."`,
+    done: `"Baik. Tanda tanganku kububuhkan. Tapi Ratu harus menyetujui juga. Temui beliau."`,
+    reward: { flags: { bastian_ok: true }, rep: { human: 2 } } });
+  addQ({ id: 'p_aurelia', step: 'capital', grp: 'palace', giver: 'cap_aurelia', title: 'Restu Sang Ratu',
+    pre: [['flag', 'bastian_ok']],
+    locked: `"Kerajaan ini berdiri di atas kepercayaan tiga bangsa."`,
+    offer: `"Bastian mengajukan namamu. Aku tak menandatangani untuk orang yang belum dikenal tiga bangsa. Tunjukkan bahwa Manusia, Elf, dan Dwarf pernah merasakan bantuanmu: selesaikan misi Kehangatan Pondok Mira, Botani Caelen, dan Penambang Muda Kael."`,
+    take: 'Akan kuselesaikan.',
+    need: [['flag', 'miraHelped', 'Misi Mira (Manusia) selesai'], ['flag', 'caelenQuestDone', 'Misi Caelen (Elf) selesai'], ['flag', 'kaelQuestDone', 'Misi Kael (Dwarf) selesai']],
+    remind: `"Tiga bangsa belum semuanya bicara tentangmu."`,
+    done: `"Tiga bangsa telah bicara. Tanda tanganku ada di sini. Bawa dokumen ini pada Sekretaris Mirelle."`,
+    reward: { flags: { queen_sign: true }, rep: { human: 3, karst: 2, aethel: 2 } } });
+  addQ({ id: 'p_mirelle', step: 'capital', grp: 'palace', giver: 'ns_mirelle', title: 'Lilin Surat Audiensi',
+    pre: [['flag', 'bastian_ok'], ['flag', 'queen_sign']],
+    locked: `"Surat Audiensi butuh dua tanda tangan: Kepala Istana dan Ratu. Kembalilah setelah keduanya ada."`,
+    offer: `"Dua tanda tangan sudah ada. Satu syarat protokol: surat audiensi harus dicap lilin istana. Biayanya 15 Perak."`,
+    take: 'Aku akan membayarnya.',
+    need: [['coin', 15]],
+    remind: `"15 Perak untuk lilin istana. Protokol tak bisa ditawar."`,
+    done: `"Surat Audiensi sudah selesai. Penyihir Veyra menerima tamu hari ini. Beliau ada di aula dalam istana."`,
+    reward: { flags: { audience: true }, items: ['audience_scroll'] } });
+
+  // ===== Bab 5 — kunci tangga =====
+  addQ({ id: 'e_oswin', step: 'veyra', grp: 'engine', giver: 'cap_oswin', title: 'Kristal Penyelaras',
+    pre: [['flag', 'ch4_truth'], ['quest', 'c_oswin']],
+    offer: `"Kau ingin turun ke Inti Mesin? Segel Aether di tangga rahasia hanya terbuka bagi pemegang Kristal Penyelaras. Aku bisa menyaduknya. Bahannya 3 Kantung Bisa Kabut sebagai pelarut dan 40 Perak untuk ongkos Akademi."`,
+    take: 'Akan kubawakan bahannya.',
+    need: [['item', 'spider_venom', 3, 'Kantung Bisa Kabut'], ['coin', 40]],
+    remind: `"3 Kantung Bisa Kabut dan 40 Perak, lalu kristalnya kusadukan."`,
+    done: `"Kristalnya sudah jadi. Pegang erat. Segel di tangga akan mengenalinya. Kembalilah hidup-hidup."`,
+    reward: { items: ['seal_crystal'], rep: { human: 2 } } });
+
+  // ----- Evaluasi syarat -----
+  function rq(r) {
+    const t = r[0];
+    if (t === 'item') { const q = itemQty(r[1]); return [q >= r[2], r[3] || r[1], q + '/' + r[2]]; }
+    if (t === 'show') { const ok = itemQty(r[1]) > 0; return [ok, r[2], ok ? 'ada' : 'belum']; }
+    if (t === 'coin') return [gameData.coins >= r[1], r[2] || (r[1] + ' Perak'), gameData.coins + '/' + r[1]];
+    if (t === 'flag') return [!!gameData.flags[r[1]], r[2] || r[1], ''];
+    if (t === 'frag') return [!!ST.frag[r[1]], r[2] || (FRAG[r[1]] ? FRAG[r[1]][0] : r[1]), ''];
+    if (t === 'quest') return [SQ_ST(r[1]) === 2, r[2] || (Q[r[1]] ? Q[r[1]].title : r[1]), ''];
+    if (t === 'qa') return [SQ_ST(r[1]) >= 1, r[2] || (Q[r[1]] ? Q[r[1]].title : r[1]), ''];
+    return [false, '?', ''];
+  }
+  const allOk = list => (list || []).every(r => rq(r)[0]);
+  const stepOk = q => stepAt(ST.step) >= stepAt(q.step);
+  const preOk = q => stepOk(q) && allOk(q.pre);
+  const needOk = q => allOk(q.need);
+  const progText = q => (q.need || []).map(r => { const x = rq(r); return (x[0] ? '✔ ' : '✘ ') + x[1] + (x[2] ? ' (' + x[2] + ')' : ''); }).join('; ');
+  const turnOf = q => rid(q.turn || q.giver);
+  const giverOf = q => rid(q.giver);
+
+  function findNpcObj(id) { for (const k in npcsByMap) { const a = npcsByMap[k]; const n = a && a.find(x => x.id === id); if (n) return n; } return null; }
+  function whereOf(id) {
+    const n = findNpcObj(id); if (!n) return '';
+    const m = Object.keys(npcsByMap).find(k => npcsByMap[k].indexOf(n) >= 0);
+    return (MAPS[m] ? (MAPS[m].short || MAPS[m].name) + ' ' : '') + '(' + Math.round(n.x / T) + ', ' + Math.round(n.y / T) + ')';
+  }
+  const npcLabel = id => { const n = findNpcObj(id); return n ? (NM[id] || String(n.name).replace(/\s*\(.*$/, '')) : String(id); };
+
+  // ----- Hadiah & penyelesaian -----
+  function applyReward(q) {
+    const r = q.reward || {}, out = [];
+    if (r.c) { gameData.coins += r.c; out.push('+' + r.c + ' Perak'); }
+    for (const k in (r.rep || {})) { gameData.reputation[k] = (gameData.reputation[k] || 0) + r.rep[k]; out.push('Rep ' + REPN2[k] + ' +' + r.rep[k]); }
+    (r.items || []).forEach(id => { addStoryItem(id); out.push(STORY_ITEMS[id][0]); });
+    (r.frag || []).forEach(k => { if (!ST.frag[k]) { ST.frag[k] = true; out.push('Petunjuk: ' + FRAG[k][0]); } });
+    for (const k in (r.flags || {})) gameData.flags[k] = r.flags[k];
+    return out;
+  }
+  const speak = (npc, text, ch) => startDialogue(NM[npc.id] || String(npc.name).replace(/\s*\(.*$/, ''), npc.race, npc.color, text, ch);
+  function sqFinish(q, npc) {
+    (q.need || []).forEach(r => { if (r[0] === 'item') removeItem(r[1], r[2]); if (r[0] === 'coin') gameData.coins -= r[1]; });
+    sqSetState(q.id, 2);
+    const out = applyReward(q);
+    refreshStoryStep(); updateUI();
+    speak(npc, q.done + (out.length ? '  ✦ ' + out.join(' · ') : ''), [{ label: 'Terima kasih.', action: closeDialogue }]);
+  }
+
+  // ----- Pencari urusan sebuah NPC -----
+  function sqBusiness(npcId) {
+    // 1) NPC ini adalah tujuan lapor/serah-terima misi aktif milik NPC lain
+    for (const q of QLIST) {
+      if (SQ_ST(q.id) === 1 && turnOf(q) === npcId && giverOf(q) !== npcId) return { kind: needOk(q) ? 'finish' : 'wait', q };
+    }
+    // 2) misi milik NPC ini sendiri, urut sesuai definisi
+    for (const q of QLIST) {
+      if (giverOf(q) !== npcId) continue;
+      const st = SQ_ST(q.id);
+      if (st === 2) continue;
+      if (st === 1) {
+        if (turnOf(q) === npcId) return { kind: needOk(q) ? 'finish' : 'remind', q };
+        return { kind: 'remind', q };
+      }
+      return { kind: preOk(q) ? 'offer' : 'locked', q };
+    }
+    return null;
+  }
+  const SHARED = { brokk: 1, senna: 1, lyraelle: 1, elandor: 1, thalorien: 1, balin: 1 };
+  function isShared(id) {
+    if (SHARED[id]) return true;
+    const d = window.FV6 && window.FV6.CAPD && window.FV6.CAPD[id];
+    return !!(d && d.s) || id === REF.pell;
+  }
+  // Kembalikan true bila NPC ditangani oleh mesin misi utama
+  function sqInteract(npc) {
+    const b = sqBusiness(npc.id);
+    gameData.flags['cm_' + String(npc.id).replace(/^cap_/, '')] = true;
+    const shared = isShared(npc.id);
+    const other = shared ? [{ label: 'Bicara hal lain / lihat dagangan', action: () => oldInteract(npc) }] : [];
+    if (!b) { if (!shared && IDLE[npc.id]) { speak(npc, IDLE[npc.id], [{ label: 'Sampai jumpa.', action: closeDialogue }]); return true; } return false; }
+    const q = b.q;
+    if (b.kind === 'locked') {
+      if (shared) return false;
+      if (!q.locked) { if (IDLE[npc.id]) { speak(npc, IDLE[npc.id], [{ label: 'Sampai jumpa.', action: closeDialogue }]); return true; } return false; }
+      speak(npc, q.locked, [{ label: 'Permisi.', action: closeDialogue }]);
+      return true;
+    }
+    if (b.kind === 'offer') {
+      speak(npc, q.offer, [{ label: q.take || 'Aku akan melakukannya.', action: () => { sqSetState(q.id, 1); refreshStoryStep(); updateUI(); closeDialogue(); } }, { label: 'Nanti saja.', action: closeDialogue }].concat(other));
+      return true;
+    }
+    if (b.kind === 'remind') {
+      speak(npc, q.remind + ' [' + progText(q) + ']', [{ label: 'Aku akan kembali.', action: closeDialogue }].concat(other));
+      return true;
+    }
+    if (b.kind === 'wait') {
+      speak(npc, (q.wait || q.remind) + ' [' + progText(q) + ']', [{ label: 'Aku akan kembali.', action: closeDialogue }].concat(other));
+      return true;
+    }
+    if (b.kind === 'finish') {
+      speak(npc, 'Kau sudah membawa semuanya: ' + (q.need || []).map(r => rq(r)[1]).join(', ') + '.', [{ label: 'Serahkan.', action: () => sqFinish(q, npc) }].concat(other));
+      return true;
+    }
+    return false;
+  }
+
+  // ----- Penanda NPC (belah ketupat) dinamis -----
+  let SQ_MARKS = new Set();
+  function sqRecalcMarks() {
+    const s = new Set();
+    QLIST.forEach(q => {
+      const st = SQ_ST(q.id);
+      if (st === 0 && preOk(q)) s.add(giverOf(q));
+      else if (st === 1) s.add(turnOf(q));
+    });
+    SQ_MARKS = s;
+  }
+
+  // ----- Baris jurnal -----
+  function qLine(id, L) {
+    const q = Q[id], st = SQ_ST(id);
+    if (st === 2) { L.push({ t: q.title, ok: true }); return; }
+    if (st === 1) {
+      L.push({ t: q.title + ' — lapor ke ' + npcLabel(turnOf(q)) + ' ' + whereOf(turnOf(q)), ok: false });
+      (q.need || []).forEach(r => { const x = rq(r); L.push({ t: '   ↳ ' + x[1] + (x[2] ? ' (' + x[2] + ')' : ''), ok: x[0] }); });
+      return;
+    }
+    if (preOk(q)) L.push({ t: q.title + ' — temui ' + npcLabel(giverOf(q)) + ' ' + whereOf(giverOf(q)), ok: false });
+  }
+  const qByStep = (grp) => QLIST.filter(q => (q.grp || q.step) === grp).map(q => q.id);
+
   // ===== NPC MARKERS =====
   window.__isStoryNpc = n => isStoryNpc(n);
   function isStoryNpc(n) {
     if (!n) return false;
-    const s = ST.step;
     const SET = {
       supply: ['cart', 'henrik', 'brokk', 'senna'],
       henrik: ['henrik'],
@@ -8008,30 +8413,32 @@
       kaelen_return: ['kaelen'],
       keys: ['elara', 'varek', 'memory_shard', 'golem', 'durgan'],
       road: ['malthus'],
-      capital: ['cap_roderic', 'cap_tobias', 'cap_pip'],
-      veyra: ['cap_veyra', 'cap_alberic'],
+      veyra: ['cap_veyra'],
       engine: ['engine_entrance'],
       final: ['veyra_boss', 'sun_engine_core']
     };
-    return (SET[s] || []).indexOf(n.id) >= 0;
+    return (SET[ST.step] || []).indexOf(n.id) >= 0 || SQ_MARKS.has(n.id);
   }
 
   // ===== STORY OBJECTIVE =====
   function getStoryObjective() {
+    const nF = capFragCount(), tot = CAP_REQ.length;
     const o = {
-      supply:['Darah di Atas Salju — Bab 1','Selesaikan krisis pasokan di Jembatan Timur (temui Korin).'],
-      henrik:['Darah di Atas Salju — Bab 1','Kembali ke Vogt Henrik untuk laporan lengkap.'],
-      kaelen:['Darah di Atas Salju — Bab 1','Temui Kaelen di Hutan Belantara Vaelen.'],
-      kaelen_trials:['Darah di Atas Salju — Ujian Pemburu','Bunuh 1 Serigala Embun, 1 Beruang Gua, dan 1 Laba-Laba Kabut.'],
-      wendigo:['Darah di Atas Salju — Bab 1','Buru Wendigo Lembah Beku di barat Hutan Belantara.'],
-      kaelen_return:['Darah di Atas Salju — Bab 1','Kembali ke Kaelen dengan Pecahan Aether Hitam.'],
-      keys:['Menyatukan Tiga Api — Bab 2','Dapatkan Setengah Kunci Zamrud (Elara) dan Setengah Kunci Baja (Varek/Durgan).'],
-      road:['Jalan Penebusan — Bab 3','Masuki Jalan Setapak. Sesosok bayangan menunggu di tengah badai.'],
-      capital:['Jejak Dosa Masa Lalu — Bab 4','Selidiki Aurelion: temui Roderic, Tobias, dan Pip.'],
-      veyra:['Sang Arsitek Salju — Bab 4','Hadapi Penyihir Istana Veyra.'],
-      engine:['Bara yang Tersisa — Bab 5','Masuk ke Inti Mesin melalui tangga rahasia.'],
-      final:['Rime & Ash — Bab 5','Kalahkan Arch-Mage Veyra dan tentukan nasib Sun-Engine.'],
-      done:['Tamat','Epilog telah tercapai.']
+      supply: ['Darah di Atas Salju — Bab 1', 'Selesaikan krisis pasokan di Jembatan Timur (temui Korin).'],
+      henrik: ['Darah di Atas Salju — Bab 1', 'Kembali ke Vogt Henrik untuk laporan lengkap.'],
+      lead: ['Darah di Atas Salju — Bab 1', 'Cari tahu siapa Pemburu Buta itu dan di mana ia berkemah. Brokk dan Senna di Oakhaven bisa menunjukkan jalan, tapi masing-masing minta imbalan.'],
+      kaelen: ['Darah di Atas Salju — Bab 1', 'Temui Kaelen di Hutan Belantara Vaelen dengan Lencana Pemburu dan peta dari Oakhaven.'],
+      kaelen_trials: ['Darah di Atas Salju — Ujian Pemburu', 'Bunuh 1 Serigala Embun, 1 Beruang Gua, dan 1 Laba-Laba Kabut.'],
+      wendigo: ['Darah di Atas Salju — Bab 1', 'Buru Wendigo Lembah Beku di barat Hutan Belantara.'],
+      kaelen_return: ['Darah di Atas Salju — Bab 1', 'Kembali ke Kaelen dengan Pecahan Aether Hitam.'],
+      keys: ['Menyatukan Tiga Api — Bab 2', 'Dapatkan dua setengah kunci Hearthstone. Suaka Elf dan Khaz-Karst masing-masing menaruh beberapa syarat berlapis sebelum kunci diserahkan.'],
+      road: ['Jalan Penebusan — Bab 3', 'Masuki Jalan Setapak. Sesosok bayangan menunggu di tengah badai.'],
+      capital: ['Jejak Dosa Masa Lalu — Bab 4', 'Kumpulkan ' + tot + ' petunjuk tentang Aurelion (' + nF + '/' + tot + '). Tak satu warga pun tahu semuanya; tiap orang hanya memegang sepotong. Mulailah dari Roderic, Tobias, Pip, Veteran Halden, atau Nenek Odalys.'],
+      palace: ['Jejak Dosa Masa Lalu — Bab 4', 'Petunjuk sudah cukup. Dapatkan Surat Audiensi untuk menghadap Veyra: temui Lord Bastian, Ratu Aurelia, dan Sekretaris Mirelle di istana.'],
+      veyra: ['Sang Arsitek Salju — Bab 4', 'Surat Audiensi sudah di tangan. Temui Penyihir Istana Veyra di dalam istana Aurelion.'],
+      engine: ['Bara yang Tersisa — Bab 5', 'Segel tangga rahasia butuh Kristal Penyelaras. Cari Sesepuh Oswin di Akademi Arkana, lalu turun ke Inti Mesin.'],
+      final: ['Rime & Ash — Bab 5', 'Kalahkan Arch-Mage Veyra dan tentukan nasib Sun-Engine.'],
+      done: ['Tamat', 'Epilog telah tercapai.']
     };
     const d = o[ST.step] || o.supply;
     return { title: d[0], text: d[1] };
@@ -8059,8 +8466,11 @@
     const f = gameData.flags;
     if (f.caelenQuestDone) f.elf_botanical = true;
     if (f.supplyOutcome === 'blackmarket') ST.selfish = true;
+    if (!ST.frag || typeof ST.frag !== 'object') ST.frag = {};
+    if (['veyra', 'engine', 'final', 'done'].indexOf(ST.step) >= 0 && !f.audience) f.audience = true; // simpanan lama
     if (ST.step === 'supply' && f.supplyOutcome) ST.step = 'henrik';
-    if (ST.step === 'henrik' && f.ch1_henrikBriefed) ST.step = 'kaelen';
+    if (ST.step === 'henrik' && f.ch1_henrikBriefed) ST.step = 'lead';
+    if (ST.step === 'lead' && SQ_ST('b1_brokk') === 2 && SQ_ST('b1_senna') === 2) ST.step = 'kaelen';
     if (ST.step === 'kaelen' && f.ch1_trialsAccepted) {
       if (f.ch1_killWolf && f.ch1_killBear && f.ch1_killSpider) ST.step = 'wendigo';
       else ST.step = 'kaelen_trials';
@@ -8070,10 +8480,13 @@
     if (ST.step === 'kaelen_return' && f.ch1_kaelenDone) { ST.chapter = 2; ST.step = 'keys'; }
     if (ST.step === 'keys' && f.elfKey && f.dwarfKey && !f.hearthstone) combineKeys();
     if (ST.step === 'road' && f.shadowDefeated) ST.step = 'capital';
-    if (ST.step === 'capital' && Object.keys(ST.clues).length >= 3) ST.step = 'veyra';
+    if (ST.step === 'capital' && capFragCount() >= CAP_REQ.length) ST.step = 'palace';
+    if (ST.step === 'palace' && f.audience) ST.step = 'veyra';
     if (ST.step === 'veyra' && f.ch4_truth) ST.step = 'engine';
     if (currentMapId === 'sun_engine' && ST.step !== 'final' && ST.step !== 'done') ST.step = 'final';
     if (ST.ending && ST.step !== 'done') ST.step = 'done';
+    const ch = CH_OF[ST.step] || 1; if (ST.chapter < ch) ST.chapter = ch;
+    sqRecalcMarks();
     if (ST.step !== ST._lastStep) { ST._lastStep = ST.step; updateUI(); }
   }
 
@@ -8083,70 +8496,73 @@
   function henrikStory(npc) {
     if (!gameData.flags.rewardClaimed) return oldInteract(npc);
     if (ST.step !== 'henrik') return oldInteract(npc);
-    startDialogue('Vogt Henrik','Manusia — Kepala Desa Oakhaven','#e06c75',
-      '"Aldric... duduklah dulu. Kau pantas mendapat penjelasan yang jujur. Selama ini aku menyimpan sesuatu darimu. Monster-monster di Hutan Belantara tidak sekadar kelaparan. Mereka keluar dari sarang karena sesuatu yang lebih besar telah membangunkan mereka. Aku mendengar bisik-bisik dari para pengungsi: ada yang melihat cahaya keunguan di langit barat tiga malam berturut-turut. Cahaya yang sama seperti ketika ibumu... Maafkan aku. Aku tidak seharusnya mengungkit itu. Tapi kau harus tahu — Kaelen sang Pemburu Buta di pos perkemahan Hutan Belantara tahu lebih banyak. Ia dulu seorang ksatria Aurelion, sebelum matanya dibakar oleh sesuatu yang bukan api biasa. Temuilah dia. Ia menunggumu sejak seminggu lalu, seolah tahu kau akan datang."',
-      [{ label:'Aku akan mencarinya.', action:()=>{ gameData.flags.ch1_henrikBriefed=true; ST.step='kaelen'; updateUI(); closeDialogue(); } }]);
+    startDialogue('Vogt Henrik', 'Manusia — Kepala Desa Oakhaven', '#e06c75',
+      `"Aldric... duduklah dulu. Aku tak akan berpura-pura semuanya baik. Monster-monster di Hutan Belantara tidak sekadar kelaparan; sesuatu telah membangunkan mereka. Hanya itu yang kutahu, dan itu pun dari bisik-bisik para pengungsi. Katanya ada seorang pemburu tua di hutan itu yang bisa membaca tanda-tandanya. Aku tak tahu namanya dan tak tahu di mana ia berkemah. Brokk dan Senna sering berdagang dengan para pemburu. Mulailah dari mereka."`,
+      [{ label: 'Aku akan bertanya pada mereka.', action: () => { gameData.flags.ch1_henrikBriefed = true; ST.step = 'lead'; refreshStoryStep(); updateUI(); closeDialogue(); } }]);
   }
 
   function kaelenStory() {
+    const K = ['Kaelen sang Pemburu Buta', 'Mantan Ksatria Aurelion — Pemburu Buta', '#a9def9'];
+    if (ST.step === 'lead' || ST.step === 'henrik' || ST.step === 'supply') {
+      return startDialogue(K[0], K[1], K[2], `"Aku tak berbicara dengan orang yang tak membawa lencana dan peta dari Oakhaven. Pergilah, sebelum dinginnya menempel padamu."`, [{ label: 'Aku akan kembali.', action: closeDialogue }]);
+    }
     if (ST.step === 'kaelen') {
-      return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion — Pemburu Buta','#a9def9',
-        '"Kau melihatnya juga, kan? Mata ini buta, tapi aku bisa merasakan dingin yang salah di udara. Monster-monster ini bukan sekadar kelaparan — mereka didorong oleh sesuatu. Dengarkan aku baik-baik, Aldric. Sebelum kau boleh menghadapi Wendigo Lembah Beku, aku harus tahu apakah kau masih pantas disebut pemburu. Bukan karena aku meragukanmu — tapi karena Wendigo itu bukan monster biasa. Ia dulunya manusia. Dan aku tidak ingin kau mati seperti kawan-kawanku dulu. Buktikan pada tiga penghuni hutan ini bahwa kau masih punya nyali: bunuh seekor Serigala Embun, seekor Beruang Gua Raksasa, dan seekor Laba-Laba Kabut. Bawa buktinya padaku, lalu kita bicara tentang Wendigo."',
-        [ { label:'Aku akan membuktikannya. (Ujian Pemburu dimulai)', action:()=>{ gameData.flags.ch1_trialsAccepted=true; ST.step='kaelen_trials'; updateUI(); closeDialogue(); } },
-          { label:'Aku butuh waktu untuk bersiap.', action: closeDialogue } ]);
+      return startDialogue(K[0], K[1], K[2],
+        `"Lencana Brokk dan peta Senna. Jadi kau yang mereka kirim. Mataku buta, tapi dingin yang salah di udara ini masih bisa kurasakan. Aku tak akan menjelaskan semuanya padamu, Aldric. Bukan karena pelit, tapi karena kebenaran yang diberikan sebelum waktunya hanya akan membunuhmu. Buktikan dulu kau masih pemburu: tumbangkan seekor Serigala Embun, seekor Beruang Gua Raksasa, dan seekor Laba-Laba Kabut."`,
+        [{ label: 'Aku akan membuktikannya. (Ujian Pemburu dimulai)', action: () => { gameData.flags.ch1_trialsAccepted = true; ST.step = 'kaelen_trials'; updateUI(); closeDialogue(); } },
+         { label: 'Aku butuh waktu untuk bersiap.', action: closeDialogue }]);
     }
     if (ST.step === 'kaelen_trials') {
       const f = gameData.flags;
       const done = [f.ch1_killWolf ? '✔ Serigala' : '☐ Serigala', f.ch1_killBear ? '✔ Beruang' : '☐ Beruang', f.ch1_killSpider ? '✔ Laba-laba' : '☐ Laba-laba'].join(' · ');
       if (f.ch1_killWolf && f.ch1_killBear && f.ch1_killSpider) {
         ST.step = 'wendigo'; updateUI();
-        return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion','#a9def9',
-          '"Bagus. Kau masih punya api di dadamu. Sekarang dengarkan baik-baik: Wendigo itu dulunya seorang ksatria — seperti aku. Ia dikirim ke Lembah Beku untuk eksperimen yang tidak pernah dijelaskan padanya. Ketika ia kembali, ia tidak lagi manusia. Buru dia di barat, tapi jangan remehkan. Wendigo tidak menyerang dengan cakar saja — ia menyerang dengan kenangan. Kau akan melihat hal-hal yang belum pernah kau alami, dan itu akan terasa nyata. Jangan percaya pada matamu. Percayalah pada pedangmu."',
-          [{label:'Aku akan memburunya sekarang.',action:closeDialogue}]);
+        return startDialogue(K[0], K[1], K[2],
+          `"Bagus. Kau masih punya api di dadamu. Ada satu buruan lagi: Wendigo Lembah Beku, di barat, di reruntuhan batu tua. Satu peringatan saja. Wendigo tidak menyerang dengan cakar; ia menyerang dengan kenangan. Jangan percaya pada matamu. Percayalah pada pedangmu."`,
+          [{ label: 'Aku akan memburunya sekarang.', action: closeDialogue }]);
       }
-      return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion','#a9def9',
-        `"Ujian belum selesai. Progresmu: ${done}. Kembalilah jika ketiganya sudah tumbang."`,
-        [{label:'Aku akan kembali.',action:closeDialogue}]);
+      return startDialogue(K[0], K[1], K[2], `"Ujian belum selesai. Progresmu: ${done}. Kembalilah jika ketiganya sudah tumbang."`, [{ label: 'Aku akan kembali.', action: closeDialogue }]);
     }
-    if (ST.step === 'wendigo') return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion','#a9def9',
-      '"Wendigo itu ada di barat, di reruntuhan batu tua. Jangan remehkan ia — aku sudah kehilangan tiga kawan di sana. Kau akan merasakan dingin yang menusuk tulang bahkan sebelum melihatnya. Itu bukan cuaca. Itu kehadirannya."',
-      [{label:'Aku akan kembali dengan kepalanya.',action:closeDialogue}]);
+    if (ST.step === 'wendigo') return startDialogue(K[0], K[1], K[2],
+      `"Wendigo itu ada di barat. Kau akan merasakan dingin yang menusuk tulang bahkan sebelum melihatnya. Itu bukan cuaca. Itu kehadirannya."`,
+      [{ label: 'Aku akan kembali dengan kepalanya.', action: closeDialogue }]);
     if (ST.step === 'kaelen_return' || (gameData.flags.wf_wendigo && !gameData.flags.ch1_blackAether)) {
-      if (!hasItem('black_aether')) return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion','#a9def9',
-        '"Kau kembali tanpa bukti. Wendigo selalu meninggalkan sesuatu — pecahan kristal hitam di tempat ia tumbang. Bawa pecahan itu padaku."',
-        [{label:'Aku akan mencarinya.',action:closeDialogue}]);
+      if (!hasItem('black_aether')) return startDialogue(K[0], K[1], K[2],
+        `"Kau kembali tanpa bukti. Wendigo selalu meninggalkan sesuatu di tempat ia tumbang: pecahan kristal hitam. Bawa pecahan itu padaku."`,
+        [{ label: 'Aku akan mencarinya.', action: closeDialogue }]);
       gameData.flags.ch1_blackAether = true; gameData.flags.ch1_kaelenDone = true; ST.chapter = 2; ST.step = 'keys'; updateUI();
-      return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion — Pemburu Buta','#a9def9',
-        '"Pecahan Aether Hitam... sama seperti yang kulihat dulu, sebelum mataku dibakar. Wendigo itu dulunya manusia — seorang ksatria yang dikirim ke Lembah Beku untuk eksperimen. Ia dibuang ke hutan ketika eksperimennya gagal. Musim dingin ini bukan bencana alam, Aldric. Ini buatan manusia. Ada seseorang di Ibu Kota yang sengaja membekukan pinggiran untuk memanaskan pusat. Dan orang itu masih hidup. Untuk melewati badai es di Jalan Setapak yang menuju Aurelion, kau butuh Hearthstone — relik kuno yang dulu digunakan para pendiri untuk menahan musim dingin. Kuncinya dipecah dua dan diserahkan pada dua bangsa: Setengah Kunci Zamrud di Suaka Elf, dan Setengah Kunci Baja di Khaz-Karst. Satukan tiga api, Aldric. Api Elf, api Dwarf, dan api manusia."',
-        [{label:'Aku akan menyatukan kunci-kunci itu.',action:closeDialogue}]);
+      return startDialogue(K[0], K[1], K[2],
+        `"Pecahan Aether Hitam... Simpan baik-baik. Ini bukti bahwa musim dingin ini bukan bencana alam. Siapa yang bertanggung jawab, aku sendiri belum tahu seluruhnya, dan tak akan kuberi tebakan. Satu hal yang bisa kuberikan: untuk menembus badai di Jalan Setapak menuju Aurelion, kau butuh Hearthstone, relik para pendiri. Kuncinya dibagi dua dan dititipkan pada dua bangsa. Mulailah dari para Elf di Suaka dan para Dwarf di Khaz-Karst."`,
+        [{ label: 'Aku akan mencari kuncinya.', action: closeDialogue }]);
     }
-    if (ST.chapter >= 2) return startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion','#a9def9',
-      '"Jangan biarkan rasa bersalah membekukanmu. Rime-rot itu bukan penyakit — itu cermin."',
-      [{label:'Terima kasih, Kaelen.',action:closeDialogue}]);
-    startDialogue('Kaelen sang Pemburu Buta','Mantan Ksatria Aurelion','#a9def9', '"Kau datang untuk berburu, atau untuk melunasi utang?"', [{label:'Aku datang untuk mencari jawaban.',action:closeDialogue}]);
+    if (ST.chapter >= 2) return startDialogue(K[0], K[1], K[2], `"Jangan biarkan rasa bersalah membekukanmu. Rime-rot itu bukan penyakit. Ia cermin."`, [{ label: 'Terima kasih, Kaelen.', action: closeDialogue }]);
+    startDialogue(K[0], K[1], K[2], `"Kau datang untuk berburu, atau untuk melunasi utang?"`, [{ label: 'Aku datang untuk mencari jawaban.', action: closeDialogue }]);
   }
 
   function elaraStory() {
-    if (ST.chapter < 2) return startDialogue('Elara, Penenun Memori','Kaum Aethel — Penenun Memori','#c792ea', '"Kau belum siap mendengar apa yang mereka bisikkan. Kembalilah ketika kau sudah melihat bayanganmu sendiri."', [{label:'Aku akan kembali.',action:closeDialogue}]);
-    if (gameData.flags.elfKey) return startDialogue('Elara, Penenun Memori','Kaum Aethel','#c792ea', '"Setengah Kunci Zamrud telah kau pegang."', [{label:'Terima kasih, Elara.',action:closeDialogue}]);
-    if (!hasItem('black_aether')) return startDialogue('Elara, Penenun Memori','Kaum Aethel','#c792ea', '"Bawa pecahan memori itu padaku — pecahan Aether Hitam dari Wendigo."', [{label:'Aku akan mencarinya.',action:closeDialogue}]);
-    const f = gameData.flags;
+    const E = ['Elara, Penenun Memori', 'Kaum Aethel', '#c792ea'], f = gameData.flags;
+    if (ST.chapter < 2) return startDialogue(E[0], E[1], E[2], `"Kau belum siap mendengar apa yang mereka bisikkan. Kembalilah ketika kau sudah melihat bayanganmu sendiri."`, [{ label: 'Aku akan kembali.', action: closeDialogue }]);
+    if (f.elfKey) return startDialogue(E[0], E[1], E[2], `"Setengah Kunci Zamrud telah kau pegang."`, [{ label: 'Terima kasih, Elara.', action: closeDialogue }]);
+    if (!f.thal_blessing) return startDialogue(E[0], E[1], E[2],
+      `"Aku hanya menenun untuk mereka yang direstui Tetua. Kau belum membawa restunya. Dengarkan dulu Lyraelle dan Elandor; mereka akan menunjukkan jalan menuju Tetua Thalorien."`,
+      [{ label: 'Aku akan menemui mereka.', action: closeDialogue }]);
+    if (!hasItem('black_aether')) return startDialogue(E[0], E[1], E[2], `"Bawa pecahan memori itu padaku, pecahan Aether Hitam dari Wendigo."`, [{ label: 'Aku akan mencarinya.', action: closeDialogue }]);
     if (f.caelenQuestDone) f.elf_botanical = true;
-    if (!f.elf_botanical) return startDialogue('Elara, Penenun Memori','Kaum Aethel','#c792ea',
-      '"Sebelum aku menyerahkan kunci padamu, aku harus tahu apakah kau benar-benar peduli pada hutan kami, atau hanya ingin memakai kekuatannya. Dua hal yang harus kau lakukan. Pertama: Cendekiawan Caelen di utara sedang meneliti Bunga Embun Perak. Ia butuh sampel segar dari selatan. Bantu dia — jangan cabut akarnya, potong dengan lembut. Kedua: di dasar danau kecil dekat pohon tua di tengah hutan, ada pecahan memori yang terlepas ketika Wendigo mengamuk. Ambil pecahan itu, dan bawa padaku. Setelah keduanya selesai, baru kita bicara tentang kunci."',
-      [{label:'Aku akan membantu Caelen dan mencari pecahan memori.',action:closeDialogue}]);
-    if (!f.elf_memoryShard) return startDialogue('Elara, Penenun Memori','Kaum Aethel','#c792ea',
-      '"Kau sudah membantu Caelen. Sekarang cari pecahan memori di dasar danau dekat pohon tua — di tengah hutan, di mana airnya paling gelap."',
-      [{label:'Aku akan menyelam ke danau.',action:closeDialogue}]);
-    startDialogue('Elara, Penenun Memori','Kaum Aethel','#c792ea',
-      '"Pohon Suci kami layu karena energinya dicuri. Untuk menghidupkannya kembali, aku butuh kehangatan dari tubuhmu sendiri — kehangatan yang kau bawa dari Wendigo. Ini akan mengorbankan sebagian Maximum HP-mu, untuk sementara. Maukah kau memberikannya?"',
-      [ { label:'Ya. Ambil sebagian kehangatanku. (Max HP -25)', action:()=>{
-            gameData.maxHp = Math.max(20, gameData.maxHp - 25); gameData.hp = Math.min(gameData.hp, gameData.maxHp);
-            gameData.flags.elfKey = true; gameData.flags.elfSacrifice = true;
-            addStoryItem('emerald_key'); updateUI(); refreshStoryStep();
-            startDialogue('Elara, Penenun Memori','Kaum Aethel','#c792ea', '"Pohon Suci bernapas lagi... Setengah Kunci Zamrud kini milikmu, Aldric. Simpan baik-baik."', [{label:'Terima kasih, Elara.',action:closeDialogue}]);
-        } },
-        { label:'Aku belum siap.', action: closeDialogue } ]);
+    if (!f.elf_botanical) return startDialogue(E[0], E[1], E[2],
+      `"Sebelum aku menyerahkan kunci, aku harus tahu apakah kau peduli pada hutan kami atau hanya ingin memakai kekuatannya. Dua hal yang harus kau lakukan. Pertama, Cendekiawan Caelen di utara sedang meneliti Bunga Embun Perak dan butuh sampel segar dari selatan. Bantu dia, potong dengan lembut, jangan cabut akarnya. Kedua, di dasar danau kecil dekat pohon tua di tengah hutan ada pecahan memori yang terlepas ketika Wendigo mengamuk. Ambil dan bawa padaku."`,
+      [{ label: 'Aku akan membantu Caelen dan mencari pecahan memori.', action: closeDialogue }]);
+    if (!f.elf_memoryShard) return startDialogue(E[0], E[1], E[2],
+      `"Kau sudah membantu Caelen. Sekarang cari pecahan memori di dasar danau dekat pohon tua, di tengah hutan, di mana airnya paling gelap."`,
+      [{ label: 'Aku akan menyelam ke danau.', action: closeDialogue }]);
+    startDialogue(E[0], E[1], E[2],
+      `"Pohon Suci kami layu karena energinya dicuri. Untuk menghidupkannya kembali, aku butuh kehangatan dari tubuhmu sendiri, kehangatan yang kau bawa dari Wendigo. Ini akan mengorbankan sebagian Maximum HP-mu, untuk sementara. Maukah kau memberikannya?"`,
+      [{ label: 'Ya. Ambil sebagian kehangatanku. (Max HP -25)', action: () => {
+          gameData.maxHp = Math.max(20, gameData.maxHp - 25); gameData.hp = Math.min(gameData.hp, gameData.maxHp);
+          f.elfKey = true; f.elfSacrifice = true;
+          addStoryItem('emerald_key'); updateUI(); refreshStoryStep();
+          startDialogue(E[0], E[1], E[2], `"Pohon Suci bernapas lagi... Setengah Kunci Zamrud kini milikmu, Aldric. Simpan baik-baik."`, [{ label: 'Terima kasih, Elara.', action: closeDialogue }]);
+      } },
+       { label: 'Aku belum siap.', action: closeDialogue }]);
   }
 
   function memoryShardStory() {
@@ -8161,18 +8577,22 @@
   }
 
   function varekStory() {
-    if (ST.chapter < 2) return startDialogue('Thane Varek sang Radikal','Kaum Dwarf — Pemimpin Faksi Radikal','#e06c75', '"Manusia permukaan. Kau datang ke kota kami yang sekarat."', [{label:'Aku akan mencari tahu.',action:closeDialogue}]);
-    if (!gameData.flags.varekProof) {
-      if (!gameData.flags.golemDefeated) return startDialogue('Thane Varek sang Radikal','Kaum Dwarf','#e06c75',
-        '"Agen Ibu Kota memprogram ulang Automaton Besi di sektor tenggara. Hancurkan mesin itu, dan bawa buktinya padaku. Tapi hati-hati: mesin itu tidak lagi bekerja sendirian. Ada sesuatu yang mengendalikannya dari kejauhan — sesuatu yang berbau Aether Hitam."',
-        [{label:'Aku akan menghancurkannya.',action:closeDialogue}]);
-      gameData.flags.varekProof = true; updateUI();
-      return startDialogue('Thane Varek sang Radikal','Kaum Dwarf','#e06c75',
-        '"Jadi benar... mereka menyabotase tambang kami. Aku hampir menenggelamkan kota ini karena kemarahan — hampir mengirim seluruh pasukan ke Aurelion untuk membalas. Tapi kau menghentikanku, Aldric. Pergilah ke Raja Durgan di Aula Tahta. Ia memegang Setengah Kunci Baja, dan sekarang ia akan memberikannya padamu."',
-        [{label:'Aku akan menemui Raja Durgan.',action:closeDialogue}]);
+    const V = ['Thane Varek sang Radikal', 'Kaum Dwarf', '#e06c75'], f = gameData.flags;
+    if (ST.chapter < 2) return startDialogue(V[0], 'Kaum Dwarf — Pemimpin Faksi Radikal', V[2], `"Manusia permukaan. Kau datang ke kota kami yang sekarat."`, [{ label: 'Aku akan mencari tahu.', action: closeDialogue }]);
+    if (!f.varekProof && !f.dwarfKey && !f.balin_vouch) return startDialogue(V[0], V[1], V[2],
+      `"Aku tak bicara dengan orang yang tak kukenal. Tak ada yang menjamin dirimu. Biasanya Mandor Balin memberi Tanda Mandor pada orang luar yang layak. Jangan buang waktuku."`,
+      [{ label: 'Aku akan menemui Mandor Balin.', action: closeDialogue }]);
+    if (!f.varekProof) {
+      if (!f.golemDefeated) return startDialogue(V[0], V[1], V[2],
+        `"Balin menjaminmu? Hm. Baiklah. Agen Ibu Kota memprogram ulang Automaton Besi di sektor tenggara. Hancurkan mesin itu dan bawa buktinya padaku. Hati-hati, mesin itu tak lagi bekerja sendirian. Ada sesuatu yang mengendalikannya dari kejauhan."`,
+        [{ label: 'Aku akan menghancurkannya.', action: closeDialogue }]);
+      f.varekProof = true; updateUI();
+      return startDialogue(V[0], V[1], V[2],
+        `"Jadi benar... mereka menyabotase tambang kami. Aku hampir menenggelamkan kota ini karena marah, hampir mengirim seluruh pasukan ke Aurelion untuk membalas. Kau menghentikanku, Aldric. Pergilah pada Raja Durgan di Aula Tahta. Ia memegang Setengah Kunci Baja, dan sekarang ia akan memberikannya padamu."`,
+        [{ label: 'Aku akan menemui Raja Durgan.', action: closeDialogue }]);
     }
-    if (!gameData.flags.dwarfKey) return startDialogue('Thane Varek sang Radikal','Kaum Dwarf','#e06c75', '"Raja Durgan menunggumu di Aula Tahta."', [{label:'Baiklah.',action:closeDialogue}]);
-    startDialogue('Thane Varek sang Radikal','Kaum Dwarf','#e06c75', '"Kau telah membuktikan bahwa lari dari masalah bukanlah jawaban."', [{label:'Terima kasih, Varek.',action:closeDialogue}]);
+    if (!f.dwarfKey) return startDialogue(V[0], V[1], V[2], `"Raja Durgan menunggumu di Aula Tahta."`, [{ label: 'Baiklah.', action: closeDialogue }]);
+    startDialogue(V[0], V[1], V[2], `"Kau telah membuktikan bahwa lari dari masalah bukanlah jawaban."`, [{ label: 'Terima kasih, Varek.', action: closeDialogue }]);
   }
 
   function durganStory() {
@@ -8553,38 +8973,22 @@ html.m-land #canvasContainer.trial-on ~ .touch-controls .action-pad{opacity:.9}
     shadowTrial();
   }
 
-  function capitalClue(id) {
-    const info = { cap_roderic:['Kapten Gerbang Roderic','Manusia — Penjaga Gerbang Barat','#e06c75'],
-                   cap_tobias:['Juru Tulis Tobias','Manusia — Pencatat Pendatang','#d7c9a8'],
-                   cap_pip:['Pip Anak Jalanan','Manusia — Anak Pasar','#ffd166'] }[id];
-    if (!info) return false;
-    const key = id.replace('cap_', '');
-    const first = !ST.clues[key];
-    if (first) { ST.clues[key] = true; if (Object.keys(ST.clues).length >= 3) ST.step = 'veyra'; updateUI(); }
-    const txt = {
-      roderic:'"Kau ingin tahu tentang Veyra? Aku bisa cerita. Karavan pasokan ke istana tidak pernah berhenti, meski desa luar membeku. Mereka membawa kristal hitam ke bawah tanah. Aku pernah bertanya pada Veyra sekali — dan ia menjawab dengan senyum yang membuat bulu kudukku berdiri."',
-      tobias:'"Catatanku... semua ada di sini. Pengiriman panas bumi dari Khaz-Karst, Aether dari Hutan Elf — semuanya menuju Sun-Engine di bawah istana. Aku mencatatnya selama bertahun-tahun, tapi tidak pernah berani bertanya untuk apa."',
-      pip:'"Penyihir jubah ungu? Aku melihatnya semalam. Ia membawa pecahan hitam ke tangga rahasia di sisi istana. Tangga itu biasanya terkunci, tapi semalam terbuka."'
-    }[key];
-    startDialogue(info[0], info[1], info[2], first ? txt : '"Aku sudah bilang semua yang kutahu."', [{label:'Terima kasih.',action:closeDialogue}]);
-    return true;
-  }
-
   function veyraStory() {
-    if (ST.step === 'veyra' || Object.keys(ST.clues).length >= 3) {
-      gameData.flags.ch4_truth = true; ST.step = 'engine'; updateUI();
-      return startDialogue('Penyihir Istana Veyra','Manusia — Peneliti Aether','#c792ea',
-        '"Jadi kau sudah tahu. Aku tidak akan berpura-pura. Sun-Engine menyedot panas Khaz-Karst dan Aether Hutan Elf untuk menjaga Aurelion tetap hangat. Setiap musim dingin, aku harus memilih: membekukan pinggiran, atau membiarkan seluruh peradaban mati. Aku memilih pusat. Temui aku di Inti Mesin — tangga rahasia di sisi istana akan terbuka."',
-        [{label:'Aku akan menghentikannya.',action:closeDialogue}]);
+    if (ST.step === 'veyra') {
+      gameData.flags.ch4_truth = true; ST.step = 'engine'; refreshStoryStep(); updateUI();
+      return startDialogue('Penyihir Istana Veyra', 'Manusia — Peneliti Aether', '#c792ea',
+        `"Jadi akhirnya kau datang, Juru Sita. Tak perlu kau jelaskan; aku tahu apa yang kau temukan di gudang, di arsip, dan di rumah-rumah yang dulu kau segel. Aku tidak akan membantah satu pun. Setiap musim dingin harus ada yang dibekukan agar sisanya hidup, dan aku memilih pinggiran. Temui aku di Inti Mesin. Tangga di sisi istana hanya terbuka bagi pemegang Kristal Penyelaras. Kau cukup cerdik untuk menemukan caranya sendiri."`,
+        [{ label: 'Aku akan menghentikannya.', action: closeDialogue }]);
     }
-    startDialogue('Penyihir Istana Veyra','Manusia','#c792ea', '"Aku sedang sibuk, Pengelana."', [{label:'Permisi.',action:closeDialogue}]);
+    startDialogue('Penyihir Istana Veyra', 'Manusia', '#c792ea', `"Aku sedang sibuk, Pengelana."`, [{ label: 'Permisi.', action: closeDialogue }]);
   }
 
   function engineEntranceStory() {
-    if (!gameData.flags.ch4_truth) return startDialogue('Tangga ke Inti Mesin','Rahasia Istana','#ff875c', 'Tangga ini terkunci oleh segel Aether. Kau belum mengetahui kebenaran yang cukup untuk membukanya.', [{label:'Kembali.',action:closeDialogue}]);
-    startDialogue('Tangga ke Inti Mesin','Rahasia Istana — Bawah Tanah','#ff875c',
-      'Segel Aether terbuka saat kau menyentuhnya — seolah mengenali tekadmu. Di bawah sana, Sun-Engine berdenyut seperti jantung yang kepanasan.',
-      [{ label:'Turun ke Inti Mesin.', action:()=> switchMap('sun_engine', 15, 17) }]);
+    if (!gameData.flags.ch4_truth) return startDialogue('Tangga ke Inti Mesin', 'Rahasia Istana', '#ff875c', 'Tangga ini terkunci oleh segel Aether. Kau belum mengetahui kebenaran yang cukup untuk membukanya.', [{ label: 'Kembali.', action: closeDialogue }]);
+    if (!hasItem('seal_crystal')) return startDialogue('Tangga ke Inti Mesin', 'Rahasia Istana', '#ff875c', 'Segel Aether menolak sentuhanmu dan berpendar merah. Segel ini hanya mengenali pemegang Kristal Penyelaras. Seseorang di Akademi Arkana tentu bisa membuatnya.', [{ label: 'Kembali.', action: closeDialogue }]);
+    startDialogue('Tangga ke Inti Mesin', 'Rahasia Istana — Bawah Tanah', '#ff875c',
+      'Segel Aether terbuka saat kristal di tanganmu bergetar, seolah mengenali tekadmu. Di bawah sana, Sun-Engine berdenyut seperti jantung yang kepanasan.',
+      [{ label: 'Turun ke Inti Mesin.', action: () => switchMap('sun_engine', 15, 17) }]);
   }
 
   function veyraBossStory() {
@@ -8605,9 +9009,11 @@ html.m-land #canvasContainer.trial-on ~ .touch-controls .action-pad{opacity:.9}
     if (npc.id === 'varek') return varekStory();
     if (npc.id === 'durgan' && ST.chapter >= 2) return durganStory();
     if (npc.id === 'malthus') return malthusStory();
-    if (npc.id === 'cap_roderic' || npc.id === 'cap_tobias' || npc.id === 'cap_pip')
-      if (ST.step === 'capital' || ST.step === 'veyra') return capitalClue(npc.id);
-    if (npc.id === 'cap_veyra' && ST.step === 'veyra') return veyraStory();
+    if (npc.id === 'cap_veyra') {
+      if (ST.step === 'veyra') return veyraStory();
+      if (ST.step === 'capital' || ST.step === 'palace') return startDialogue('Penyihir Istana Veyra', 'Manusia — Peneliti Aether', '#c792ea', '\"Aku tidak menerima tamu tanpa Surat Audiensi. Sekretarisku, Mirelle, yang mengatur jadwalku. Bicaralah padanya.\"', [{ label: 'Permisi.', action: closeDialogue }]);
+    }
+    if (sqInteract(npc)) return;
     if (npc.id === 'engine_entrance') return engineEntranceStory();
     if (npc.id === 'veyra_boss') return veyraBossStory();
     if (npc.id === 'sun_engine_core') {
@@ -8674,7 +9080,7 @@ html.m-land #canvasContainer.trial-on ~ .touch-controls .action-pad{opacity:.9}
     if (id === 'capital' && ST.chapter >= 3 && !gameData.flags.ch4_intro) {
       gameData.flags.ch4_intro = true;
       setTimeout(()=> startDialogue('Aurelion — Ibu Kota Kerajaan','Kontras dengan Lembah Vaelen','#ffd966',
-        'Aurelion hangat, terang, dan megah. Di luar tembok, desa-desa membeku. Di sinilah sumber musim dingin abadi itu bermula.',
+        'Aurelion hangat, terang, dan megah. Di luar tembok, desa-desa membeku, tetapi tak seorang pun di sini tampak peduli. Tak satu warga pun tahu seluruh ceritanya; tiap orang hanya memegang sepotong. Mulailah bertanya.',
         [{label:'Selidiki kota ini.',action:closeDialogue}]), 120);
     }
   };
@@ -8796,16 +9202,16 @@ html.m-land #canvasContainer.trial-on ~ .touch-controls .action-pad{opacity:.9}
     document.head.appendChild(st);
   })();
 
-  const QJ_ORD = ['supply', 'henrik', 'kaelen', 'kaelen_trials', 'wendigo', 'kaelen_return', 'keys', 'road', 'capital', 'veyra', 'engine', 'final', 'done'];
+  const QJ_ORD = STEP_ORDER;
   const QJ_CH = [
-    { n: 'Bab 1 — Darah di Atas Salju', s: ['supply', 'henrik', 'kaelen', 'kaelen_trials', 'wendigo', 'kaelen_return'] },
+    { n: 'Bab 1 — Darah di Atas Salju', s: ['supply', 'henrik', 'lead', 'kaelen', 'kaelen_trials', 'wendigo', 'kaelen_return'] },
     { n: 'Bab 2 — Menyatukan Tiga Api', s: ['keys'] },
     { n: 'Bab 3 — Jalan Penebusan', s: ['road'] },
-    { n: 'Bab 4 — Jejak Dosa Masa Lalu', s: ['capital', 'veyra'] },
+    { n: 'Bab 4 — Jejak Dosa Masa Lalu', s: ['capital', 'palace', 'veyra'] },
     { n: 'Bab 5 — Rime & Ash', s: ['engine', 'final'] }
   ];
-  const QJ_LBL = { supply: 'Krisis Pasokan Jembatan Timur', henrik: 'Laporan kepada Vogt Henrik', kaelen: 'Bertemu Kaelen', kaelen_trials: 'Ujian Pemburu', wendigo: 'Perburuan Wendigo', kaelen_return: 'Kembali kepada Kaelen',
-    keys: 'Dua Setengah Kunci Hearthstone', road: 'Ujian Penebusan', capital: 'Menyelidiki Aurelion', veyra: 'Menghadapi Veyra', engine: 'Turun ke Inti Mesin', final: 'Pertarungan Terakhir' };
+  const QJ_LBL = { supply: 'Krisis Pasokan Jembatan Timur', henrik: 'Laporan kepada Vogt Henrik', lead: 'Mencari Jejak Pemburu Buta', kaelen: 'Bertemu Kaelen', kaelen_trials: 'Ujian Pemburu', wendigo: 'Perburuan Wendigo', kaelen_return: 'Kembali kepada Kaelen',
+    keys: 'Dua Setengah Kunci Hearthstone', road: 'Ujian Penebusan', capital: 'Menyelidiki Aurelion', palace: 'Izin Menghadap Veyra', veyra: 'Menghadapi Veyra', engine: 'Turun ke Inti Mesin', final: 'Pertarungan Terakhir' };
   const qjEsc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const qjMapName = id => (typeof MAPS !== 'undefined' && MAPS[id]) ? (MAPS[id].short || MAPS[id].name || '') : '';
 
@@ -8820,7 +9226,10 @@ html.m-land #canvasContainer.trial-on ~ .touch-controls .action-pad{opacity:.9}
         S_('Selesaikan krisis lewat Diplomasi atau Tempur', f.supplyOutcome); break;
       case 'henrik':
         S_('Kembali ke Vogt Henrik di Oakhaven', f.ch1_henrikBriefed);
-        S_('Dengarkan laporan lengkapnya', f.ch1_henrikBriefed); break;
+        S_('Dengarkan laporannya', f.ch1_henrikBriefed); break;
+      case 'lead':
+        S_('Tanyakan soal pemburu tua itu kepada Brokk dan Senna', SQ_ST('b1_brokk') === 2 && SQ_ST('b1_senna') === 2);
+        qLine('b1_brokk', L); qLine('b1_senna', L); break;
       case 'kaelen':
         S_('Pergi ke Hutan Belantara Vaelen (peta barat)', f.ch1_trialsAccepted);
         S_('Temui Kaelen sang Pemburu Buta', f.ch1_trialsAccepted);
@@ -8838,10 +9247,12 @@ html.m-land #canvasContainer.trial-on ~ .touch-controls .action-pad{opacity:.9}
         S_('Serahkan Pecahan Aether Hitam', f.ch1_kaelenDone); break;
       case 'keys':
         H_('Setengah Kunci Zamrud (Suaka Elf)');
+        ['b2_lyra', 'b2_elan', 'b2_thal'].forEach(id => qLine(id, L));
         S_('Bantu Caelen memanen Bunga Embun Perak', f.elf_botanical || f.caelenQuestDone);
         S_('Ambil pecahan memori di danau tua', f.elf_memoryShard);
         S_('Terima Kunci Zamrud dari Elara', f.elfKey);
         H_('Setengah Kunci Baja (Khaz-Karst)');
+        qLine('b2_balin', L);
         S_('Hancurkan Automaton Besi', f.varekProof || f.golemDefeated);
         S_('Terima kunci dari Raja Durgan', f.dwarfKey);
         H_('Penyatuan');
@@ -8850,25 +9261,36 @@ html.m-land #canvasContainer.trial-on ~ .touch-controls .action-pad{opacity:.9}
         S_('Masuki Jalan Setapak Hutan Kuno lewat gerbang Timur Hutan Elf', currentMapId === 'elf_road' || f.shadowDefeated);
         S_('Temui sosok di tengah badai (Malthus)', f.shadowDefeated);
         S_('Lulus 3 Ujian Penebusan: Menghindar, Mengingat, Menyeimbangkan', f.shadowDefeated); break;
-      case 'capital':
-        S_('Temui Kapten Gerbang Roderic', ST.clues && ST.clues.roderic);
-        S_('Temui Juru Tulis Tobias', ST.clues && ST.clues.tobias);
-        S_('Temui Pip Anak Jalanan', ST.clues && ST.clues.pip); break;
+      case 'capital': {
+        H_('Petunjuk terkumpul: ' + capFragCount() + '/' + CAP_REQ.length);
+        CAP_REQ.forEach(k => { if (ST.frag[k]) S_(FRAG[k][0] + ': ' + FRAG[k][1], true); });
+        H_('Penyelidikan yang bisa dikerjakan');
+        qByStep('capital').forEach(id => qLine(id, L));
+        H_('Menuju istana');
+        qByStep('palace').forEach(id => qLine(id, L));
+        break; }
+      case 'palace':
+        qByStep('palace').forEach(id => qLine(id, L));
+        S_('Dapatkan Surat Audiensi dari Sekretaris Mirelle', f.audience); break;
       case 'veyra':
-        S_('Temui Penyihir Istana Veyra di Aurelion', f.ch4_truth);
-        S_('Dengarkan kebenaran tentang Sun-Engine', f.ch4_truth); break;
+        S_('Temui Penyihir Istana Veyra di dalam istana Aurelion', f.ch4_truth);
+        S_('Dengarkan pengakuannya', f.ch4_truth); break;
       case 'engine':
+        qLine('e_oswin', L);
         S_('Pergi ke tangga rahasia di sisi istana Aurelion', currentMapId === 'sun_engine');
         S_('Turun ke Inti Mesin', currentMapId === 'sun_engine'); break;
       case 'final':
         S_('Kalahkan Arch-Mage Veyra', f.finalBattleDone);
         S_('Tentukan nasib Sun-Engine (pilih akhir)', ST.ending); break;
     }
-    // langkah yang lebih akhir sudah selesai => langkah sebelumnya (dalam grup yang sama) juga selesai
-    let last = -1; L.forEach((x, i) => { if (!x.h && x.ok) last = i; });
-    for (let i = 0; i < last; i++) if (!L[i].h) L[i].ok = true;
+    // Hanya untuk tahap berurutan: langkah yang lebih akhir selesai => langkah sebelumnya juga selesai
+    if (['supply', 'henrik', 'kaelen', 'kaelen_trials', 'wendigo', 'kaelen_return', 'road', 'veyra', 'final'].indexOf(ST.step) >= 0) {
+      let last = -1; L.forEach((x, i) => { if (!x.h && x.ok) last = i; });
+      for (let i = 0; i < last; i++) if (!L[i].h) L[i].ok = true;
+    }
     return L;
   }
+
   function qjStepsHtml(L, plain) {
     let first = !plain, h = '';
     L.forEach(x => {
@@ -10167,5 +10589,114 @@ html.m-land #canvasContainer.trial-on ~ .touch-controls .action-pad{opacity:.9}
     sync();
   })();
   </script>
+<style id="pop-tabs-css">
+/* Perbaikan gulir: di HP portrait layar permainan diputar 90 derajat lewat CSS, sedangkan
+   touch-action mengikuti arah layar asli. 'pan-y' lama memblokir geser yang dibutuhkan panel. */
+.popup-body, .dialogue-panel, #sv-box, .mm-page, #trialOverlay, #popMenu .popup-body,
+html.m-land .popup-body, html.m-rot .popup-body, html.m-rot .dialogue-panel { touch-action: pan-x pan-y !important; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.info-popup { touch-action: pan-x pan-y; }
+/* Zona joystick tidak boleh menutupi panel saat panel terbuka (cadangan untuk browser tanpa :has) */
+html.pop-open .touch-controls .joy-zone { display: none !important; }
+html.pop-open .touch-controls .action-pad { visibility: hidden; pointer-events: none; }
+
+/* Kotak penanda panel yang sedang dilihat (bisa digulir) */
+.pop-tabs { display: flex; flex-wrap: nowrap; gap: 4px; padding: 5px 6px; flex-shrink: 0; overflow-x: auto; overflow-y: hidden;
+  background: #120e0b; border-bottom: 1px solid #4f4132; touch-action: pan-x pan-y !important; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; scrollbar-width: thin; }
+.pop-tabs::-webkit-scrollbar { height: 4px; }
+.pop-tabs::-webkit-scrollbar-thumb { background: #6b5a43; }
+.pop-tab { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; font-family: inherit; font-size: 11px; font-weight: bold; white-space: nowrap;
+  color: #b8afa6; background: #1d1713; border: 1px solid #4f4132; border-radius: 0; cursor: pointer; touch-action: pan-x pan-y; }
+.pop-tab:active { background: #2e251d; }
+.pop-tab.on { color: #1a1209; background: #d4af37; border-color: #ffe08a; box-shadow: 0 0 0 1px #000, inset 0 -3px 0 rgba(0,0,0,.25); cursor: default; }
+</style>
+<script id="pop-tabs-js">
+(function () {
+  var box = document.getElementById('canvasContainer'), root = document.documentElement;
+  if (!box) return;
+  var ORDER = ['popStatus', 'popInv', 'popEquip', 'popTask', 'popQuest', 'popGuide'];
+  var NAME = { popStatus: ['❤', 'Kondisi'], popInv: ['🎒', 'Inventori'], popEquip: ['⚔', 'Perlengkapan'], popTask: ['📋', 'Tugas'], popQuest: ['📜', 'Jurnal'], popGuide: ['⚙', 'Setelan'] };
+  var pops = [].slice.call(box.querySelectorAll('.info-popup')).filter(function (p) { return p.id !== 'popMenu' && ORDER.indexOf(p.id) >= 0; });
+  var btnOf = function (id) { return box.querySelector('.dock-btn[data-panel="' + id + '"]'); };
+
+  function makeBar() {
+    var bar = document.createElement('div'); bar.className = 'pop-tabs'; bar.setAttribute('role', 'tablist'); bar.setAttribute('aria-label', 'Pilih informasi');
+    ORDER.forEach(function (id) {
+      var b = btnOf(id); if (!b || b.hidden) return;
+      var t = document.createElement('button'); t.type = 'button'; t.className = 'pop-tab'; t.dataset.panel = id; t.setAttribute('role', 'tab');
+      t.innerHTML = '<span>' + NAME[id][0] + '</span><span>' + NAME[id][1] + '</span>';
+      t.addEventListener('click', function () { if (!t.classList.contains('on')) b.click(); });
+      bar.appendChild(t);
+    });
+    // sentuhan di kotak ini tidak boleh dibatalkan oleh penahan gulir halaman
+    ['touchmove', 'touchstart'].forEach(function (ev) { bar.addEventListener(ev, function (e) { e.stopPropagation(); }, { passive: true }); });
+    return bar;
+  }
+  pops.forEach(function (p) { var body = p.querySelector('.popup-body'); if (body) p.insertBefore(makeBar(), body); });
+
+  function sync() {
+    var open = pops.filter(function (p) { return p.classList.contains('open'); })[0];
+    var any = !!open || !!box.querySelector('#popMenu.open, #mmLarge.show');
+    root.classList.toggle('pop-open', any);
+    if (!open) return;
+    var bar = open.querySelector('.pop-tabs'); if (!bar) return;
+    [].forEach.call(bar.children, function (t) { var on = t.dataset.panel === open.id; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); });
+    var on = bar.querySelector('.pop-tab.on');
+    if (on) { var l = on.offsetLeft - (bar.clientWidth - on.offsetWidth) / 2; bar.scrollLeft = Math.max(0, l); }
+  }
+  var mo = new MutationObserver(sync);
+  pops.forEach(function (p) { mo.observe(p, { attributes: true, attributeFilter: ['class'] }); });
+  [box.querySelector('#popMenu'), box.querySelector('#mmLarge')].forEach(function (e) { if (e) mo.observe(e, { attributes: true, attributeFilter: ['class'] }); });
+  sync();
+})();
+</script>
+
+
+<style id="scroll-fix-css">
+/* Cadangan untuk HP tanpa :has() — zona joystick tidak boleh menelan sentuhan saat dialog terbuka */
+html.dlg-open .touch-controls .joy-zone { display: none !important; }
+html.dlg-open .touch-controls .joystick { pointer-events: none !important; }
+.popup-body, .dialogue-panel, #sv-box, .mm-page { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+</style>
+<script id="scroll-fix-js">
+(function () {
+  "use strict";
+  // Masalah: panel (Jurnal, Inventori, Tugas, dll.) dibangun ulang oleh updateUI() saat jari sedang menggulir,
+  // sehingga elemen yang disentuh terhapus dan gulir berhenti. Solusi: tunda pembangunan ulang selama
+  // jari menggeser / gulir masih berjalan, lalu jalankan sekali setelah selesai.
+  var SEL = '.popup-body, .dialogue-panel, #sv-box, .mm-page, #eq-root, .info-popup';
+  var touching = false, moved = false, lastScroll = 0, pending = false, timer = null;
+  var inScroll = function (t) { if (t && t.nodeType !== 1) t = t.parentElement; return !!(t && t.closest && t.closest(SEL)); };
+  var busy = function () { return (touching && moved) || (Date.now() - lastScroll < 350); };
+  document.addEventListener('touchstart', function (e) { if (inScroll(e.target)) { touching = true; moved = false; } }, { passive: true, capture: true });
+  document.addEventListener('touchmove', function (e) { if (touching && inScroll(e.target)) moved = true; }, { passive: true, capture: true });
+  ['touchend', 'touchcancel'].forEach(function (ev) {
+    document.addEventListener(ev, function () { if (touching && moved) lastScroll = Date.now(); touching = false; moved = false; if (pending) schedule(); }, { passive: true, capture: true });
+  });
+  document.addEventListener('scroll', function (e) { if (inScroll(e.target)) lastScroll = Date.now(); }, { passive: true, capture: true });
+
+  var base = window.updateUI;
+  if (typeof base !== 'function') return;
+  function run() {
+    var keep = [].map.call(document.querySelectorAll('.popup-body, .dialogue-panel'), function (el) { return [el, el.scrollTop]; });
+    base.apply(window, arguments);
+    keep.forEach(function (k) { if (k[0].isConnected && Math.abs(k[0].scrollTop - k[1]) > 1) k[0].scrollTop = k[1]; });
+  }
+  function schedule() { if (!timer) timer = setTimeout(flush, 200); }
+  function flush() { timer = null; if (busy()) return schedule(); if (pending) { pending = false; run(); } }
+  window.updateUI = updateUI = function () {
+    if (busy()) { pending = true; schedule(); return; }
+    run.apply(this, arguments);
+  };
+
+  // Tandai html saat dialog terbuka (pengganti :has)
+  var box = document.getElementById('canvasContainer');
+  if (box) {
+    var sync = function () { document.documentElement.classList.toggle('dlg-open', box.classList.contains('in-dialog')); };
+    new MutationObserver(sync).observe(box, { attributes: true, attributeFilter: ['class'] });
+    sync();
+  }
+})();
+</script>
+
 </body>
 </html>
